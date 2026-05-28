@@ -1,0 +1,3320 @@
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import imageCompression from 'browser-image-compression';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Legend
+} from 'recharts';
+import {
+  MapPin, Camera, Calendar, User, Building2, Check, X,
+  Filter, Plus, ChevronRight, ChevronLeft, LayoutDashboard, ClipboardList,
+  Map as MapIcon, Database, Target, Activity, Trash2,
+  Users, Briefcase, Globe, ChevronDown, LogOut, Shield,
+  Lock, Mail, Eye, EyeOff, AlertCircle, Fingerprint, Loader2,
+  Navigation, Phone, FileText, Download, Search, Upload, FileSpreadsheet
+} from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Polyline, Circle } from 'react-leaflet';
+import L from 'leaflet';
+import * as XLSX from 'xlsx';
+
+import { MOCK_MODE } from './lib/supabase';
+import * as api from './lib/api';
+import { getPhotoURL } from './lib/photoStore';
+
+// Custom pin marker factory (inline SVG via divIcon — no asset path issues)
+const makePinIcon = (color = '#dc2626', pulse = true) => L.divIcon({
+  className: 'mobil1-marker',
+  html: `
+    <div style="position:relative;">
+      ${pulse ? `<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:32px;height:32px;background:${color};border-radius:50%;opacity:0.35;animation:m1pulse 1.5s ease-out infinite;"></div>` : ''}
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="${color}" stroke="#0a0a0a" stroke-width="1.5" stroke-linejoin="round" style="position:relative;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));">
+        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+        <circle cx="12" cy="10" r="3" fill="#0a0a0a" stroke="none"/>
+      </svg>
+    </div>
+    <style>@keyframes m1pulse{0%{transform:translate(-50%,-50%) scale(0.6);opacity:0.6;}100%{transform:translate(-50%,-50%) scale(1.8);opacity:0;}}</style>
+  `,
+  iconSize: [28, 28],
+  iconAnchor: [14, 26],
+  popupAnchor: [0, -24],
+});
+
+const RED_PIN_ICON  = makePinIcon('#dc2626', true);
+const BLUE_PIN_ICON = makePinIcon('#3b82f6', true);
+
+// Haversine distance (meter) between 2 lat/lng
+const haversineMeters = (lat1, lng1, lat2, lng2) => {
+  const R = 6371000;
+  const toRad = (d) => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLng/2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+};
+
+const formatDistance = (m) => m < 1000 ? `${Math.round(m)} m` : `${(m/1000).toFixed(2)} km`;
+
+// CSV export helper — RFC 4180 escaped
+const exportToCSV = (rows, filename) => {
+  if (!rows || rows.length === 0) return;
+  const headers = Object.keys(rows[0]);
+  const escape = (v) => {
+    if (v == null) return '';
+    const s = String(v);
+    if (s.includes('"') || s.includes(',') || s.includes('\n')) {
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+  };
+  const csv = [
+    headers.join(','),
+    ...rows.map(r => headers.map(h => escape(r[h])).join(',')),
+  ].join('\n');
+  // Prepend BOM agar Excel ID buka UTF-8 dengan benar
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+// Build flat row dari visit untuk CSV export
+const visitToCSVRow = (v, ctx) => {
+  const b = ctx.bengkels.find(x => x.id === v.bengkel_id);
+  const k = b ? ctx.kotas.find(x => x.id === b.kota_id) : null;
+  const r = k ? ctx.regions.find(x => x.id === k.region_id) : null;
+  const d = ctx.distributors.find(x => x.id === v.distributor_id) || null;
+  const md = ctx.mds.find(x => x.id === v.md_id);
+  const photoCount = PHOTO_KEYS.filter(key => v[key]).length;
+  return {
+    visit_id: v.id,
+    tanggal: v.visit_date,
+    md_name: md?.full_name || v.md_name || '',
+    md_email: md?.email || v.md_email || '',
+    bengkel_code: b?.code || '',
+    bengkel_name: b?.name || v.bengkel_name || '',
+    kota: k?.name || v.kota_name || '',
+    region: r?.name || v.region_name || '',
+    distributor: d?.name || v.distributor_name || '',
+    pic_name: v.pic_name || '',
+    pic_phone: v.pic_phone || '',
+    status: v.status,
+    remarks: v.remarks || '',
+    bengkel_lat: b?.lat ?? '',
+    bengkel_lng: b?.lng ?? '',
+    visit_lat: v.visit_lat ?? '',
+    visit_lng: v.visit_lng ?? '',
+    photo_count: photoCount,
+    created_at: v.created_at || '',
+  };
+};
+
+// Recenter map when coords change (Leaflet map doesn't react to prop changes by default)
+function RecenterMap({ lat, lng }) {
+  const map = useMap();
+  useEffect(() => {
+    if (lat != null && lng != null) {
+      map.flyTo([lat, lng], map.getZoom(), { duration: 0.6 });
+    }
+  }, [lat, lng, map]);
+  return null;
+}
+
+// Fit bounds when 2 points exist; preserve user zoom for single-point updates (drag-friendly)
+function FitBounds({ points }) {
+  const map = useMap();
+  useEffect(() => {
+    if (points.length === 2) {
+      const bounds = L.latLngBounds(points);
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 17 });
+    } else if (points.length === 1) {
+      const targetZoom = Math.max(map.getZoom(), 15);
+      map.flyTo(points[0], targetZoom, { duration: 0.4 });
+    }
+  }, [JSON.stringify(points), map]);
+  return null;
+}
+
+const BengkelMap = ({
+  lat, lng, name, code,
+  userLat, userLng, gpsStatus, gpsError, accuracy,
+  onRefetchGPS, onUserLocationChange,
+}) => {
+  const hasBengkel = lat != null && lng != null;
+  const hasUser = userLat != null && userLng != null;
+  const userPinDraggable = !hasBengkel && !!onUserLocationChange;
+
+  // Empty state: bengkel ✗ AND user ✗ → tampilkan placeholder + retry GPS
+  if (!hasBengkel && !hasUser) {
+    return (
+      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 flex flex-col items-center justify-center gap-3 min-h-[180px]">
+        <div className="flex items-center gap-2 text-zinc-500 text-xs">
+          {gpsStatus === 'loading'
+            ? <><Loader2 className="w-4 h-4 animate-spin" />Mengambil GPS…</>
+            : gpsStatus === 'error'
+              ? <><AlertCircle className="w-4 h-4 text-rose-400" /><span className="text-rose-400">{gpsError || 'GPS gagal'}</span></>
+              : <><MapPin className="w-4 h-4" />Menunggu GPS…</>}
+        </div>
+        <p className="text-[11px] text-zinc-500 text-center max-w-xs">
+          Bengkel ini belum punya koordinat & GPS Anda belum aktif. Aktifkan GPS untuk capture lokasi visit.
+        </p>
+        {onRefetchGPS && (
+          <button onClick={onRefetchGPS} type="button"
+            className="text-xs text-red-400 hover:text-red-300 font-medium flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-600/30 bg-red-600/10">
+            <Navigation className="w-3.5 h-3.5" />Ambil GPS
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // Compute map center & points
+  const distance = (hasBengkel && hasUser) ? haversineMeters(lat, lng, userLat, userLng) : null;
+  const points = [hasBengkel && [lat, lng], hasUser && [userLat, userLng]].filter(Boolean);
+  const center = hasBengkel ? [lat, lng] : [userLat, userLng];
+
+  return (
+    <div className="rounded-xl overflow-hidden border border-zinc-800">
+      {/* Banner kalau bengkel belum punya koordinat */}
+      {!hasBengkel && (
+        <div className="bg-amber-600/10 border-b border-amber-600/20 px-3 py-2 flex items-start gap-2 text-[11px] text-amber-400">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          <span>
+            Bengkel ini belum punya koordinat di master data. <span className="text-amber-300 font-medium">GPS Anda dipakai sebagai lokasi visit</span> — drag pin biru kalau posisinya geser dari titik bengkel sebenarnya.
+          </span>
+        </div>
+      )}
+
+      <MapContainer
+        center={center}
+        zoom={16}
+        scrollWheelZoom={false}
+        style={{ height: '220px', width: '100%' }}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          subdomains="abcd"
+          maxZoom={19}
+        />
+        {/* Pin bengkel (merah) */}
+        {hasBengkel && (
+          <Marker position={[lat, lng]} icon={RED_PIN_ICON}>
+            <Popup>
+              <div className="text-xs">
+                <div className="font-mono text-[10px] text-zinc-400">{code}</div>
+                <div className="font-semibold text-zinc-100">{name}</div>
+                <div className="font-mono text-[10px] text-zinc-500 mt-1">{lat.toFixed(5)}, {lng.toFixed(5)}</div>
+              </div>
+            </Popup>
+          </Marker>
+        )}
+        {/* Pin user (biru) + accuracy circle */}
+        {hasUser && (
+          <>
+            <Marker
+              position={[userLat, userLng]}
+              icon={BLUE_PIN_ICON}
+              draggable={userPinDraggable}
+              eventHandlers={userPinDraggable ? {
+                dragend: (e) => {
+                  const pos = e.target.getLatLng();
+                  onUserLocationChange(pos.lat, pos.lng);
+                },
+              } : undefined}
+            >
+              <Popup>
+                <div className="text-xs">
+                  <div className="font-semibold text-zinc-100">Lokasi Anda{userPinDraggable && ' (drag untuk koreksi)'}</div>
+                  <div className="font-mono text-[10px] text-zinc-500 mt-1">{userLat.toFixed(5)}, {userLng.toFixed(5)}</div>
+                  {accuracy && <div className="text-[10px] text-zinc-400 mt-0.5">Akurasi ±{Math.round(accuracy)} m</div>}
+                </div>
+              </Popup>
+            </Marker>
+            {accuracy && accuracy < 500 && !userPinDraggable && (
+              <Circle center={[userLat, userLng]} radius={accuracy} pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.1, weight: 1 }} />
+            )}
+            {hasBengkel && (
+              <Polyline positions={[[lat, lng], [userLat, userLng]]} pathOptions={{ color: '#71717a', weight: 2, dashArray: '6 4' }} />
+            )}
+          </>
+        )}
+        <FitBounds points={points} />
+      </MapContainer>
+
+      {/* Status Bar */}
+      <div className="bg-zinc-950 border-t border-zinc-800 divide-y divide-zinc-800/60">
+        {hasBengkel && (
+          <div className="px-3 py-2 flex items-center justify-between text-xs">
+            <span className="text-zinc-400 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-red-500" />Bengkel
+            </span>
+            <span className="font-mono text-zinc-300">{lat.toFixed(5)}, {lng.toFixed(5)}</span>
+          </div>
+        )}
+        <div className="px-3 py-2 flex items-center justify-between text-xs gap-2">
+          <span className="text-zinc-400 flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${hasUser ? 'bg-blue-500' : 'bg-zinc-700'}`} />
+            {userPinDraggable ? 'Lokasi Visit (drag pin)' : 'Lokasi Saya'}
+          </span>
+          {gpsStatus === 'loading' && (
+            <span className="flex items-center gap-1.5 text-zinc-500"><Loader2 className="w-3 h-3 animate-spin" />Mengambil GPS…</span>
+          )}
+          {gpsStatus === 'error' && (
+            <span className="text-rose-400 flex items-center gap-1.5"><AlertCircle className="w-3 h-3" />{gpsError || 'GPS gagal'}</span>
+          )}
+          {hasUser && (
+            <span className="font-mono text-zinc-300">{userLat.toFixed(5)}, {userLng.toFixed(5)}</span>
+          )}
+          {onRefetchGPS && (
+            <button onClick={onRefetchGPS} type="button"
+              className="ml-2 text-[11px] text-red-400 hover:text-red-300 font-medium flex items-center gap-1">
+              <Navigation className="w-3 h-3" />{hasUser ? 'Ulang' : 'Ambil GPS'}
+            </button>
+          )}
+        </div>
+        {distance != null && (
+          <div className={`px-3 py-2 flex items-center justify-between text-xs font-medium ${distance < 100 ? 'bg-emerald-600/10 text-emerald-400' : distance < 500 ? 'bg-amber-600/10 text-amber-400' : 'bg-rose-600/10 text-rose-400'}`}>
+            <span className="flex items-center gap-1.5">
+              <Navigation className="w-3 h-3" />Jarak ke bengkel
+            </span>
+            <span className="font-mono">{formatDistance(distance)} {distance < 100 ? '· Di lokasi ✓' : distance < 500 ? '· Dekat' : '· Jauh dari bengkel'}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// BENGKEL PICKER MAP — Admin pick lat/lng via click/drag
+// ============================================================
+
+function MapClickHandler({ onPick }) {
+  useMapEvents({
+    click(e) { onPick(e.latlng.lat, e.latlng.lng); },
+  });
+  return null;
+}
+
+const INDONESIA_CENTER = { lat: -2.5, lng: 118 };
+const JAKARTA_CENTER   = { lat: -6.2, lng: 106.85 };
+
+const BengkelPickerMap = ({ lat, lng, onChange }) => {
+  const hasPin = lat != null && lng != null;
+  const center = hasPin ? [lat, lng] : [JAKARTA_CENTER.lat, JAKARTA_CENTER.lng];
+  const zoom = hasPin ? 16 : 11;
+
+  // Local string state untuk input manual (biar bisa ketik "-6." tanpa langsung di-commit)
+  const [latText, setLatText] = useState(lat != null ? String(lat) : '');
+  const [lngText, setLngText] = useState(lng != null ? String(lng) : '');
+
+  // Sync dari props kalau berubah dari luar (klik map / drag / GPS)
+  useEffect(() => { setLatText(lat != null ? String(lat) : ''); }, [lat]);
+  useEffect(() => { setLngText(lng != null ? String(lng) : ''); }, [lng]);
+
+  const useMyGPS = () => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => onChange(pos.coords.latitude, pos.coords.longitude),
+      (err) => alert('Gagal ambil GPS: ' + (err.message || 'unknown')),
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  };
+
+  // Commit nilai input ke parent kalau valid. Mendukung paste "lat, lng" sekaligus.
+  const commitLat = (raw) => {
+    // Deteksi paste "−6.25, 107.26" → split
+    if (raw.includes(',')) {
+      const [a, b] = raw.split(',').map(s => s.trim());
+      const la = Number(a), ln = Number(b);
+      if (!Number.isNaN(la) && !Number.isNaN(ln)) { onChange(la, ln); return; }
+    }
+    const la = Number(raw);
+    if (!Number.isNaN(la) && la >= -90 && la <= 90 && lngText.trim() !== '') {
+      const ln = Number(lngText);
+      if (!Number.isNaN(ln)) onChange(la, ln);
+    }
+  };
+  const commitLng = (raw) => {
+    const ln = Number(raw);
+    if (!Number.isNaN(ln) && ln >= -180 && ln <= 180 && latText.trim() !== '') {
+      const la = Number(latText);
+      if (!Number.isNaN(la)) onChange(la, ln);
+    }
+  };
+
+  const latInvalid = latText.trim() !== '' && (Number.isNaN(Number(latText)) || Number(latText) < -90 || Number(latText) > 90);
+  const lngInvalid = lngText.trim() !== '' && (Number.isNaN(Number(lngText)) || Number(lngText) < -180 || Number(lngText) > 180);
+
+  return (
+    <div className="rounded-xl overflow-hidden border border-zinc-800">
+      <div className="bg-zinc-950 px-3 py-2 border-b border-zinc-800 flex items-center justify-between gap-2">
+        <span className="text-[11px] text-zinc-400">Klik map, geser pin, atau ketik koordinat</span>
+        <button type="button" onClick={useMyGPS}
+          className="text-[11px] text-red-400 hover:text-red-300 font-medium flex items-center gap-1">
+          <Navigation className="w-3 h-3" />Pakai GPS Saya
+        </button>
+      </div>
+      <MapContainer
+        center={center}
+        zoom={zoom}
+        scrollWheelZoom={true}
+        style={{ height: '260px', width: '100%', cursor: 'crosshair' }}
+      >
+        <TileLayer
+          attribution='&copy; CARTO &copy; OSM'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          subdomains="abcd"
+          maxZoom={19}
+        />
+        <MapClickHandler onPick={onChange} />
+        {hasPin && (
+          <Marker
+            position={[lat, lng]}
+            icon={RED_PIN_ICON}
+            draggable={true}
+            eventHandlers={{
+              dragend: (e) => {
+                const pos = e.target.getLatLng();
+                onChange(pos.lat, pos.lng);
+              },
+            }}
+          />
+        )}
+        {hasPin && <RecenterMap lat={lat} lng={lng} />}
+      </MapContainer>
+      {/* Input manual lat/lng */}
+      <div className="bg-zinc-950 px-3 py-2.5 border-t border-zinc-800">
+        <div className="flex items-center gap-2">
+          <span className="text-zinc-400 flex items-center gap-1.5 text-xs shrink-0"><MapPin className="w-3 h-3 text-red-500" />Lat / Lng</span>
+          <div className="flex-1 grid grid-cols-2 gap-2">
+            <input
+              type="text" inputMode="decimal" placeholder="-6.251787"
+              value={latText}
+              onChange={e => { setLatText(e.target.value); commitLat(e.target.value); }}
+              className={`w-full bg-zinc-900 border rounded-md px-2 py-1.5 text-xs font-mono text-zinc-100 placeholder-zinc-600 focus:outline-none transition ${latInvalid ? 'border-rose-600/50' : 'border-zinc-800 focus:border-red-600/50'}`}
+            />
+            <input
+              type="text" inputMode="decimal" placeholder="107.268440"
+              value={lngText}
+              onChange={e => { setLngText(e.target.value); commitLng(e.target.value); }}
+              className={`w-full bg-zinc-900 border rounded-md px-2 py-1.5 text-xs font-mono text-zinc-100 placeholder-zinc-600 focus:outline-none transition ${lngInvalid ? 'border-rose-600/50' : 'border-zinc-800 focus:border-red-600/50'}`}
+            />
+          </div>
+        </div>
+        {(latInvalid || lngInvalid) && (
+          <p className="text-[10px] text-rose-400 mt-1.5">Lat harus -90..90, Lng harus -180..180</p>
+        )}
+        <p className="text-[10px] text-zinc-600 mt-1.5">💡 Bisa paste "lat, lng" dari Google Maps langsung ke kolom Lat</p>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// VISIT DETAIL MODAL — Admin view individual visit
+// ============================================================
+
+// Foto bisa berupa: URL http (Supabase/B2), ref 'idb:...' (mock IndexedDB), atau 'mock' (seed lama)
+const isPlaceholderPhoto = (url) => !url || url === 'mock';
+
+// Render foto yang otomatis resolve ref IndexedDB → blob URL
+function StoredImage({ src, alt, className, onClick }) {
+  const [resolved, setResolved] = useState(src?.startsWith('idb:') ? null : src);
+  useEffect(() => {
+    let active = true;
+    if (src?.startsWith('idb:')) {
+      setResolved(null);
+      getPhotoURL(src.slice(4)).then(u => { if (active) setResolved(u); });
+    } else {
+      setResolved(src);
+    }
+    return () => { active = false; };
+  }, [src]);
+
+  if (!resolved) {
+    return <div className={`flex items-center justify-center bg-zinc-900 ${className || ''}`}><Loader2 className="w-5 h-5 text-zinc-600 animate-spin" /></div>;
+  }
+  return <img src={resolved} alt={alt} className={className} onClick={onClick} />;
+}
+
+const PHOTO_LABELS = {
+  photo_tampak_depan:    'Tampak Depan',
+  photo_in:              'Foto In',
+  photo_out:             'Foto Out',
+  photo_spanduk_before:  'Spanduk Before',
+  photo_spanduk_after:   'Spanduk After',
+  photo_poster_before:   'Poster Before',
+  photo_poster_after:    'Poster After',
+};
+const PHOTO_KEYS = Object.keys(PHOTO_LABELS);
+
+function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose }) {
+  const [lightboxIdx, setLightboxIdx] = useState(null);
+
+  // Esc handler
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        if (lightboxIdx != null) setLightboxIdx(null);
+        else onClose();
+      }
+      if (lightboxIdx != null) {
+        if (e.key === 'ArrowRight') setLightboxIdx(i => (i + 1) % availablePhotos.length);
+        if (e.key === 'ArrowLeft') setLightboxIdx(i => (i - 1 + availablePhotos.length) % availablePhotos.length);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
+  const availablePhotos = PHOTO_KEYS
+    .filter(k => visit[k])
+    .map(k => ({ key: k, label: PHOTO_LABELS[k], url: visit[k] }));
+
+  const isMockPhoto = isPlaceholderPhoto;
+  const hasBengkelCoord = bengkel?.lat != null && bengkel?.lng != null;
+  const hasVisitCoord = visit.visit_lat != null && visit.visit_lng != null;
+  const distance = (hasBengkelCoord && hasVisitCoord)
+    ? haversineMeters(bengkel.lat, bengkel.lng, visit.visit_lat, visit.visit_lng)
+    : null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/80 backdrop-blur-sm p-4 overflow-y-auto"
+         onClick={onClose}>
+      <div className="w-full max-w-3xl my-8 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden"
+           onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between gap-3 sticky top-0 bg-zinc-950 z-10">
+          <div className="min-w-0">
+            <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono">{bengkel?.code || '—'}</div>
+            <h2 className="font-display font-bold text-lg text-zinc-100 truncate">{bengkel?.name || visit.bengkel_name || '—'}</h2>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <StatusBadge status={visit.status} />
+            <button onClick={onClose} className="w-9 h-9 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 flex items-center justify-center">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Quick info grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <InfoCell icon={Calendar} label="Tanggal Visit" value={visit.visit_date} />
+            <InfoCell icon={User} label="MD Petugas" value={md?.full_name || visit.md_name || '—'} />
+            <InfoCell icon={MapPin} label="Kota" value={kota?.name || visit.kota_name || '—'} />
+            <InfoCell icon={Briefcase} label="Distributor" value={distributor?.name || visit.distributor_name || '—'} />
+          </div>
+
+          {/* Contact PIC */}
+          <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
+            <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">PIC / Owner Bengkel</div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-sm font-bold text-zinc-200">
+                  {(visit.pic_name || '?').charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-zinc-100">{visit.pic_name}</div>
+                  <a href={`tel:${visit.pic_phone}`} className="text-xs text-zinc-400 hover:text-red-300 flex items-center gap-1">
+                    <Phone className="w-3 h-3" />{visit.pic_phone}
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Map */}
+          {(hasBengkelCoord || hasVisitCoord) && (
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2 flex items-center gap-2">
+                <Navigation className="w-3 h-3" />Lokasi
+              </div>
+              <div className="rounded-xl overflow-hidden border border-zinc-800">
+                <MapContainer
+                  center={hasBengkelCoord ? [bengkel.lat, bengkel.lng] : [visit.visit_lat, visit.visit_lng]}
+                  zoom={16}
+                  scrollWheelZoom={false}
+                  style={{ height: '240px', width: '100%' }}
+                >
+                  <TileLayer
+                    attribution='&copy; CARTO &copy; OSM'
+                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                    subdomains="abcd"
+                    maxZoom={19}
+                  />
+                  {hasBengkelCoord && (
+                    <Marker position={[bengkel.lat, bengkel.lng]} icon={RED_PIN_ICON}>
+                      <Popup><div className="text-xs"><div className="font-semibold">{bengkel.name}</div><div className="font-mono text-[10px] text-zinc-500">{bengkel.lat.toFixed(5)}, {bengkel.lng.toFixed(5)}</div></div></Popup>
+                    </Marker>
+                  )}
+                  {hasVisitCoord && (
+                    <Marker position={[visit.visit_lat, visit.visit_lng]} icon={BLUE_PIN_ICON}>
+                      <Popup><div className="text-xs"><div className="font-semibold">Lokasi MD saat visit</div><div className="font-mono text-[10px] text-zinc-500">{visit.visit_lat.toFixed(5)}, {visit.visit_lng.toFixed(5)}</div></div></Popup>
+                    </Marker>
+                  )}
+                  {hasBengkelCoord && hasVisitCoord && (
+                    <Polyline positions={[[bengkel.lat, bengkel.lng], [visit.visit_lat, visit.visit_lng]]}
+                              pathOptions={{ color: '#71717a', weight: 2, dashArray: '6 4' }} />
+                  )}
+                  <FitBounds points={[
+                    hasBengkelCoord && [bengkel.lat, bengkel.lng],
+                    hasVisitCoord && [visit.visit_lat, visit.visit_lng],
+                  ].filter(Boolean)} />
+                </MapContainer>
+                <div className="bg-zinc-950 border-t border-zinc-800 divide-y divide-zinc-800/60 text-xs">
+                  {hasBengkelCoord && (
+                    <div className="px-3 py-2 flex justify-between">
+                      <span className="text-zinc-400 flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500" />Bengkel</span>
+                      <span className="font-mono text-zinc-300">{bengkel.lat.toFixed(5)}, {bengkel.lng.toFixed(5)}</span>
+                    </div>
+                  )}
+                  {hasVisitCoord && (
+                    <div className="px-3 py-2 flex justify-between">
+                      <span className="text-zinc-400 flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500" />MD saat visit</span>
+                      <span className="font-mono text-zinc-300">{visit.visit_lat.toFixed(5)}, {visit.visit_lng.toFixed(5)}</span>
+                    </div>
+                  )}
+                  {distance != null && (
+                    <div className={`px-3 py-2 flex justify-between font-medium ${distance < 100 ? 'bg-emerald-600/10 text-emerald-400' : distance < 500 ? 'bg-amber-600/10 text-amber-400' : 'bg-rose-600/10 text-rose-400'}`}>
+                      <span className="flex items-center gap-1.5"><Navigation className="w-3 h-3" />Jarak MD ↔ Bengkel</span>
+                      <span className="font-mono">{formatDistance(distance)} {distance < 100 ? '· On-site ✓' : distance < 500 ? '· Dekat' : '· Jauh'}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Photo gallery */}
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2 flex items-center gap-2">
+              <Camera className="w-3 h-3" />Dokumentasi Foto ({availablePhotos.length}/7)
+            </div>
+            {availablePhotos.length === 0 ? (
+              <div className="text-center text-sm text-zinc-500 py-8 bg-zinc-950 border border-zinc-800 rounded-xl">Tidak ada foto</div>
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {availablePhotos.map((p, i) => (
+                  <button key={p.key} onClick={() => setLightboxIdx(i)}
+                    className="relative aspect-square rounded-lg overflow-hidden border border-zinc-800 hover:border-red-600/50 transition group bg-zinc-950">
+                    {isMockPhoto(p.url) ? (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-600">
+                        <Camera className="w-5 h-5 mb-1" />
+                        <span className="text-[9px] uppercase tracking-wider">No Foto</span>
+                      </div>
+                    ) : (
+                      <StoredImage src={p.url} alt={p.label} className="absolute inset-0 w-full h-full object-cover" />
+                    )}
+                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent px-2 py-1.5">
+                      <div className="text-[10px] font-medium text-zinc-100 truncate">{p.label}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Remarks */}
+          {visit.remarks && (
+            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
+              <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2 flex items-center gap-1.5">
+                <FileText className="w-3 h-3" />Remarks
+              </div>
+              <p className="text-sm text-zinc-300 whitespace-pre-wrap">{visit.remarks}</p>
+            </div>
+          )}
+
+          {/* Meta footer */}
+          <div className="pt-3 border-t border-zinc-800 text-[11px] text-zinc-500 flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span>Visit ID: <span className="font-mono text-zinc-400">{visit.id?.slice(0, 8)}…</span></span>
+            {visit.created_at && <span>Dibuat: {new Date(visit.created_at).toLocaleString('id-ID')}</span>}
+          </div>
+        </div>
+      </div>
+
+      {/* Lightbox */}
+      {lightboxIdx != null && availablePhotos[lightboxIdx] && (
+        <div className="fixed inset-0 z-[2000] bg-zinc-950/95 flex items-center justify-center p-4"
+             onClick={() => setLightboxIdx(null)}>
+          <button onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx - 1 + availablePhotos.length) % availablePhotos.length); }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-100 flex items-center justify-center">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx + 1) % availablePhotos.length); }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-100 flex items-center justify-center">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); setLightboxIdx(null); }}
+            className="absolute right-4 top-4 w-10 h-10 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-100 flex items-center justify-center">
+            <X className="w-5 h-5" />
+          </button>
+          <div className="max-w-5xl max-h-full flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
+            {isMockPhoto(availablePhotos[lightboxIdx].url) ? (
+              <div className="w-96 h-96 bg-zinc-950 border border-zinc-800 rounded-xl flex flex-col items-center justify-center text-zinc-500">
+                <Camera className="w-16 h-16 mb-2" />
+                <span className="text-xs uppercase tracking-wider">Tidak ada foto</span>
+              </div>
+            ) : (
+              <StoredImage src={availablePhotos[lightboxIdx].url} alt={availablePhotos[lightboxIdx].label}
+                   className="max-w-full max-h-[80vh] object-contain rounded-lg" />
+            )}
+            <div className="bg-zinc-950/95 backdrop-blur px-4 py-2 rounded-full text-sm text-zinc-200 flex items-center gap-3">
+              <span className="font-semibold">{availablePhotos[lightboxIdx].label}</span>
+              <span className="text-zinc-500">·</span>
+              <span className="text-zinc-400 font-mono">{lightboxIdx + 1} / {availablePhotos.length}</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const InfoCell = ({ icon: Icon, label, value }) => (
+  <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3">
+    <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1 flex items-center gap-1.5">
+      <Icon className="w-3 h-3" />{label}
+    </div>
+    <div className="text-sm text-zinc-100 font-medium truncate">{value}</div>
+  </div>
+);
+
+// ============================================================
+// UI PRIMITIVES
+// ============================================================
+
+const STATUS_STYLES = {
+  Pemasangan:        { bg: 'bg-emerald-600/100/10', text: 'text-emerald-400', border: 'border-emerald-500/30', dot: 'bg-emerald-400' },
+  Revisit:           { bg: 'bg-sky-600/100/10',     text: 'text-sky-400',     border: 'border-sky-500/30',     dot: 'bg-sky-400' },
+  Maintenance:       { bg: 'bg-amber-600/100/10',   text: 'text-amber-400',   border: 'border-amber-500/30',   dot: 'bg-amber-400' },
+  'Delivery Gimmic': { bg: 'bg-violet-600/100/10',  text: 'text-violet-400',  border: 'border-violet-500/30',  dot: 'bg-violet-400' },
+};
+
+const STATUS_OPTIONS = ['Pemasangan', 'Revisit', 'Maintenance', 'Delivery Gimmic'];
+
+const StatusBadge = ({ status }) => {
+  const s = STATUS_STYLES[status] || STATUS_STYLES.Pemasangan;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${s.bg} ${s.text} ${s.border}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+      {status}
+    </span>
+  );
+};
+
+const Section = ({ title, subtitle, children, icon: Icon }) => (
+  <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 mb-4">
+    <div className="flex items-center gap-3 mb-4">
+      {Icon && (
+        <div className="w-8 h-8 rounded-lg bg-red-600/10 border border-red-600/20 flex items-center justify-center">
+          <Icon className="w-4 h-4 text-red-500" />
+        </div>
+      )}
+      <div>
+        <h3 className="text-sm font-semibold text-zinc-100 tracking-wide">{title}</h3>
+        {subtitle && <p className="text-xs text-zinc-500 mt-0.5">{subtitle}</p>}
+      </div>
+    </div>
+    {children}
+  </div>
+);
+
+const Field = ({ label, children, required }) => (
+  <div className="mb-3">
+    <label className="block text-xs font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
+      {label} {required && <span className="text-red-500">*</span>}
+    </label>
+    {children}
+  </div>
+);
+
+const Input = (props) => (
+  <input
+    {...props}
+    className={`w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-600/50 focus:ring-1 focus:ring-red-600/30 transition ${props.className || ''}`}
+  />
+);
+
+const Select = ({ children, ...props }) => (
+  <div className="relative">
+    <select
+      {...props}
+      className="w-full appearance-none bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 pr-9 text-sm text-zinc-100 focus:outline-none focus:border-red-600/50 focus:ring-1 focus:ring-red-600/30 transition cursor-pointer"
+    >
+      {children}
+    </select>
+    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+  </div>
+);
+
+const Textarea = (props) => (
+  <textarea
+    {...props}
+    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-600/50 focus:ring-1 focus:ring-red-600/30 transition resize-none"
+  />
+);
+
+// Dropdown dengan search box. options = [{ value, label }]
+const SearchableSelect = ({ value, onChange, options, placeholder = 'Pilih…', disabled = false, emptyText = 'Tidak ada hasil' }) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [activeIdx, setActiveIdx] = useState(0);
+  const ref = useRef(null);
+  const inputRef = useRef(null);
+  const listRef = useRef(null);
+
+  const selected = options.find(o => String(o.value) === String(value));
+  const filtered = query.trim()
+    ? options.filter(o => o.label.toLowerCase().includes(query.trim().toLowerCase()))
+    : options;
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setQuery(''); } };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  // Focus search on open
+  useEffect(() => {
+    if (open) { setQuery(''); setActiveIdx(0); setTimeout(() => inputRef.current?.focus(), 30); }
+  }, [open]);
+
+  const pick = (opt) => { onChange(opt.value); setOpen(false); setQuery(''); };
+
+  const onKeyDown = (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(i => Math.min(i + 1, filtered.length - 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(i => Math.max(i - 1, 0)); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (filtered[activeIdx]) pick(filtered[activeIdx]); }
+    else if (e.key === 'Escape') { setOpen(false); setQuery(''); }
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setOpen(o => !o)}
+        className={`w-full flex items-center justify-between gap-2 bg-zinc-950 border rounded-lg px-3 py-2.5 text-sm text-left transition cursor-pointer
+          ${disabled ? 'opacity-50 cursor-not-allowed border-zinc-800' : 'border-zinc-800 hover:border-zinc-700'}
+          ${open ? 'border-red-600/50 ring-1 ring-red-600/30' : ''}`}
+      >
+        <span className={`truncate ${selected ? 'text-zinc-100' : 'text-zinc-600'}`}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <ChevronDown className={`w-4 h-4 text-zinc-500 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-30 mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl overflow-hidden">
+          <div className="p-2 border-b border-zinc-800">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+              <input
+                ref={inputRef}
+                value={query}
+                onChange={e => { setQuery(e.target.value); setActiveIdx(0); }}
+                onKeyDown={onKeyDown}
+                placeholder="Cari…"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-md pl-8 pr-2 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-600/50"
+              />
+            </div>
+          </div>
+          <div ref={listRef} className="max-h-56 overflow-y-auto py-1">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-3 text-xs text-zinc-500 text-center">{emptyText}</div>
+            ) : filtered.map((o, i) => {
+              const isSel = String(o.value) === String(value);
+              const isActive = i === activeIdx;
+              return (
+                <button
+                  key={o.value ?? `opt-${i}`}
+                  type="button"
+                  onMouseEnter={() => setActiveIdx(i)}
+                  onClick={() => pick(o)}
+                  className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between gap-2 transition
+                    ${isActive ? 'bg-zinc-800' : ''} ${isSel ? 'text-red-400 font-medium' : 'text-zinc-200'}`}
+                >
+                  <span className="truncate">{o.label}</span>
+                  {isSel && <Check className="w-3.5 h-3.5 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const Button = ({ children, variant = 'primary', size = 'md', ...props }) => {
+  const variants = {
+    primary: 'bg-red-600 hover:bg-red-500 text-white border-red-600 disabled:bg-red-900/50 disabled:border-red-900/50 disabled:cursor-not-allowed',
+    secondary: 'bg-zinc-950 hover:bg-zinc-800 text-zinc-100 border-zinc-800',
+    ghost: 'bg-transparent hover:bg-zinc-950 text-zinc-400 hover:text-zinc-100 border-transparent',
+  };
+  const sizes = {
+    sm: 'px-3 py-1.5 text-xs',
+    md: 'px-4 py-2.5 text-sm',
+    lg: 'px-5 py-3 text-base',
+  };
+  return (
+    <button
+      {...props}
+      className={`inline-flex items-center justify-center gap-2 font-medium rounded-lg border transition ${variants[variant]} ${sizes[size]} ${props.className || ''}`}
+    >
+      {children}
+    </button>
+  );
+};
+
+const formatSize = (bytes) => {
+  if (!bytes) return '0KB';
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+};
+
+// ============================================================
+// PHOTO TILE
+// ============================================================
+
+const PhotoTile = ({ label, photo, onChange, required }) => {
+  const inputRef = useRef(null);
+
+  const handleSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    const initialPreview = URL.createObjectURL(file);
+    onChange({ status: 'compressing', preview: initialPreview, file: null, originalSize: file.size, compressedSize: 0 });
+
+    try {
+      const compressed = await imageCompression(file, {
+        maxSizeMB: 0.3, maxWidthOrHeight: 1280, useWebWorker: true, fileType: 'image/jpeg',
+      });
+      const compressedPreview = URL.createObjectURL(compressed);
+      URL.revokeObjectURL(initialPreview);
+      onChange({ status: 'ready', preview: compressedPreview, file: compressed, originalSize: file.size, compressedSize: compressed.size });
+    } catch (err) {
+      console.error('Compression failed:', err);
+      onChange({ status: 'error', preview: initialPreview, error: err.message });
+    }
+  };
+
+  const handleClear = (e) => {
+    e.stopPropagation();
+    if (photo?.preview) URL.revokeObjectURL(photo.preview);
+    onChange(null);
+  };
+
+  const hasPhoto = !!photo;
+  const savedPercent = photo?.status === 'ready' && photo.originalSize
+    ? Math.round((1 - photo.compressedSize / photo.originalSize) * 100) : 0;
+
+  return (
+    <div className="relative group">
+      <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5 font-medium">
+        {label}{required && <span className="text-red-500 ml-0.5">*</span>}
+      </div>
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className={`relative w-full aspect-square rounded-xl border-2 overflow-hidden transition ${
+          hasPhoto ? 'border-emerald-600/40 border-solid' : 'border-zinc-800 border-dashed bg-zinc-950 hover:border-red-600/40 hover:bg-red-600/5'
+        }`}
+      >
+        {hasPhoto ? (
+          <>
+            <img src={photo.preview} alt={label} className="absolute inset-0 w-full h-full object-cover" />
+            {photo.status === 'compressing' && (
+              <div className="absolute inset-0 bg-zinc-950/70 backdrop-blur-sm flex flex-col items-center justify-center">
+                <Loader2 className="w-6 h-6 text-white animate-spin" />
+                <span className="text-[9px] text-white mt-1.5 font-medium uppercase tracking-wider">Compressing…</span>
+              </div>
+            )}
+            {photo.status === 'ready' && (
+              <>
+                <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-emerald-600/100 flex items-center justify-center shadow-lg">
+                  <Check className="w-3 h-3 text-zinc-900" strokeWidth={3} />
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-zinc-950 via-zinc-950/70 to-transparent px-1.5 py-1.5">
+                  <div className="text-[9px] font-mono text-white/90 text-center leading-tight">
+                    {(photo.compressedSize / 1024).toFixed(0)}KB
+                    {savedPercent > 0 && <span className="text-emerald-400 ml-1">↓{savedPercent}%</span>}
+                  </div>
+                </div>
+              </>
+            )}
+            {photo.status === 'error' && (
+              <div className="absolute inset-0 bg-rose-600/10 flex flex-col items-center justify-center gap-1">
+                <AlertCircle className="w-5 h-5 text-rose-400" />
+                <span className="text-[9px] text-rose-300 font-medium">Failed</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-zinc-600 group-hover:text-red-500 transition">
+            <Camera className="w-6 h-6" />
+            <span className="text-[10px] font-medium">Upload</span>
+          </div>
+        )}
+      </button>
+      <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={handleSelect} className="hidden" />
+      {hasPhoto && photo.status !== 'compressing' && (
+        <button type="button" onClick={handleClear} className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-zinc-800/50 hover:bg-rose-600 border border-zinc-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition z-10">
+          <X className="w-3 h-3 text-zinc-100" />
+        </button>
+      )}
+    </div>
+  );
+};
+
+// ============================================================
+// LOGIN SCREEN
+// ============================================================
+
+function LoginScreen({ onLogin }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [remember, setRemember] = useState(true);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+
+  const handleSubmit = async () => {
+    setError(''); setLoading(true);
+    try {
+      const profile = await api.signIn(email, password);
+      onLogin(profile);
+    } catch (err) {
+      setError(err.message || 'Login gagal');
+      setLoading(false);
+    }
+  };
+
+  if (forgotOpen) return <ForgotPasswordScreen onBack={() => setForgotOpen(false)} />;
+
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4 py-8 relative overflow-hidden">
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-zinc-950" />
+        <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, rgba(220,38,38,0.25), transparent 40%), radial-gradient(circle at 80% 80%, rgba(220,38,38,0.15), transparent 50%)' }} />
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+      </div>
+
+      <div className="w-full max-w-md">
+        <div className="flex flex-col items-center mb-8">
+          <div className="relative mb-4">
+            <div className="absolute inset-0 bg-red-600 rounded-2xl blur-2xl opacity-30" />
+            <img src="/mobil1-logo.png" alt="Mobil1" className="relative h-16 w-auto drop-shadow-2xl" />
+          </div>
+          <h1 className="font-display font-bold text-2xl text-zinc-100 tracking-tight">Mobil1 POSM</h1>
+          <p className="text-xs text-zinc-500 uppercase tracking-[0.2em] mt-1">MD Field Operations</p>
+        </div>
+
+        <div className="bg-zinc-950 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6 shadow-2xl">
+          <div className="mb-5">
+            <h2 className="font-display font-bold text-lg text-zinc-100">Selamat datang kembali</h2>
+            <p className="text-sm text-zinc-500 mt-1">Sign in untuk lanjut tracking visit</p>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-rose-600/10 border border-rose-600/30 rounded-lg flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-rose-400">{error}</p>
+            </div>
+          )}
+
+          <Field label="Email" required>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <input type="email" placeholder="nama@mobil1.id" value={email}
+                onChange={e => setEmail(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                autoComplete="email"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-10 pr-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-600/50 focus:ring-1 focus:ring-red-600/30 transition" />
+            </div>
+          </Field>
+
+          <Field label="Password" required>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <input type={showPw ? 'text' : 'password'} placeholder="••••••••" value={password}
+                onChange={e => setPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                autoComplete="current-password"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-10 pr-10 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-600/50 focus:ring-1 focus:ring-red-600/30 transition" />
+              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition">
+                {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </Field>
+
+          <div className="flex items-center justify-between mb-5 mt-1">
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <div onClick={() => setRemember(!remember)} className={`w-4 h-4 rounded border flex items-center justify-center transition ${remember ? 'bg-red-600 border-red-600' : 'bg-zinc-950 border-zinc-700 group-hover:border-zinc-700'}`}>
+                {remember && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+              </div>
+              <span className="text-xs text-zinc-400">Ingat saya</span>
+            </label>
+            <button onClick={() => setForgotOpen(true)} className="text-xs text-red-500 hover:text-red-400 transition">Lupa password?</button>
+          </div>
+
+          <Button variant="primary" size="lg" className="w-full" onClick={handleSubmit} disabled={loading || !email || !password}>
+            {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Memverifikasi…</> : <>Sign In<ChevronRight className="w-4 h-4" /></>}
+          </Button>
+
+          <div className="mt-4 pt-4 border-t border-zinc-800">
+            <button className="w-full flex items-center justify-center gap-2 py-2 text-xs text-zinc-500 hover:text-zinc-300 transition">
+              <Fingerprint className="w-4 h-4" />
+              Gunakan biometric (jika tersedia)
+            </button>
+          </div>
+        </div>
+
+        {MOCK_MODE && (
+          <div className="mt-5 p-3 bg-zinc-950 border border-zinc-800 rounded-lg">
+            <div className="flex items-start gap-2 text-[11px] text-zinc-500">
+              <Shield className="w-3.5 h-3.5 text-zinc-600 shrink-0 mt-0.5" />
+              <div>
+                <div className="text-amber-400 font-medium mb-0.5">🟡 Mode Demo (Mock Data)</div>
+                <span className="text-zinc-400 font-medium">MD:</span> <span className="font-mono text-zinc-400">budi@mobil1.id</span> / <span className="font-mono text-zinc-400">mobil1</span><br/>
+                <span className="text-zinc-400 font-medium">Admin:</span> <span className="font-mono text-zinc-400">admin@mobil1.id</span> / <span className="font-mono text-zinc-400">mobil1</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <p className="text-center text-[11px] text-zinc-600 mt-6">© 2026 Mobil1 Indonesia · Powered by ExxonMobil</p>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// FORGOT PASSWORD
+// ============================================================
+
+function ForgotPasswordScreen({ onBack }) {
+  const [email, setEmail] = useState('');
+  const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async () => {
+    setError(''); setLoading(true);
+    try {
+      await api.sendPasswordReset(email);
+      setSent(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4 py-8 bg-zinc-950">
+      <div className="w-full max-w-md">
+        <button onClick={onBack} className="mb-4 text-sm text-zinc-400 hover:text-zinc-100 transition flex items-center gap-1.5">
+          <ChevronRight className="w-4 h-4 rotate-180" /> Kembali ke login
+        </button>
+
+        <div className="bg-zinc-950 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6 shadow-2xl">
+          {sent ? (
+            <div className="text-center py-4">
+              <div className="w-14 h-14 rounded-full bg-emerald-600/100/10 border border-emerald-500/30 mx-auto flex items-center justify-center mb-4">
+                <Mail className="w-6 h-6 text-emerald-500" />
+              </div>
+              <h2 className="font-display font-bold text-lg text-zinc-100 mb-2">Email terkirim</h2>
+              <p className="text-sm text-zinc-400 leading-relaxed">
+                Cek inbox <span className="text-zinc-100 font-medium">{email}</span> untuk link reset password. Link berlaku 1 jam.
+              </p>
+              <Button variant="secondary" className="w-full mt-5" onClick={onBack}>Kembali ke Login</Button>
+            </div>
+          ) : (
+            <>
+              <h2 className="font-display font-bold text-lg text-zinc-100 mb-2">Lupa Password?</h2>
+              <p className="text-sm text-zinc-500 mb-5">Masukkan email terdaftar — kami akan kirim link untuk reset password.</p>
+
+              {error && (
+                <div className="mb-4 p-3 bg-rose-600/10 border border-rose-600/30 rounded-lg flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-rose-400">{error}</p>
+                </div>
+              )}
+
+              <Field label="Email" required>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="nama@mobil1.id"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-10 pr-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-600/50 focus:ring-1 focus:ring-red-600/30 transition" />
+                </div>
+              </Field>
+
+              <Button variant="primary" size="lg" className="w-full mt-2" onClick={handleSubmit} disabled={loading || !email}>
+                {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Mengirim…</> : <>Kirim Link Reset<ChevronRight className="w-4 h-4" /></>}
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// MD VIEW — Form & History
+// ============================================================
+
+function MDView({ currentMD, refreshKey }) {
+  const [tab, setTab] = useState('new');
+  const [visits, setVisits] = useState([]);
+  const [bengkels, setBengkels] = useState([]);
+  const [regions, setRegions] = useState([]);
+  const [kotas, setKotas] = useState([]);
+  const [distributors, setDistributors] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      api.fetchVisits({ mdId: currentMD.id }),
+      api.fetchBengkels(),
+      api.fetchRegions(),
+      api.fetchKotas(),
+      api.fetchDistributors(),
+    ]).then(([v, b, r, k, d]) => {
+      setVisits(v); setBengkels(b); setRegions(r); setKotas(k); setDistributors(d); setLoading(false);
+    }).catch(err => { console.error(err); setLoading(false); });
+  }, [currentMD.id, refreshKey]);
+
+  const reloadVisits = async () => {
+    const v = await api.fetchVisits({ mdId: currentMD.id });
+    setVisits(v);
+  };
+
+  if (loading) return <Loading />;
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div className="flex gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-xl mb-5">
+        <button onClick={() => setTab('new')} className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition ${tab === 'new' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>
+          <ClipboardList className="w-4 h-4 inline mr-2" /> Visit Baru
+        </button>
+        <button onClick={() => setTab('history')} className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition ${tab === 'history' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>
+          <Activity className="w-4 h-4 inline mr-2" /> History ({visits.length})
+        </button>
+      </div>
+
+      {tab === 'new'
+        ? <VisitForm currentMD={currentMD} bengkels={bengkels} regions={regions} kotas={kotas} distributors={distributors} onSubmitted={() => { reloadVisits(); setTab('history'); }} />
+        : <VisitHistory visits={visits} bengkels={bengkels} kotas={kotas} distributors={distributors} />
+      }
+    </div>
+  );
+}
+
+function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmitted }) {
+  const [form, setForm] = useState({
+    regionId: currentMD.region_id || '',
+    kotaId: '',
+    bengkelId: '',
+    distributorId: '',
+    date: new Date().toISOString().slice(0, 10),
+    pic: '', phone: '',
+    status: 'Pemasangan', remarks: '',
+    photos: { tampakDepan: null, in: null, out: null, spandukBefore: null, spandukAfter: null, posterBefore: null, posterAfter: null },
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [backfilled, setBackfilled] = useState(false);
+  const [error, setError] = useState('');
+
+  // GPS user state — di-capture saat bengkel dipilih
+  const [gps, setGps] = useState({ status: 'idle', lat: null, lng: null, accuracy: null, error: null });
+
+  const filteredKotas = kotas.filter(k => k.region_id === form.regionId);
+  const filteredBengkels = bengkels.filter(b => !form.kotaId || b.kota_id === form.kotaId);
+  const filteredDistributors = distributors.filter(d => d.region_id === form.regionId);
+  const selectedBengkel = bengkels.find(b => b.id === form.bengkelId);
+
+  // Fetch GPS user
+  const fetchGPS = () => {
+    if (!navigator.geolocation) {
+      setGps({ status: 'error', lat: null, lng: null, accuracy: null, error: 'GPS tidak didukung browser' });
+      return;
+    }
+    setGps(g => ({ ...g, status: 'loading', error: null }));
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setGps({
+        status: 'ready',
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+        error: null,
+      }),
+      (err) => {
+        const msg = err.code === 1 ? 'Izin GPS ditolak' : err.code === 2 ? 'Posisi tidak tersedia' : err.code === 3 ? 'GPS timeout' : 'GPS gagal';
+        setGps({ status: 'error', lat: null, lng: null, accuracy: null, error: msg });
+      },
+      { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 }
+    );
+  };
+
+  // Trigger GPS saat bengkel dipilih. (Distributor TIDAK auto-set lagi —
+  // dipilih bebas oleh MD per visit, karena 1 bengkel bisa dicover banyak distributor.)
+  useEffect(() => {
+    if (selectedBengkel) {
+      fetchGPS();
+    }
+  }, [form.bengkelId]);
+
+  const setPhoto = (key, val) => setForm(f => ({ ...f, photos: { ...f.photos, [key]: val } }));
+  const photoCount = Object.values(form.photos).filter(p => p?.status === 'ready').length;
+  const totalSize = Object.values(form.photos).filter(p => p?.status === 'ready').reduce((s, p) => s + p.compressedSize, 0);
+  const anyCompressing = Object.values(form.photos).some(p => p?.status === 'compressing');
+
+  const requiredPhotos = ['in', 'tampakDepan', 'out'];
+  const hasAllRequiredPhotos = requiredPhotos.every(k => form.photos[k]?.status === 'ready');
+  const canSubmit = form.bengkelId && form.distributorId && form.pic && form.phone && hasAllRequiredPhotos && !anyCompressing && !submitting;
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    setSubmitting(true); setError('');
+
+    try {
+      // GPS sudah ditangkap saat bengkel dipilih (state gps). Fallback ke bengkel coord kalau gagal.
+      const lat = gps.status === 'ready' ? gps.lat : selectedBengkel?.lat;
+      const lng = gps.status === 'ready' ? gps.lng : selectedBengkel?.lng;
+
+      // Kalau bengkel belum punya koord di master, request backfill ke api
+      const bengkelLacksCoords = selectedBengkel?.lat == null || selectedBengkel?.lng == null;
+
+      const { bengkelBackfilled } = await api.createVisit({
+        mdId: currentMD.id,
+        bengkelId: form.bengkelId,
+        distributorId: form.distributorId,
+        visitDate: form.date,
+        picName: form.pic,
+        picPhone: form.phone,
+        status: form.status,
+        remarks: form.remarks,
+        lat, lng,
+        photos: form.photos,
+        backfillBengkelCoords: bengkelLacksCoords,
+      });
+
+      setSubmitted(true);
+      setBackfilled(bengkelBackfilled);
+      setTimeout(() => { setSubmitted(false); setBackfilled(false); onSubmitted(); }, 2000);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Gagal menyimpan visit');
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      {submitted && (
+        <div className="mb-4 p-4 bg-emerald-600/10 border border-emerald-600/30 rounded-xl flex items-start gap-3">
+          <div className="w-8 h-8 rounded-full bg-emerald-600/100 flex items-center justify-center shrink-0">
+            <Check className="w-5 h-5 text-zinc-900" strokeWidth={3} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-emerald-400">Visit berhasil disimpan</p>
+            <p className="text-xs text-emerald-400">Foto sudah diupload ke storage…</p>
+            {backfilled && (
+              <div className="mt-2 p-2 bg-sky-600/10 border border-sky-600/30 rounded-lg flex items-start gap-2">
+                <MapPin className="w-3.5 h-3.5 text-sky-400 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-sky-400">
+                  Koordinat bengkel di master data otomatis ter-update dari GPS Anda. Visit berikutnya akan langsung pakai koord ini.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-4 p-3 bg-rose-600/10 border border-rose-600/30 rounded-lg flex items-start gap-2.5">
+          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+          <p className="text-xs text-rose-400">{error}</p>
+        </div>
+      )}
+
+      <Section title="Info Bengkel" subtitle="Pilih bengkel target visit" icon={Building2}>
+        <Field label="Region" required>
+          <SearchableSelect
+            value={form.regionId}
+            onChange={(val) => setForm({ ...form, regionId: val, kotaId: '', bengkelId: '', distributorId: '' })}
+            options={regions.map(r => ({ value: r.id, label: r.name }))}
+            placeholder="Pilih region…"
+          />
+        </Field>
+        <Field label="Kota" required>
+          <SearchableSelect
+            value={form.kotaId}
+            onChange={(val) => setForm({ ...form, kotaId: val, bengkelId: '' })}
+            options={filteredKotas.map(k => ({ value: k.id, label: k.name }))}
+            placeholder="Pilih kota…"
+            disabled={!form.regionId}
+            emptyText="Tidak ada kota di region ini"
+          />
+        </Field>
+        <Field label="Distributor" required>
+          <SearchableSelect
+            value={form.distributorId}
+            onChange={(val) => setForm({ ...form, distributorId: val })}
+            options={filteredDistributors.map(d => ({ value: d.id, label: d.name }))}
+            placeholder="Pilih distributor…"
+            disabled={!form.regionId}
+            emptyText="Tidak ada distributor di region ini"
+          />
+        </Field>
+
+        <Field label="Kode - Nama Bengkel" required>
+          <SearchableSelect
+            value={form.bengkelId}
+            onChange={(val) => setForm({ ...form, bengkelId: val })}
+            options={filteredBengkels.map(b => ({ value: b.id, label: `${b.code} - ${b.name}` }))}
+            placeholder="Pilih bengkel…"
+            disabled={!form.kotaId}
+            emptyText="Belum ada bengkel di kota ini"
+          />
+          {form.kotaId && filteredBengkels.length === 0 && (
+            <p className="text-[11px] text-amber-400 mt-1.5 flex items-center gap-1.5">
+              <AlertCircle className="w-3 h-3" />
+              Belum ada bengkel terdaftar di kota ini.
+            </p>
+          )}
+        </Field>
+
+        {selectedBengkel && (
+          <div className="mt-3">
+            <BengkelMap
+              lat={selectedBengkel.lat}
+              lng={selectedBengkel.lng}
+              name={selectedBengkel.name}
+              code={selectedBengkel.code}
+              userLat={gps.lat}
+              userLng={gps.lng}
+              accuracy={gps.accuracy}
+              gpsStatus={gps.status}
+              gpsError={gps.error}
+              onRefetchGPS={fetchGPS}
+              onUserLocationChange={(lat, lng) => setGps(g => ({ ...g, status: 'ready', lat, lng, accuracy: null, error: null }))}
+            />
+          </div>
+        )}
+      </Section>
+
+      <Section title="Detail Kunjungan" icon={Calendar}>
+        <Field label="Tanggal Visit" required>
+          <Input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+        </Field>
+        <Field label="Nama PIC / Owner" required>
+          <Input placeholder="Mis. Pak Hendra" value={form.pic} onChange={e => setForm({ ...form, pic: e.target.value })} />
+        </Field>
+        <Field label="No. Telpon" required>
+          <Input type="tel" placeholder="08xx-xxxx-xxxx" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+        </Field>
+      </Section>
+
+      <Section title="Dokumentasi Foto" subtitle={`${photoCount} / 7 foto · Total: ${formatSize(totalSize)} (terkompres)`} icon={Camera}>
+        <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Saat Tiba</div>
+        <div className="grid grid-cols-3 gap-3">
+          <PhotoTile label="Foto In" required photo={form.photos.in} onChange={v => setPhoto('in', v)} />
+        </div>
+
+        <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Dokumentasi POSM</div>
+        <div className="grid grid-cols-3 gap-3">
+          <PhotoTile label="Tampak Depan" required photo={form.photos.tampakDepan} onChange={v => setPhoto('tampakDepan', v)} />
+          <PhotoTile label="Spanduk Before" photo={form.photos.spandukBefore} onChange={v => setPhoto('spandukBefore', v)} />
+          <PhotoTile label="Spanduk After" photo={form.photos.spandukAfter} onChange={v => setPhoto('spandukAfter', v)} />
+          <PhotoTile label="Poster Before" photo={form.photos.posterBefore} onChange={v => setPhoto('posterBefore', v)} />
+          <PhotoTile label="Poster After" photo={form.photos.posterAfter} onChange={v => setPhoto('posterAfter', v)} />
+        </div>
+
+        <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Saat Pulang</div>
+        <div className="grid grid-cols-3 gap-3">
+          <PhotoTile label="Foto Out" required photo={form.photos.out} onChange={v => setPhoto('out', v)} />
+        </div>
+        {photoCount > 0 && (
+          <div className="mt-3 p-2.5 bg-emerald-600/10 border border-emerald-200 rounded-lg flex items-center gap-2 text-xs">
+            <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <span className="text-emerald-400">Foto sudah dikompres siap upload ke B2. Hemat bandwidth ~85-90%.</span>
+          </div>
+        )}
+      </Section>
+
+      <Section title="Status & Remarks" icon={Check}>
+        <Field label="Status Kunjungan" required>
+          <div className="grid grid-cols-2 gap-2">
+            {STATUS_OPTIONS.map(s => (
+              <button key={s} onClick={() => setForm({ ...form, status: s })}
+                className={`py-2.5 rounded-lg text-xs font-medium border transition ${
+                  form.status === s ? `${STATUS_STYLES[s].bg} ${STATUS_STYLES[s].text} ${STATUS_STYLES[s].border}` : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-300'
+                }`}>{s}</button>
+            ))}
+          </div>
+        </Field>
+        <Field label="Remarks">
+          <Textarea rows={3} placeholder="Catatan tambahan…" value={form.remarks} onChange={e => setForm({ ...form, remarks: e.target.value })} />
+        </Field>
+      </Section>
+
+      <Button variant="primary" size="lg" className="w-full" onClick={handleSubmit} disabled={!canSubmit}>
+        {submitting ? <><Loader2 className="w-4 h-4 animate-spin" />Menyimpan & upload foto…</> : <>Simpan Visit <ChevronRight className="w-4 h-4" /></>}
+      </Button>
+    </>
+  );
+}
+
+function VisitHistory({ visits, bengkels, kotas, distributors }) {
+  if (visits.length === 0) {
+    return <div className="text-center py-12 text-zinc-500 text-sm">Belum ada visit tercatat.</div>;
+  }
+
+  const findBengkel = (id) => bengkels.find(b => b.id === id);
+  const findKota = (id) => kotas.find(k => k.id === id);
+  const findDist = (id) => distributors.find(d => d.id === id);
+
+  return (
+    <div className="space-y-3">
+      {visits.map(v => {
+        const b = findBengkel(v.bengkel_id);
+        const k = b ? findKota(b.kota_id) : null;
+        const d = findDist(v.distributor_id);
+        const photoCount = ['photo_tampak_depan','photo_in','photo_out','photo_spanduk_before','photo_spanduk_after','photo_poster_before','photo_poster_after']
+          .filter(key => v[key]).length;
+        return (
+          <div key={v.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div className="min-w-0">
+                <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono">{b?.code || '—'}</div>
+                <h4 className="text-sm font-semibold text-zinc-100 truncate">{b?.name || v.bengkel_name || '—'}</h4>
+                <div className="text-xs text-zinc-500 mt-0.5">{k?.name || v.kota_name || '—'} · {d?.name || v.distributor_name || '—'}</div>
+              </div>
+              <StatusBadge status={v.status} />
+            </div>
+            <div className="flex items-center gap-3 text-xs text-zinc-500 pt-2 border-t border-zinc-800 mt-2">
+              <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{v.visit_date}</span>
+              <span className="flex items-center gap-1"><Camera className="w-3 h-3" />{photoCount}/7 foto</span>
+              <span className="flex items-center gap-1"><User className="w-3 h-3" />{v.pic_name}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ============================================================
+// ADMIN VIEW
+// ============================================================
+
+function AdminView() {
+  const [tab, setTab] = useState('dashboard');
+  const [visits, setVisits] = useState([]);
+  const [mds, setMds] = useState([]);
+  const [bengkels, setBengkels] = useState([]);
+  const [regions, setRegions] = useState([]);
+  const [kotas, setKotas] = useState([]);
+  const [distributors, setDistributors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [detailVisitId, setDetailVisitId] = useState(null);
+
+  const loadAll = () => {
+    setLoading(true);
+    Promise.all([
+      api.fetchVisits(), api.fetchMDs(), api.fetchBengkels(),
+      api.fetchRegions(), api.fetchKotas(), api.fetchDistributors(),
+    ]).then(([v, m, b, r, k, d]) => {
+      setVisits(v); setMds(m); setBengkels(b); setRegions(r); setKotas(k); setDistributors(d);
+      setLoading(false);
+    }).catch(err => { console.error(err); setLoading(false); });
+  };
+
+  useEffect(loadAll, []);
+
+  if (loading) return <Loading />;
+
+  const openDetail = (id) => setDetailVisitId(id);
+  const detailVisit = detailVisitId ? visits.find(v => v.id === detailVisitId) : null;
+  const detailBengkel = detailVisit ? bengkels.find(b => b.id === detailVisit.bengkel_id) : null;
+  const detailKota = detailBengkel ? kotas.find(k => k.id === detailBengkel.kota_id) : null;
+  const detailDistributor = detailVisit ? distributors.find(d => d.id === detailVisit.distributor_id) : null;
+  const detailMD = detailVisit ? mds.find(m => m.id === detailVisit.md_id) : null;
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      <div className="flex gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-xl mb-5 overflow-x-auto">
+        {[
+          { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+          { id: 'visits', label: 'Visits', icon: ClipboardList },
+          { id: 'coverage', label: 'Coverage Map', icon: MapIcon },
+          { id: 'master', label: 'Master Data', icon: Database },
+        ].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className={`flex-1 min-w-fit py-2.5 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${tab === t.id ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>
+            <t.icon className="w-4 h-4 inline mr-2" />{t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'dashboard' && <DashboardTab visits={visits} mds={mds} onOpenVisit={openDetail} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} />}
+      {tab === 'visits' && <VisitsTab visits={visits} mds={mds} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} onOpenVisit={openDetail} />}
+      {tab === 'coverage' && <CoverageTab visits={visits} mds={mds} bengkels={bengkels} kotas={kotas} regions={regions} distributors={distributors} onOpenVisit={openDetail} />}
+      {tab === 'master' && <MasterTab regions={regions} kotas={kotas} distributors={distributors} bengkels={bengkels} mds={mds} onChange={loadAll} />}
+
+      {detailVisit && (
+        <VisitDetailModal
+          visit={detailVisit}
+          bengkel={detailBengkel}
+          kota={detailKota}
+          distributor={detailDistributor}
+          md={detailMD}
+          onClose={() => setDetailVisitId(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// VISITS TAB — list dengan filter & sort, klik buka detail
+// ============================================================
+
+function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpenVisit }) {
+  const [filters, setFilters] = useState({
+    search: '',
+    mdId: 'all',
+    regionId: 'all',
+    distributorId: 'all',
+    status: 'all',
+    month: 'all',
+  });
+
+  const findBengkel = (id) => bengkels.find(b => b.id === id);
+  const findKota = (id) => kotas.find(k => k.id === id);
+  const findRegion = (id) => regions.find(r => r.id === id);
+  const findMD = (id) => mds.find(m => m.id === id);
+
+  // Build filtered list
+  const filtered = useMemo(() => {
+    return visits.filter(v => {
+      const b = findBengkel(v.bengkel_id);
+      const k = b ? findKota(b.kota_id) : null;
+      const md = findMD(v.md_id);
+
+      if (filters.mdId !== 'all' && v.md_id !== filters.mdId) return false;
+      if (filters.regionId !== 'all' && k?.region_id !== filters.regionId) return false;
+      if (filters.distributorId !== 'all' && v.distributor_id !== filters.distributorId) return false;
+      if (filters.status !== 'all' && v.status !== filters.status) return false;
+      if (filters.month !== 'all' && !v.visit_date.startsWith(filters.month)) return false;
+
+      if (filters.search.trim()) {
+        const q = filters.search.toLowerCase();
+        const haystack = `${b?.code || ''} ${b?.name || v.bengkel_name || ''} ${md?.full_name || v.md_name || ''} ${v.pic_name || ''}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    }).sort((a, b) => b.visit_date.localeCompare(a.visit_date) || (b.created_at || '').localeCompare(a.created_at || ''));
+  }, [visits, filters, bengkels, kotas, mds]);
+
+  const availableMonths = useMemo(() => {
+    const set = new Set(visits.map(v => v.visit_date.slice(0, 7)));
+    return [...set].sort().reverse();
+  }, [visits]);
+
+  return (
+    <div>
+      <div className="mb-5">
+        <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display">Daftar Visit</h2>
+        <p className="text-sm text-zinc-500 mt-1">{filtered.length} dari {visits.length} visit · klik untuk lihat detail</p>
+      </div>
+
+      {/* Filter bar */}
+      <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 mb-4 grid grid-cols-2 md:grid-cols-6 gap-2">
+        <div className="col-span-2 md:col-span-2 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <input value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })}
+            placeholder="Cari kode/nama bengkel, MD, PIC…"
+            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-600/50" />
+        </div>
+        <Select value={filters.month} onChange={e => setFilters({ ...filters, month: e.target.value })}>
+          <option value="all">Semua Bulan</option>
+          {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
+        </Select>
+        <Select value={filters.mdId} onChange={e => setFilters({ ...filters, mdId: e.target.value })}>
+          <option value="all">Semua MD</option>
+          {mds.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+        </Select>
+        <Select value={filters.regionId} onChange={e => setFilters({ ...filters, regionId: e.target.value })}>
+          <option value="all">Semua Region</option>
+          {regions.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+        </Select>
+        <Select value={filters.distributorId} onChange={e => setFilters({ ...filters, distributorId: e.target.value })}>
+          <option value="all">Semua Distributor</option>
+          {distributors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </Select>
+        <Select value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}>
+          <option value="all">Semua Status</option>
+          {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+        </Select>
+      </div>
+
+      {/* List */}
+      {filtered.length === 0 ? (
+        <div className="text-center py-12 text-zinc-500 text-sm bg-zinc-900/30 border border-zinc-800 rounded-xl">
+          Tidak ada visit yang sesuai filter.
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {filtered.map(v => {
+            const b = findBengkel(v.bengkel_id);
+            const k = b ? findKota(b.kota_id) : null;
+            const r = k ? findRegion(k.region_id) : null;
+            const md = findMD(v.md_id);
+            const photoCount = PHOTO_KEYS.filter(key => v[key]).length;
+            return (
+              <button key={v.id} onClick={() => onOpenVisit(v.id)}
+                className="w-full text-left bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg px-3 py-2 transition group flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono shrink-0">{b?.code || '—'}</span>
+                    <span className="text-sm font-semibold text-zinc-100 truncate">{b?.name || v.bengkel_name || '—'}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 mt-0.5 truncate">
+                    <Calendar className="w-3 h-3 shrink-0" /><span>{v.visit_date}</span>
+                    <span className="text-zinc-700">·</span>
+                    <User className="w-3 h-3 shrink-0" /><span className="truncate">{md?.full_name || v.md_name || '—'}</span>
+                    <span className="text-zinc-700 hidden sm:inline">·</span>
+                    <MapPin className="w-3 h-3 shrink-0 hidden sm:inline" /><span className="truncate hidden sm:inline">{k?.name || '—'}</span>
+                    <span className="text-zinc-700">·</span>
+                    <Camera className="w-3 h-3 shrink-0" /><span className="shrink-0">{photoCount}/7</span>
+                  </div>
+                </div>
+                <StatusBadge status={v.status} />
+                <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-red-300 transition shrink-0" />
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onOpenVisit }) {
+  const [filters, setFilters] = useState({ month: 'all', mdId: 'all', regionId: 'all', distributorId: 'all' });
+
+  const availableMonths = useMemo(() => {
+    const set = new Set(visits.map(v => v.visit_date.slice(0, 7)));
+    const arr = [...set].sort().reverse();
+    return arr.length ? arr : [new Date().toISOString().slice(0, 7)];
+  }, [visits]);
+
+  // Default month ke yang terbaru
+  useEffect(() => {
+    if (filters.month === 'all' && availableMonths.length > 0) {
+      setFilters(f => ({ ...f, month: availableMonths[0] }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableMonths.join(',')]);
+
+  // Apply filters
+  const filteredVisits = useMemo(() => visits.filter(v => {
+    const b = bengkels.find(x => x.id === v.bengkel_id);
+    const k = b ? kotas.find(x => x.id === b.kota_id) : null;
+    if (filters.month !== 'all' && !v.visit_date.startsWith(filters.month)) return false;
+    if (filters.mdId !== 'all' && v.md_id !== filters.mdId) return false;
+    if (filters.regionId !== 'all' && k?.region_id !== filters.regionId) return false;
+    if (filters.distributorId !== 'all' && v.distributor_id !== filters.distributorId) return false;
+    return true;
+  }), [visits, filters, bengkels, kotas]);
+
+  // MDs yang relevan dengan filter (region/distributor)
+  const relevantMDs = useMemo(() => {
+    if (filters.regionId === 'all') return mds;
+    return mds.filter(m => m.region_id === filters.regionId);
+  }, [mds, filters.regionId]);
+
+  const chartData = relevantMDs.map(md => {
+    const actual = filteredVisits.filter(v => v.md_id === md.id).length;
+    const target = md.monthly_target || 30;
+    return { name: md.full_name.split(' ')[0], Actual: actual, Target: target, achievement: Math.round((actual / target) * 100) };
+  });
+
+  const totalVisits = filteredVisits.length;
+  const totalTarget = relevantMDs.reduce((s, m) => s + (m.monthly_target || 30), 0);
+  const completionRate = totalTarget > 0 ? Math.round((totalVisits / totalTarget) * 100) : 0;
+  const pemasangan = filteredVisits.filter(v => v.status === 'Pemasangan').length;
+
+  const handleExport = () => {
+    const ctx = { bengkels, kotas, regions, distributors, mds };
+    const rows = filteredVisits.map(v => visitToCSVRow(v, ctx));
+    const fname = `visits_${filters.month}_${new Date().toISOString().slice(0, 10)}.csv`;
+    exportToCSV(rows, fname);
+  };
+
+  // Recent 5 visits dari filter
+  const recentVisits = useMemo(() => [...filteredVisits]
+    .sort((a, b) => (b.created_at || b.visit_date).localeCompare(a.created_at || a.visit_date))
+    .slice(0, 5), [filteredVisits]);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
+        <div>
+          <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display">Dashboard</h2>
+          <p className="text-sm text-zinc-500 mt-1">Performa tracking POSM · {filteredVisits.length} visit ter-filter</p>
+        </div>
+        <Button variant="secondary" onClick={handleExport} disabled={filteredVisits.length === 0}>
+          <Download className="w-4 h-4" />Export CSV ({filteredVisits.length})
+        </Button>
+      </div>
+
+      {/* Filter bar */}
+      <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 mb-5 grid grid-cols-2 md:grid-cols-4 gap-2">
+        <Select value={filters.month} onChange={e => setFilters({ ...filters, month: e.target.value })}>
+          <option value="all">Semua Bulan</option>
+          {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
+        </Select>
+        <Select value={filters.mdId} onChange={e => setFilters({ ...filters, mdId: e.target.value })}>
+          <option value="all">Semua MD</option>
+          {mds.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+        </Select>
+        <Select value={filters.regionId} onChange={e => setFilters({ ...filters, regionId: e.target.value })}>
+          <option value="all">Semua Region</option>
+          {regions.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+        </Select>
+        <Select value={filters.distributorId} onChange={e => setFilters({ ...filters, distributorId: e.target.value })}>
+          <option value="all">Semua Distributor</option>
+          {distributors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        {[
+          { label: 'Total Visit', value: totalVisits, sub: `dari ${totalTarget} target`, icon: Activity, color: 'red' },
+          { label: 'Achievement', value: `${completionRate}%`, sub: 'completion rate', icon: Target, color: 'emerald' },
+          { label: 'Pemasangan', value: pemasangan, sub: 'POSM aktif', icon: Check, color: 'sky' },
+          { label: 'Active MDs', value: relevantMDs.length, sub: 'merchandiser', icon: Users, color: 'amber' },
+        ].map((k, i) => (
+          <div key={i} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-zinc-500 uppercase tracking-wider font-medium">{k.label}</span>
+              <k.icon className={`w-4 h-4 text-${k.color}-500`} />
+            </div>
+            <div className="text-2xl font-bold text-zinc-100 mb-0.5">{k.value}</div>
+            <div className="text-xs text-zinc-500">{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      <Section title="Visit per MD" subtitle={`Actual vs Target — ${filters.month === 'all' ? 'semua bulan' : filters.month}`} icon={Activity}>
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+              <XAxis dataKey="name" stroke="#71717a" tick={{ fontSize: 11 }} />
+              <YAxis stroke="#71717a" tick={{ fontSize: 11 }} />
+              <Tooltip contentStyle={{ background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', fontSize: '12px' }} cursor={{ fill: 'rgba(239,68,68,0.05)' }} />
+              <Legend wrapperStyle={{ fontSize: '12px' }} />
+              <Bar dataKey="Target" fill="#3f3f46" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Actual" fill="#dc2626" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="mt-5 space-y-2">
+          {[...chartData].sort((a, b) => b.achievement - a.achievement).map((md, i) => (
+            <div key={md.name} className="flex items-center gap-3 p-2.5 rounded-lg bg-zinc-950 border border-zinc-800">
+              <div className="w-6 h-6 rounded-full bg-zinc-800/50 flex items-center justify-center text-[10px] font-mono text-zinc-400">{i + 1}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-zinc-200">{md.name}</div>
+                <div className="h-1 bg-zinc-800/50 rounded-full mt-1 overflow-hidden">
+                  <div className={`h-full rounded-full ${md.achievement >= 80 ? 'bg-emerald-600/100' : md.achievement >= 50 ? 'bg-amber-600/100' : 'bg-rose-600/100'}`} style={{ width: `${Math.min(md.achievement, 100)}%` }} />
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm font-semibold text-zinc-100">{md.Actual}<span className="text-zinc-500">/{md.Target}</span></div>
+                <div className="text-[10px] text-zinc-500">{md.achievement}%</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* Recent visits — quick link ke detail */}
+      {recentVisits.length > 0 && (
+        <Section title="Visit Terbaru" subtitle="Klik untuk lihat detail · 5 terbaru sesuai filter" icon={ClipboardList}>
+          <div className="space-y-1.5">
+            {recentVisits.map(v => {
+              const b = bengkels.find(x => x.id === v.bengkel_id);
+              const md = mds.find(m => m.id === v.md_id);
+              const photoCount = PHOTO_KEYS.filter(key => v[key]).length;
+              return (
+                <button key={v.id} onClick={() => onOpenVisit?.(v.id)}
+                  className="w-full text-left flex items-center gap-3 p-3 rounded-lg bg-zinc-950 border border-zinc-800 hover:border-zinc-700 transition group">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono">{b?.code || '—'} · {v.visit_date}</div>
+                    <div className="text-sm font-semibold text-zinc-100 truncate">{b?.name || v.bengkel_name || '—'}</div>
+                    <div className="text-xs text-zinc-500 truncate">{md?.full_name || v.md_name || '—'} · {photoCount}/7 foto</div>
+                  </div>
+                  <StatusBadge status={v.status} />
+                  <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-red-300 transition" />
+                </button>
+              );
+            })}
+          </div>
+        </Section>
+      )}
+    </div>
+  );
+}
+
+const MD_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#a855f7', '#ec4899', '#06b6d4', '#84cc16'];
+
+// Fit map ke semua titik visit
+function FitToVisits({ points }) {
+  const map = useMap();
+  useEffect(() => {
+    if (points.length === 0) return;
+    if (points.length === 1) {
+      map.flyTo(points[0], 13, { duration: 0.6 });
+    } else {
+      const bounds = L.latLngBounds(points);
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+    }
+  }, [JSON.stringify(points), map]);
+  return null;
+}
+
+function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOpenVisit }) {
+  const [filters, setFilters] = useState({ mdId: 'all', regionId: 'all', distributorId: 'all', month: 'all' });
+
+  // Enrich visits with bengkel lat/lng if not stored on visit
+  const enriched = useMemo(() => visits.map(v => {
+    const b = bengkels.find(x => x.id === v.bengkel_id);
+    return {
+      ...v,
+      visit_lat: v.visit_lat ?? b?.lat,
+      visit_lng: v.visit_lng ?? b?.lng,
+      _bengkel: b,
+      _kota: b ? kotas.find(k => k.id === b.kota_id) : null,
+    };
+  }), [visits, bengkels, kotas]);
+
+  const filtered = useMemo(() => enriched.filter(v => {
+    if (!v.visit_lat || !v.visit_lng) return false;
+    if (filters.month !== 'all' && !v.visit_date.startsWith(filters.month)) return false;
+    if (filters.mdId !== 'all' && v.md_id !== filters.mdId) return false;
+    if (filters.regionId !== 'all' && v._kota?.region_id !== filters.regionId) return false;
+    if (filters.distributorId !== 'all' && v.distributor_id !== filters.distributorId) return false;
+    return true;
+  }), [enriched, filters]);
+
+  const availableMonths = useMemo(() => {
+    const set = new Set(visits.map(v => v.visit_date.slice(0, 7)));
+    return [...set].sort().reverse();
+  }, [visits]);
+
+  const points = filtered.map(v => [v.visit_lat, v.visit_lng]);
+
+  // Group visits by location (round to 5 decimal ≈ 1m) untuk deteksi visit di titik sama
+  const grouped = useMemo(() => {
+    const map = new Map();
+    filtered.forEach(v => {
+      const key = `${v.visit_lat.toFixed(5)},${v.visit_lng.toFixed(5)}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(v);
+    });
+    return [...map.values()];
+  }, [filtered]);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
+        <div>
+          <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display">Coverage Map</h2>
+          <p className="text-sm text-zinc-500 mt-1">{filtered.length} titik visit di {grouped.length} lokasi unik</p>
+        </div>
+      </div>
+
+      {/* Filter bar */}
+      <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 mb-4 grid grid-cols-2 md:grid-cols-4 gap-2">
+        <Select value={filters.month} onChange={e => setFilters({ ...filters, month: e.target.value })}>
+          <option value="all">Semua Bulan</option>
+          {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
+        </Select>
+        <Select value={filters.mdId} onChange={e => setFilters({ ...filters, mdId: e.target.value })}>
+          <option value="all">Semua MD</option>
+          {mds.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+        </Select>
+        <Select value={filters.regionId} onChange={e => setFilters({ ...filters, regionId: e.target.value })}>
+          <option value="all">Semua Region</option>
+          {regions.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+        </Select>
+        <Select value={filters.distributorId} onChange={e => setFilters({ ...filters, distributorId: e.target.value })}>
+          <option value="all">Semua Distributor</option>
+          {distributors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </Select>
+      </div>
+
+      <div className="bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden">
+        <div className="relative">
+          {filtered.length === 0 ? (
+            <div className="h-72 flex flex-col items-center justify-center text-zinc-500 gap-2 text-sm">
+              <MapPin className="w-6 h-6" />
+              Tidak ada visit dengan koordinat sesuai filter
+            </div>
+          ) : (
+            <MapContainer
+              center={points[0]}
+              zoom={11}
+              scrollWheelZoom={true}
+              style={{ height: '480px', width: '100%' }}
+            >
+              <TileLayer
+                attribution='&copy; CARTO &copy; OSM'
+                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                subdomains="abcd"
+                maxZoom={19}
+              />
+              {grouped.map((vs, gi) => {
+                const [lat, lng] = [vs[0].visit_lat, vs[0].visit_lng];
+                const isStacked = vs.length > 1;
+                // Pick color dari first visit di stack
+                const mdIdx = mds.findIndex(m => m.id === vs[0].md_id);
+                const color = MD_COLORS[mdIdx % MD_COLORS.length] || '#dc2626';
+
+                const icon = isStacked
+                  ? L.divIcon({
+                      className: 'coverage-cluster',
+                      html: `<div style="background:${color};color:#0a0a0a;font-weight:bold;font-size:11px;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #0a0a0a;box-shadow:0 0 10px rgba(0,0,0,0.5);">${vs.length}</div>`,
+                      iconSize: [28, 28],
+                      iconAnchor: [14, 14],
+                    })
+                  : L.divIcon({
+                      className: 'coverage-pin',
+                      html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #0a0a0a;box-shadow:0 0 8px ${color}80;"></div>`,
+                      iconSize: [14, 14],
+                      iconAnchor: [7, 7],
+                    });
+
+                return (
+                  <Marker key={gi} position={[lat, lng]} icon={icon}>
+                    <Popup maxWidth={280}>
+                      <div className="text-xs space-y-1 max-h-48 overflow-y-auto">
+                        <div className="font-semibold text-zinc-100 text-sm mb-2">{vs.length} visit di titik ini</div>
+                        {vs.slice(0, 5).map(v => (
+                          <button key={v.id} onClick={() => onOpenVisit?.(v.id)}
+                            className="block w-full text-left p-2 rounded bg-zinc-800/50 hover:bg-zinc-700 transition">
+                            <div className="font-mono text-[9px] text-zinc-500">{v._bengkel?.code} · {v.visit_date}</div>
+                            <div className="text-xs text-zinc-100 truncate">{v._bengkel?.name}</div>
+                            <div className="text-[10px] text-zinc-400">{v.md_name || mds.find(m => m.id === v.md_id)?.full_name} · {v.status}</div>
+                          </button>
+                        ))}
+                        {vs.length > 5 && <div className="text-[10px] text-zinc-500 text-center pt-1">+{vs.length - 5} lagi</div>}
+                      </div>
+                    </Popup>
+                  </Marker>
+                );
+              })}
+              <FitToVisits points={points} />
+            </MapContainer>
+          )}
+        </div>
+
+        {/* Legend MD */}
+        <div className="border-t border-zinc-800 p-4 flex flex-wrap gap-3">
+          {mds.map((md, i) => {
+            const count = filtered.filter(v => v.md_id === md.id).length;
+            return (
+              <button key={md.id}
+                onClick={() => setFilters(f => ({ ...f, mdId: f.mdId === md.id ? 'all' : md.id }))}
+                className={`flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-lg transition border ${
+                  filters.mdId === md.id ? 'border-red-600/40 bg-red-600/10' : 'border-zinc-800 hover:border-zinc-700'
+                }`}>
+                <span className="w-2.5 h-2.5 rounded-full" style={{ background: MD_COLORS[i % MD_COLORS.length] }} />
+                <span className="text-zinc-300">{md.full_name}</span>
+                <span className="text-zinc-500 font-mono">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Sub-form Bengkel: add atau edit (kalau `initial` di-pass)
+// Distributor TIDAK di sini — dicatat per-visit (1 bengkel bisa dicover banyak distributor)
+function BengkelForm({ kotas, regions, onSave, initial, onCancel }) {
+  const isEdit = !!initial;
+  // Region cuma untuk memfilter dropdown Kota (TIDAK disimpan ke bengkel — diturunkan dari kota)
+  const initialRegionId = initial?.kota_id
+    ? (kotas.find(k => k.id === initial.kota_id)?.region_id || '')
+    : '';
+  const [form, setForm] = useState({
+    region_id: initialRegionId,
+    code: initial?.code || '',
+    name: initial?.name || '',
+    kota_id: initial?.kota_id || '',
+    lat: initial?.lat ?? null,
+    lng: initial?.lng ?? null,
+  });
+  const [saving, setSaving] = useState(false);
+
+  const filteredKotas = kotas.filter(k => k.region_id === form.region_id);
+  const canSave = form.code.trim() && form.name.trim() && form.kota_id && form.lat != null && form.lng != null && !saving;
+
+  const handlePick = (lat, lng) => setForm(f => ({ ...f, lat, lng }));
+
+  const handleSave = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      await onSave({
+        code: form.code.trim().toUpperCase(),
+        name: form.name.trim(),
+        kota_id: form.kota_id,
+        lat: form.lat,
+        lng: form.lng,
+      });
+      if (!isEdit) {
+        // reset form (pertahankan region biar gampang input banyak bengkel di region sama)
+        setForm(f => ({ region_id: f.region_id, code: '', name: '', kota_id: '', lat: null, lng: null }));
+      }
+    } catch (err) {
+      alert('Gagal simpan: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className={`mb-5 p-4 bg-zinc-950 border rounded-xl ${isEdit ? 'border-amber-600/40' : 'border-zinc-800'}`}>
+      <div className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-3 flex items-center justify-between gap-2">
+        <span className="flex items-center gap-2">
+          {isEdit ? <>
+            <Activity className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-amber-300">Edit Bengkel · {initial.code}</span>
+          </> : <>
+            <Plus className="w-3.5 h-3.5" />Tambah Bengkel Baru
+          </>}
+        </span>
+        {isEdit && onCancel && (
+          <button onClick={onCancel} className="text-zinc-500 hover:text-zinc-100 text-[11px] flex items-center gap-1">
+            <X className="w-3 h-3" />Batal
+          </button>
+        )}
+      </div>
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <Field label="Kode" required>
+          <Input placeholder="BK006" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} />
+        </Field>
+        <Field label="Nama Bengkel" required>
+          <Input placeholder="Bengkel ..." value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+        </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <Field label="Region" required>
+          <Select value={form.region_id} onChange={e => setForm({ ...form, region_id: e.target.value, kota_id: '' })}>
+            <option value="">Pilih region…</option>
+            {(regions || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+          </Select>
+        </Field>
+        <Field label="Kota" required>
+          <Select value={form.kota_id} onChange={e => setForm({ ...form, kota_id: e.target.value })} disabled={!form.region_id}>
+            <option value="">{form.region_id ? 'Pilih kota…' : 'Pilih region dulu'}</option>
+            {filteredKotas.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
+          </Select>
+        </Field>
+      </div>
+
+      <Field label="Lokasi (klik / drag pin)" required>
+        <BengkelPickerMap lat={form.lat} lng={form.lng} onChange={handlePick} />
+      </Field>
+
+      <div className="flex gap-2 mt-3">
+        <Button variant="primary" onClick={handleSave} disabled={!canSave} className="flex-1">
+          {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Menyimpan…</> : <><Check className="w-4 h-4" />{isEdit ? 'Update Bengkel' : 'Simpan Bengkel'}</>}
+        </Button>
+        {isEdit && onCancel && (
+          <Button variant="secondary" onClick={onCancel}>Batal</Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Sub-form akun MD: buat baru atau edit (kalau `initial` di-pass)
+function MDForm({ regions, onSave, initial, onCancel }) {
+  const isEdit = !!initial;
+  const ROLES = ['md', 'bp', 'admin'];
+  const [form, setForm] = useState({
+    email: initial?.email || '',
+    full_name: initial?.full_name || '',
+    role: initial?.role || 'md',
+    region_id: initial?.region_id || '',
+    monthly_target: String(initial?.monthly_target ?? 30),
+    password: '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [showPw, setShowPw] = useState(false);
+
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
+  const emailInvalid = !isEdit && form.email.trim() !== '' && !emailOk;
+  const canSave = (isEdit || emailOk) && form.full_name.trim() && !saving;
+
+  const handleSave = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      const base = {
+        full_name: form.full_name.trim(),
+        role: form.role || 'md',
+        region_id: form.region_id || null,
+        monthly_target: form.monthly_target === '' ? 30 : Number(form.monthly_target),
+      };
+      if (isEdit) {
+        // patch — email tidak diubah (identitas auth). password hanya kalau diisi.
+        await onSave(form.password.trim() ? { ...base, password: form.password.trim() } : base);
+      } else {
+        await onSave({ ...base, email: form.email.trim().toLowerCase(), password: form.password.trim() || undefined });
+        setForm({ email: '', full_name: '', role: 'md', region_id: '', monthly_target: '30', password: '' });
+      }
+    } catch (err) {
+      alert('Gagal: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className={`mb-5 p-4 bg-zinc-950 border rounded-xl ${isEdit ? 'border-amber-600/40' : 'border-zinc-800'}`}>
+      <div className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-3 flex items-center justify-between gap-2">
+        <span className="flex items-center gap-2">
+          {isEdit
+            ? <><Activity className="w-3.5 h-3.5 text-amber-400" /><span className="text-amber-300">Edit Akun · {initial.full_name}</span></>
+            : <><Plus className="w-3.5 h-3.5" />Buat Akun MD Baru</>}
+        </span>
+        {isEdit && onCancel && (
+          <button onClick={onCancel} className="text-zinc-500 hover:text-zinc-100 text-[11px] flex items-center gap-1">
+            <X className="w-3 h-3" />Batal
+          </button>
+        )}
+      </div>
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <Field label="Email" required>
+          <Input type="email" placeholder="nama@mobil1.id" value={form.email}
+            disabled={isEdit}
+            onChange={e => setForm({ ...form, email: e.target.value })}
+            className={`${emailInvalid ? 'border-rose-600/50' : ''} ${isEdit ? 'opacity-60 cursor-not-allowed' : ''}`} />
+        </Field>
+        <Field label="Nama Lengkap" required>
+          <Input placeholder="Mis. Budi Santoso" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} />
+        </Field>
+        <Field label="Role">
+          <Select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
+            {ROLES.map(r => <option key={r} value={r}>{r === 'md' ? 'MD (Merchandiser)' : r === 'bp' ? 'BP (Supervisor)' : 'Admin'}</option>)}
+          </Select>
+        </Field>
+        <Field label="Region (wilayah kerja)">
+          <Select value={form.region_id} onChange={e => setForm({ ...form, region_id: e.target.value })}>
+            <option value="">— Tidak di-set —</option>
+            {(regions || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+          </Select>
+        </Field>
+        <Field label="Target Visit / Bulan">
+          <Input type="number" min="0" placeholder="30" value={form.monthly_target} onChange={e => setForm({ ...form, monthly_target: e.target.value })} />
+        </Field>
+        <Field label={isEdit ? 'Reset Password (opsional)' : 'Password (opsional)'}>
+          <div className="relative">
+            <Input type={showPw ? 'text' : 'password'} placeholder={isEdit ? 'Kosong = tidak diubah' : 'Kosong = auto-generate'} value={form.password}
+              onChange={e => setForm({ ...form, password: e.target.value })} className="pr-9" />
+            <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
+              {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        </Field>
+      </div>
+      {emailInvalid && <p className="text-[11px] text-rose-400 mb-2">Format email tidak valid</p>}
+      {!isEdit && <p className="text-[11px] text-zinc-500 mb-3">💡 Password kosong → digenerate otomatis, MD set sendiri via "Lupa password" di login.</p>}
+      {isEdit && !MOCK_MODE && <p className="text-[11px] text-amber-400 mb-3">⚠ Reset password di mode produksi perlu Edge Function. Untuk sekarang ubah via Supabase atau "Lupa password".</p>}
+      <div className="flex gap-2">
+        <Button variant="primary" onClick={handleSave} disabled={!canSave} className="flex-1">
+          {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Menyimpan…</> : <><Check className="w-4 h-4" />{isEdit ? 'Update Akun' : 'Buat Akun MD'}</>}
+        </Button>
+        {isEdit && onCancel && <Button variant="secondary" onClick={onCancel}>Batal</Button>}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// BENGKEL IMPORT — Upload Excel/CSV → preview → bulk insert
+// ============================================================
+
+// Normalisasi header column dari Excel
+const COLUMN_ALIASES = {
+  code: ['code', 'kode', 'kode bengkel', 'kode_bengkel'],
+  name: ['name', 'nama', 'nama bengkel', 'nama_bengkel', 'bengkel'],
+  kota: ['kota', 'city', 'nama kota', 'nama_kota'],
+  region: ['region', 'nama region', 'wilayah'],
+  lat: ['lat', 'latitude', 'lintang'],
+  lng: ['lng', 'lon', 'long', 'longitude', 'bujur'],
+  address: ['address', 'alamat'],
+};
+
+// Match raw header ke field kanonik
+const normalizeColumn = (header) => {
+  const h = String(header || '').trim().toLowerCase();
+  for (const [field, aliases] of Object.entries(COLUMN_ALIASES)) {
+    if (aliases.includes(h)) return field;
+  }
+  return null;
+};
+
+// Validate & enrich satu row dari Excel
+const validateBengkelRow = (raw, ctx, existingCodes) => {
+  const errors = [];
+  const code = String(raw.code || '').trim().toUpperCase();
+  const name = String(raw.name || '').trim();
+  const kotaName = String(raw.kota || '').trim().toLowerCase();
+  const regionName = String(raw.region || '').trim().toLowerCase();
+  const latRaw = raw.lat, lngRaw = raw.lng;
+
+  if (!code) errors.push('Kode kosong');
+  if (!name) errors.push('Nama kosong');
+  if (!kotaName) errors.push('Kota kosong');
+
+  // Lookup region (opsional, tapi mendisambiguasi kota dengan nama sama)
+  let region = null;
+  if (regionName) {
+    region = ctx.regions.find(r => r.name.toLowerCase() === regionName);
+    if (!region) errors.push(`Region "${raw.region}" tidak ditemukan`);
+  }
+
+  // Cari kota: kalau region di-isi, match nama + region; kalau tidak, by nama saja
+  const kotaMatches = ctx.kotas.filter(k => k.name.toLowerCase() === kotaName);
+  let kota = null;
+  if (kotaName) {
+    if (region) {
+      kota = kotaMatches.find(k => k.region_id === region.id);
+      if (!kota && kotaMatches.length > 0) errors.push(`Kota "${raw.kota}" tidak ada di region "${raw.region}"`);
+      else if (!kota) errors.push(`Kota "${raw.kota}" tidak ditemukan`);
+    } else {
+      if (kotaMatches.length > 1) errors.push(`Kota "${raw.kota}" ada di >1 region — isi kolom region untuk memperjelas`);
+      else if (kotaMatches.length === 1) kota = kotaMatches[0];
+      else errors.push(`Kota "${raw.kota}" tidak ditemukan`);
+    }
+  }
+
+  let lat = null, lng = null;
+  if (latRaw !== undefined && latRaw !== '' && latRaw !== null) {
+    const n = Number(latRaw);
+    if (Number.isNaN(n) || n < -90 || n > 90) errors.push(`Lat invalid: ${latRaw}`);
+    else lat = n;
+  }
+  if (lngRaw !== undefined && lngRaw !== '' && lngRaw !== null) {
+    const n = Number(lngRaw);
+    if (Number.isNaN(n) || n < -180 || n > 180) errors.push(`Lng invalid: ${lngRaw}`);
+    else lng = n;
+  }
+
+  // Duplicate check (vs existing bengkels + dalam batch yang sedang di-import)
+  if (code && existingCodes.has(code)) errors.push(`Kode ${code} sudah terdaftar (duplikat)`);
+
+  const payload = errors.length === 0 ? {
+    code, name,
+    kota_id: kota?.id,
+    lat, lng,
+    address: raw.address ? String(raw.address).trim() : null,
+  } : null;
+
+  return { ok: errors.length === 0, errors, payload, raw };
+};
+
+// Download CSV template dengan 2 contoh baris
+const downloadBengkelTemplate = (kotas, regions) => {
+  const sampleKota = kotas[0]?.name || 'Jakarta Selatan';
+  const sampleRegion = regions?.[0]?.name || 'Jabodetabek';
+  const rows = [
+    ['code', 'name', 'kota', 'region', 'lat', 'lng', 'address'],
+    ['BK101', 'Bengkel Contoh Satu', sampleKota, sampleRegion, '-6.2615', '106.8106', 'Jl. Contoh No. 1'],
+    ['BK102', 'Bengkel Contoh Dua', sampleKota, sampleRegion, '', '', ''],
+  ];
+  const csv = rows.map(r => r.map(cell => {
+    const s = String(cell);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }).join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'bengkel-template.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+function BengkelImportModal({ kotas, regions, bengkels, onClose, onImported }) {
+  const [step, setStep] = useState('upload'); // upload | preview | importing | done
+  const [filename, setFilename] = useState('');
+  const [rawRows, setRawRows] = useState([]);     // raw parse dengan column normalized
+  const [validated, setValidated] = useState([]); // [{ok, errors, payload, raw}]
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [result, setResult] = useState(null);
+  const inputRef = useRef(null);
+
+  const handleFile = async (file) => {
+    if (!file) return;
+    setFilename(file.name);
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
+      if (data.length === 0) {
+        alert('Sheet kosong atau tidak ada data');
+        return;
+      }
+      // Map columns lewat alias
+      const rawHeaders = Object.keys(data[0]);
+      const colMap = {};
+      rawHeaders.forEach(h => {
+        const norm = normalizeColumn(h);
+        if (norm) colMap[h] = norm;
+      });
+      // Build normalized rows
+      const rows = data.map(row => {
+        const out = {};
+        for (const [raw, norm] of Object.entries(colMap)) out[norm] = row[raw];
+        return out;
+      });
+      // Validate
+      const existingCodes = new Set(bengkels.map(b => b.code));
+      const seenInBatch = new Set();
+      const validatedRows = rows.map(r => {
+        const code = String(r.code || '').trim().toUpperCase();
+        // Mark intra-batch duplicate
+        const isDupInBatch = code && seenInBatch.has(code);
+        if (code) seenInBatch.add(code);
+
+        const res = validateBengkelRow(r, { kotas, regions }, existingCodes);
+        if (isDupInBatch) {
+          res.ok = false;
+          res.errors.push(`Kode ${code} duplikat di file ini`);
+        }
+        return res;
+      });
+      setRawRows(rows);
+      setValidated(validatedRows);
+      setStep('preview');
+    } catch (e) {
+      alert('Gagal parse file: ' + e.message);
+    }
+  };
+
+  const handleImport = async () => {
+    const validPayloads = validated.filter(v => v.ok).map(v => v.payload);
+    if (validPayloads.length === 0) return;
+    setStep('importing');
+    setProgress({ done: 0, total: validPayloads.length });
+    try {
+      const r = await api.bulkAddBengkels(validPayloads, (done, total) => setProgress({ done, total }));
+      setResult(r);
+      setStep('done');
+    } catch (e) {
+      alert('Gagal import: ' + e.message);
+      setStep('preview');
+    }
+  };
+
+  const handleFinish = () => {
+    onImported?.();
+    onClose();
+  };
+
+  const validCount = validated.filter(v => v.ok).length;
+  const invalidCount = validated.length - validCount;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/80 backdrop-blur-sm p-4 overflow-y-auto" onClick={onClose}>
+      <div className="w-full max-w-4xl my-8 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between sticky top-0 bg-zinc-900 z-10">
+          <div className="flex items-center gap-3">
+            <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+            <h2 className="font-display font-bold text-lg text-zinc-100">Import Bengkel dari Excel</h2>
+          </div>
+          <button onClick={onClose} className="w-9 h-9 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 flex items-center justify-center">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-5">
+          {/* STEP: UPLOAD */}
+          {step === 'upload' && (
+            <div className="space-y-4">
+              <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 space-y-2">
+                <p className="font-semibold text-zinc-200 text-sm">📋 Petunjuk file Excel / CSV</p>
+                <p>Header kolom yang dikenali (case-insensitive, urutan bebas):</p>
+                <ul className="ml-4 space-y-0.5 list-disc">
+                  <li><span className="font-mono text-zinc-300">code</span> / kode <span className="text-red-400">*</span></li>
+                  <li><span className="font-mono text-zinc-300">name</span> / nama / bengkel <span className="text-red-400">*</span></li>
+                  <li><span className="font-mono text-zinc-300">kota</span> / city <span className="text-red-400">*</span> — harus match nama kota di master</li>
+                  <li><span className="font-mono text-zinc-300">region</span> / wilayah — opsional, tapi <span className="text-amber-400">wajib kalau ada kota bernama sama di &gt;1 region</span></li>
+                  <li><span className="font-mono text-zinc-300">lat</span> / latitude — opsional, range -90 .. 90</li>
+                  <li><span className="font-mono text-zinc-300">lng</span> / longitude — opsional, range -180 .. 180</li>
+                  <li><span className="font-mono text-zinc-300">address</span> / alamat — opsional</li>
+                </ul>
+                <p className="text-amber-400">⚠ Kota & region di-lookup by name. Pastikan sudah ada di Master Data sebelum import. (Distributor dicatat saat visit, bukan di bengkel.)</p>
+                <button
+                  onClick={() => downloadBengkelTemplate(kotas, regions)}
+                  className="mt-2 text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 text-xs font-medium">
+                  <Download className="w-3.5 h-3.5" />Download template CSV
+                </button>
+              </div>
+
+              <button onClick={() => inputRef.current?.click()}
+                className="w-full border-2 border-dashed border-zinc-700 hover:border-red-600/40 hover:bg-red-600/5 rounded-xl py-12 flex flex-col items-center gap-3 transition cursor-pointer">
+                <Upload className="w-10 h-10 text-zinc-500" />
+                <div className="text-center">
+                  <p className="text-sm font-medium text-zinc-200">Klik untuk pilih file</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">Mendukung .xlsx, .xls, .csv</p>
+                </div>
+              </button>
+              <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+                onChange={e => handleFile(e.target.files?.[0])} className="hidden" />
+            </div>
+          )}
+
+          {/* STEP: PREVIEW */}
+          {step === 'preview' && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-zinc-950 border border-zinc-800 rounded-xl p-3">
+                <div className="flex items-center gap-3 text-sm">
+                  <FileSpreadsheet className="w-4 h-4 text-zinc-400" />
+                  <span className="text-zinc-300 font-medium">{filename}</span>
+                  <span className="text-zinc-500">·</span>
+                  <span className="text-zinc-500">{validated.length} baris</span>
+                </div>
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="flex items-center gap-1.5 text-emerald-400">
+                    <Check className="w-3.5 h-3.5" />{validCount} valid
+                  </span>
+                  {invalidCount > 0 && (
+                    <span className="flex items-center gap-1.5 text-rose-400">
+                      <AlertCircle className="w-3.5 h-3.5" />{invalidCount} error
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="max-h-96 overflow-auto bg-zinc-950 border border-zinc-800 rounded-xl">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-zinc-900 border-b border-zinc-800">
+                    <tr className="text-left text-zinc-500 uppercase tracking-wider">
+                      <th className="px-2 py-2 w-8">#</th>
+                      <th className="px-2 py-2 w-6"></th>
+                      <th className="px-2 py-2">Code</th>
+                      <th className="px-2 py-2">Nama</th>
+                      <th className="px-2 py-2">Kota</th>
+                      <th className="px-2 py-2">Region</th>
+                      <th className="px-2 py-2">Lat/Lng</th>
+                      <th className="px-2 py-2">Error</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {validated.map((v, i) => (
+                      <tr key={i} className={`border-b border-zinc-800/50 ${v.ok ? '' : 'bg-rose-600/5'}`}>
+                        <td className="px-2 py-1.5 text-zinc-500 font-mono">{i + 1}</td>
+                        <td className="px-2 py-1.5">
+                          {v.ok
+                            ? <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            : <AlertCircle className="w-3.5 h-3.5 text-rose-400" />}
+                        </td>
+                        <td className="px-2 py-1.5 font-mono text-zinc-300">{v.raw.code || '—'}</td>
+                        <td className="px-2 py-1.5 text-zinc-200 max-w-[180px] truncate">{v.raw.name || '—'}</td>
+                        <td className="px-2 py-1.5 text-zinc-400 max-w-[120px] truncate">{v.raw.kota || '—'}</td>
+                        <td className="px-2 py-1.5 text-zinc-400 max-w-[120px] truncate">{v.raw.region || '—'}</td>
+                        <td className="px-2 py-1.5 font-mono text-zinc-500">
+                          {v.raw.lat && v.raw.lng ? `${Number(v.raw.lat).toFixed(3)},${Number(v.raw.lng).toFixed(3)}` : '—'}
+                        </td>
+                        <td className="px-2 py-1.5 text-rose-400 text-[11px]">
+                          {v.errors.join(', ')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex gap-2">
+                <Button variant="secondary" onClick={() => { setStep('upload'); setValidated([]); setRawRows([]); }}>
+                  <ChevronLeft className="w-4 h-4" />Pilih file lain
+                </Button>
+                <Button variant="primary" onClick={handleImport} disabled={validCount === 0} className="flex-1">
+                  <Upload className="w-4 h-4" />Import {validCount} Bengkel
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP: IMPORTING */}
+          {step === 'importing' && (
+            <div className="py-12 flex flex-col items-center gap-4">
+              <Loader2 className="w-10 h-10 text-red-500 animate-spin" />
+              <div className="text-center">
+                <p className="text-sm font-semibold text-zinc-100">Mengimport bengkel…</p>
+                <p className="text-xs text-zinc-500 mt-1">{progress.done} / {progress.total} baris</p>
+              </div>
+              <div className="w-full max-w-xs h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                <div className="h-full bg-red-500 transition-all" style={{ width: `${progress.total > 0 ? (progress.done / progress.total * 100) : 0}%` }} />
+              </div>
+            </div>
+          )}
+
+          {/* STEP: DONE */}
+          {step === 'done' && result && (
+            <div className="py-8 flex flex-col items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-emerald-500 flex items-center justify-center">
+                <Check className="w-7 h-7 text-zinc-900" strokeWidth={3} />
+              </div>
+              <div className="text-center">
+                <h3 className="font-display font-bold text-lg text-zinc-100">Import selesai</h3>
+                <p className="text-sm text-emerald-400 mt-1">{result.inserted} bengkel berhasil di-tambah</p>
+                {result.errors.length > 0 && (
+                  <p className="text-xs text-rose-400 mt-1">{result.errors.length} gagal (lihat error log di console)</p>
+                )}
+              </div>
+              {result.errors.length > 0 && (
+                <div className="w-full max-h-48 overflow-y-auto bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-[11px] text-rose-400 space-y-1">
+                  {result.errors.map((e, i) => (
+                    <div key={i}>Row {e.row}: {e.message}</div>
+                  ))}
+                </div>
+              )}
+              <Button variant="primary" onClick={handleFinish}>
+                <Check className="w-4 h-4" />Selesai
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// MASTER IMPORT — generic config-driven (regions/distributors/kotas/mds)
+// ============================================================
+
+const VALID_ROLES = ['md', 'bp', 'admin'];
+const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Helper: cari alias kolom
+const pickCol = (row, aliases) => {
+  for (const key of Object.keys(row)) {
+    if (aliases.includes(key.trim().toLowerCase())) return row[key];
+  }
+  return undefined;
+};
+
+// Config per section yang bisa di-import
+const MASTER_IMPORT_CFG = {
+  regions: {
+    label: 'Region',
+    template: [['name'], ['Kalimantan'], ['Bali & Nusa Tenggara']],
+    preview: [{ key: 'name', label: 'Nama Region' }],
+    parseRow: (row) => ({ name: String(pickCol(row, ['name', 'nama', 'region', 'nama region']) || '').trim() }),
+    validate: (p, ctx, seen, existing) => {
+      const errs = [];
+      if (!p.name) errs.push('Nama kosong');
+      const key = p.name.toLowerCase();
+      if (p.name && existing.has(key)) errs.push(`Region "${p.name}" sudah ada`);
+      if (p.name && seen.has(key)) errs.push('Duplikat di file ini');
+      return errs;
+    },
+    keyOf: (p) => p.name.toLowerCase(),
+    existingKeys: (ctx) => new Set(ctx.regions.map(r => r.name.toLowerCase())),
+    payload: (p) => ({ name: p.name }),
+    importer: (rows, onP) => api.bulkAddMaster('regions', rows, onP),
+  },
+
+  distributors: {
+    label: 'Distributor',
+    template: [['name', 'region'], ['PT Pelumas Jaya', 'Jabodetabek'], ['CV Oli Makmur', 'Jawa Barat']],
+    preview: [{ key: 'name', label: 'Nama Distributor' }, { key: 'region', label: 'Region' }],
+    parseRow: (row) => ({
+      name: String(pickCol(row, ['name', 'nama', 'distributor', 'nama distributor']) || '').trim(),
+      region: String(pickCol(row, ['region', 'nama region', 'wilayah']) || '').trim(),
+    }),
+    validate: (p, ctx, seen, existing) => {
+      const errs = [];
+      if (!p.name) errs.push('Nama kosong');
+      if (!p.region) errs.push('Region kosong');
+      const reg = ctx.regions.find(r => r.name.toLowerCase() === p.region.toLowerCase());
+      if (p.region && !reg) errs.push(`Region "${p.region}" tidak ditemukan`);
+      p._region_id = reg?.id;
+      const key = `${p.name.toLowerCase()}|${p.region.toLowerCase()}`;
+      if (p.name && p.region && existing.has(key)) errs.push(`Distributor "${p.name}" di region ini sudah ada`);
+      if (p.name && p.region && seen.has(key)) errs.push('Duplikat di file ini');
+      return errs;
+    },
+    keyOf: (p) => `${p.name.toLowerCase()}|${p.region.toLowerCase()}`,
+    existingKeys: (ctx) => {
+      const regById = Object.fromEntries(ctx.regions.map(r => [r.id, r.name.toLowerCase()]));
+      return new Set(ctx.distributors.map(d => `${d.name.toLowerCase()}|${regById[d.region_id] || ''}`));
+    },
+    payload: (p) => ({ name: p.name, region_id: p._region_id }),
+    importer: (rows, onP) => api.bulkAddMaster('distributors', rows, onP),
+  },
+
+  kotas: {
+    label: 'Kota',
+    template: [['name', 'region'], ['Cikarang', 'Jabodetabek'], ['Karawang', 'Jawa Barat']],
+    preview: [{ key: 'name', label: 'Nama Kota' }, { key: 'region', label: 'Region' }],
+    parseRow: (row) => ({
+      name: String(pickCol(row, ['name', 'nama', 'kota', 'nama kota']) || '').trim(),
+      region: String(pickCol(row, ['region', 'nama region', 'wilayah']) || '').trim(),
+    }),
+    validate: (p, ctx, seen, existing) => {
+      const errs = [];
+      if (!p.name) errs.push('Nama kota kosong');
+      if (!p.region) errs.push('Region kosong');
+      const reg = ctx.regions.find(r => r.name.toLowerCase() === p.region.toLowerCase());
+      if (p.region && !reg) errs.push(`Region "${p.region}" tidak ditemukan`);
+      p._region_id = reg?.id;
+      const key = `${p.name.toLowerCase()}|${p.region.toLowerCase()}`;
+      if (p.name && p.region && existing.has(key)) errs.push('Kota di region ini sudah ada');
+      if (p.name && p.region && seen.has(key)) errs.push('Duplikat di file ini');
+      return errs;
+    },
+    keyOf: (p) => `${p.name.toLowerCase()}|${p.region.toLowerCase()}`,
+    existingKeys: (ctx) => {
+      const regById = Object.fromEntries(ctx.regions.map(r => [r.id, r.name.toLowerCase()]));
+      return new Set(ctx.kotas.map(k => `${k.name.toLowerCase()}|${regById[k.region_id] || ''}`));
+    },
+    payload: (p) => ({ name: p.name, region_id: p._region_id }),
+    importer: (rows, onP) => api.bulkAddMaster('kotas', rows, onP),
+  },
+
+  mds: {
+    label: 'Akun MD',
+    template: [
+      ['email', 'full_name', 'role', 'region', 'monthly_target', 'password'],
+      ['dewi@mobil1.id', 'Dewi Anjani', 'md', 'Jabodetabek', '40', 'mobil1'],
+      ['eko@mobil1.id', 'Eko Prasetyo', 'md', 'Jawa Barat', '35', ''],
+    ],
+    preview: [
+      { key: 'email', label: 'Email' },
+      { key: 'full_name', label: 'Nama' },
+      { key: 'role', label: 'Role' },
+      { key: 'region', label: 'Region' },
+      { key: 'monthly_target', label: 'Target' },
+    ],
+    parseRow: (row) => ({
+      email: String(pickCol(row, ['email', 'e-mail']) || '').trim(),
+      full_name: String(pickCol(row, ['full_name', 'name', 'nama', 'nama lengkap']) || '').trim(),
+      role: String(pickCol(row, ['role', 'peran']) || 'md').trim().toLowerCase(),
+      region: String(pickCol(row, ['region', 'wilayah']) || '').trim(),
+      monthly_target: pickCol(row, ['monthly_target', 'target', 'target bulanan']),
+      password: String(pickCol(row, ['password', 'pwd', 'sandi']) || '').trim(),
+    }),
+    validate: (p, ctx, seen, existing) => {
+      const errs = [];
+      if (!p.email) errs.push('Email kosong');
+      else if (!emailRe.test(p.email)) errs.push('Format email invalid');
+      if (!p.full_name) errs.push('Nama kosong');
+      if (p.role && !VALID_ROLES.includes(p.role)) errs.push(`Role "${p.role}" invalid (md/bp/admin)`);
+      if (p.region) {
+        const reg = ctx.regions.find(r => r.name.toLowerCase() === p.region.toLowerCase());
+        if (!reg) errs.push(`Region "${p.region}" tidak ditemukan`);
+        p._region_id = reg?.id;
+      }
+      if (p.monthly_target !== undefined && p.monthly_target !== '' && p.monthly_target !== null) {
+        const n = Number(p.monthly_target);
+        if (Number.isNaN(n) || n < 0) errs.push('Target invalid');
+        else p._target = n;
+      }
+      const key = p.email.toLowerCase();
+      if (p.email && existing.has(key)) errs.push(`Email ${p.email} sudah terdaftar`);
+      if (p.email && seen.has(key)) errs.push('Duplikat email di file ini');
+      return errs;
+    },
+    keyOf: (p) => p.email.toLowerCase(),
+    existingKeys: (ctx) => new Set(ctx.mds.map(m => m.email.toLowerCase())),
+    payload: (p) => ({
+      email: p.email.toLowerCase(),
+      full_name: p.full_name,
+      role: p.role || 'md',
+      region_id: p._region_id || null,
+      monthly_target: p._target ?? 30,
+      password: p.password || undefined,
+    }),
+    importer: (rows, onP) => api.bulkCreateMDs(rows, onP),
+  },
+};
+
+// Download template CSV generic
+const downloadMasterTemplate = (section) => {
+  const cfg = MASTER_IMPORT_CFG[section];
+  if (!cfg) return;
+  const csv = cfg.template.map(r => r.map(c => {
+    const s = String(c);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }).join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${section}-template.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+function MasterImportModal({ section, ctx, onClose, onImported }) {
+  const cfg = MASTER_IMPORT_CFG[section];
+  const [step, setStep] = useState('upload');
+  const [filename, setFilename] = useState('');
+  const [validated, setValidated] = useState([]);
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [result, setResult] = useState(null);
+  const inputRef = useRef(null);
+
+  const handleFile = async (file) => {
+    if (!file) return;
+    setFilename(file.name);
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
+      if (data.length === 0) { alert('Sheet kosong'); return; }
+
+      const existing = cfg.existingKeys(ctx);
+      const seen = new Set();
+      const rows = data.map(raw => {
+        const parsed = cfg.parseRow(raw);
+        const errs = cfg.validate(parsed, ctx, seen, existing);
+        const key = cfg.keyOf(parsed);
+        if (key) seen.add(key);
+        return { ok: errs.length === 0, errors: errs, parsed, payload: errs.length === 0 ? cfg.payload(parsed) : null };
+      });
+      setValidated(rows);
+      setStep('preview');
+    } catch (e) {
+      alert('Gagal parse file: ' + e.message);
+    }
+  };
+
+  const handleImport = async () => {
+    const payloads = validated.filter(v => v.ok).map(v => v.payload);
+    if (payloads.length === 0) return;
+    setStep('importing');
+    setProgress({ done: 0, total: payloads.length });
+    try {
+      const r = await cfg.importer(payloads, (done, total) => setProgress({ done, total }));
+      setResult(r);
+      setStep('done');
+    } catch (e) {
+      alert('Gagal import: ' + e.message);
+      setStep('preview');
+    }
+  };
+
+  const validCount = validated.filter(v => v.ok).length;
+  const invalidCount = validated.length - validCount;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/80 backdrop-blur-sm p-4 overflow-y-auto" onClick={onClose}>
+      <div className="w-full max-w-3xl my-8 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between sticky top-0 bg-zinc-900 z-10">
+          <div className="flex items-center gap-3">
+            <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+            <h2 className="font-display font-bold text-lg text-zinc-100">Import {cfg.label} dari Excel</h2>
+          </div>
+          <button onClick={onClose} className="w-9 h-9 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 flex items-center justify-center">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-5">
+          {step === 'upload' && (
+            <div className="space-y-4">
+              <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 space-y-2">
+                <p className="font-semibold text-zinc-200 text-sm">📋 Kolom yang dikenali</p>
+                <p className="font-mono text-zinc-300">{cfg.template[0].join(', ')}</p>
+                {(section === 'kotas' || section === 'distributors') && <p className="text-amber-400">⚠ Region di-lookup by nama. Pastikan region sudah ada di Master Data.</p>}
+                {section === 'mds' && (
+                  <>
+                    <p className="text-amber-400">⚠ role: md / bp / admin (default md). region di-lookup by nama.</p>
+                    <p className="text-amber-400">⚠ password kosong → digenerate random (MD reset via "Lupa password").</p>
+                    {!MOCK_MODE && <p className="text-rose-400">⚠ Butuh Edge Function <span className="font-mono">admin-create-md</span> ter-deploy (lihat catatan).</p>}
+                  </>
+                )}
+                <button onClick={() => downloadMasterTemplate(section)}
+                  className="mt-2 text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 text-xs font-medium">
+                  <Download className="w-3.5 h-3.5" />Download template CSV
+                </button>
+              </div>
+              <button onClick={() => inputRef.current?.click()}
+                className="w-full border-2 border-dashed border-zinc-700 hover:border-red-600/40 hover:bg-red-600/5 rounded-xl py-12 flex flex-col items-center gap-3 transition">
+                <Upload className="w-10 h-10 text-zinc-500" />
+                <div className="text-center">
+                  <p className="text-sm font-medium text-zinc-200">Klik untuk pilih file</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">.xlsx, .xls, .csv</p>
+                </div>
+              </button>
+              <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" onChange={e => handleFile(e.target.files?.[0])} className="hidden" />
+            </div>
+          )}
+
+          {step === 'preview' && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-zinc-950 border border-zinc-800 rounded-xl p-3">
+                <div className="flex items-center gap-3 text-sm">
+                  <FileSpreadsheet className="w-4 h-4 text-zinc-400" />
+                  <span className="text-zinc-300 font-medium">{filename}</span>
+                  <span className="text-zinc-500">· {validated.length} baris</span>
+                </div>
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="flex items-center gap-1.5 text-emerald-400"><Check className="w-3.5 h-3.5" />{validCount} valid</span>
+                  {invalidCount > 0 && <span className="flex items-center gap-1.5 text-rose-400"><AlertCircle className="w-3.5 h-3.5" />{invalidCount} error</span>}
+                </div>
+              </div>
+              <div className="max-h-96 overflow-auto bg-zinc-950 border border-zinc-800 rounded-xl">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-zinc-900 border-b border-zinc-800">
+                    <tr className="text-left text-zinc-500 uppercase tracking-wider">
+                      <th className="px-2 py-2 w-8">#</th>
+                      <th className="px-2 py-2 w-6"></th>
+                      {cfg.preview.map(c => <th key={c.key} className="px-2 py-2">{c.label}</th>)}
+                      <th className="px-2 py-2">Error</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {validated.map((v, i) => (
+                      <tr key={i} className={`border-b border-zinc-800/50 ${v.ok ? '' : 'bg-rose-600/5'}`}>
+                        <td className="px-2 py-1.5 text-zinc-500 font-mono">{i + 1}</td>
+                        <td className="px-2 py-1.5">{v.ok ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <AlertCircle className="w-3.5 h-3.5 text-rose-400" />}</td>
+                        {cfg.preview.map(c => (
+                          <td key={c.key} className="px-2 py-1.5 text-zinc-200 max-w-[160px] truncate">{String(v.parsed[c.key] ?? '') || '—'}</td>
+                        ))}
+                        <td className="px-2 py-1.5 text-rose-400 text-[11px]">{v.errors.join(', ')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="secondary" onClick={() => { setStep('upload'); setValidated([]); }}>
+                  <ChevronLeft className="w-4 h-4" />Pilih file lain
+                </Button>
+                <Button variant="primary" onClick={handleImport} disabled={validCount === 0} className="flex-1">
+                  <Upload className="w-4 h-4" />Import {validCount} {cfg.label}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === 'importing' && (
+            <div className="py-12 flex flex-col items-center gap-4">
+              <Loader2 className="w-10 h-10 text-red-500 animate-spin" />
+              <p className="text-sm font-semibold text-zinc-100">Mengimport {cfg.label}…</p>
+              <p className="text-xs text-zinc-500">{progress.done} / {progress.total}</p>
+              <div className="w-full max-w-xs h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                <div className="h-full bg-red-500 transition-all" style={{ width: `${progress.total > 0 ? (progress.done / progress.total * 100) : 0}%` }} />
+              </div>
+            </div>
+          )}
+
+          {step === 'done' && result && (
+            <div className="py-8 flex flex-col items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-emerald-500 flex items-center justify-center">
+                <Check className="w-7 h-7 text-zinc-900" strokeWidth={3} />
+              </div>
+              <div className="text-center">
+                <h3 className="font-display font-bold text-lg text-zinc-100">Import selesai</h3>
+                <p className="text-sm text-emerald-400 mt-1">{result.inserted} {cfg.label} berhasil di-tambah</p>
+                {result.errors?.length > 0 && <p className="text-xs text-rose-400 mt-1">{result.errors.length} gagal</p>}
+              </div>
+              {result.errors?.length > 0 && (
+                <div className="w-full max-h-48 overflow-y-auto bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-[11px] text-rose-400 space-y-1">
+                  {result.errors.map((e, i) => <div key={i}>Row {e.row}: {e.message}</div>)}
+                </div>
+              )}
+              <Button variant="primary" onClick={() => { onImported?.(); onClose(); }}>
+                <Check className="w-4 h-4" />Selesai
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange }) {
+  const [section, setSection] = useState('distributors');
+  const [newItem, setNewItem] = useState('');
+  const [newItemRegion, setNewItemRegion] = useState('');  // region untuk add kota/distributor
+  const [editingBengkelId, setEditingBengkelId] = useState(null);
+  const [editingMDId, setEditingMDId] = useState(null);
+  const [importOpen, setImportOpen] = useState(false);          // bengkel import
+  const [masterImportOpen, setMasterImportOpen] = useState(false); // regions/distributors/kotas/mds import
+
+  const editingBengkel = editingBengkelId ? bengkels.find(b => b.id === editingBengkelId) : null;
+  const editingMD = editingMDId ? mds.find(m => m.id === editingMDId) : null;
+  const regionName = (id) => regions.find(r => r.id === id)?.name;
+
+  const sections = [
+    { id: 'distributors', label: 'Distributor', icon: Briefcase, items: distributors, getName: d => d.name },
+    { id: 'regions', label: 'Region', icon: Globe, items: regions, getName: r => r.name },
+    { id: 'kotas', label: 'Kota', icon: MapPin, items: kotas, getName: k => k.name },
+    { id: 'bengkels', label: 'Bengkel', icon: Building2, items: bengkels, getName: b => `${b.code} - ${b.name}` },
+    { id: 'mds', label: 'Akun MD', icon: Users, items: mds, getName: m => `${m.full_name} (${m.email})` },
+  ];
+
+  const current = sections.find(s => s.id === section);
+  // Section yang butuh pilih region saat tambah manual
+  const needsRegion = section === 'kotas' || section === 'distributors';
+
+  // Reset edit mode & modal kalau pindah section
+  useEffect(() => { setEditingBengkelId(null); setEditingMDId(null); setImportOpen(false); setMasterImportOpen(false); setNewItem(''); setNewItemRegion(''); }, [section]);
+
+  const handleAdd = async () => {
+    if (!newItem.trim()) return;
+    if (needsRegion && !newItemRegion) { alert('Pilih region dulu'); return; }
+    try {
+      const payload = needsRegion
+        ? { name: newItem.trim(), region_id: newItemRegion }
+        : { name: newItem.trim() };
+
+      await api.addMaster(section, payload);
+      await onChange();
+      setNewItem('');
+    } catch (err) {
+      alert('Gagal: ' + err.message);
+    }
+  };
+
+  const handleAddBengkel = async (payload) => {
+    await api.addMaster('bengkels', payload);
+    await onChange();
+  };
+
+  const handleAddMD = async (payload) => {
+    const r = await api.bulkCreateMDs([payload]);
+    if (r.errors?.length) throw new Error(r.errors[0].message);
+    await onChange();
+  };
+
+  const handleUpdateMD = async (patch) => {
+    await api.updateMaster('profiles', editingMDId, patch);
+    await onChange();
+    setEditingMDId(null);
+  };
+
+  const handleUpdateBengkel = async (payload) => {
+    await api.updateMaster('bengkels', editingBengkelId, payload);
+    await onChange();
+    setEditingBengkelId(null);
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Hapus item ini?')) return;
+    try {
+      await api.deleteMaster(section, id);
+      await onChange();
+    } catch (err) {
+      alert('Gagal: ' + err.message);
+    }
+  };
+
+  return (
+    <div>
+      <div className="mb-5">
+        <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display">Master Data</h2>
+        <p className="text-sm text-zinc-500 mt-1">Kelola distributor, region, kota, bengkel & akun</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4">
+        <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-2 h-fit">
+          {sections.map(s => (
+            <button key={s.id} onClick={() => setSection(s.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${section === s.id ? 'bg-red-600/10 text-red-400 border border-red-600/20' : 'text-zinc-400 hover:bg-zinc-950 hover:text-zinc-100 border border-transparent'}`}>
+              <s.icon className="w-4 h-4" />{s.label}
+              <span className="ml-auto text-[10px] font-mono text-zinc-600">{s.items.length}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-5">
+          {/* Form: 3 mode — simple input / bengkel form (add or edit) / MD info */}
+          {section === 'bengkels' && (
+            <>
+              {!editingBengkel && (
+                <div className="mb-3 flex flex-wrap gap-2 justify-end">
+                  <Button variant="secondary" size="sm" onClick={() => setImportOpen(true)}>
+                    <FileSpreadsheet className="w-3.5 h-3.5" />Import Excel
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => downloadBengkelTemplate(kotas, regions)}>
+                    <Download className="w-3.5 h-3.5" />Template CSV
+                  </Button>
+                </div>
+              )}
+              {editingBengkel ? (
+                <BengkelForm
+                  key={editingBengkel.id}
+                  kotas={kotas}
+                  regions={regions}
+                  initial={editingBengkel}
+                  onSave={handleUpdateBengkel}
+                  onCancel={() => setEditingBengkelId(null)}
+                />
+              ) : (
+                <BengkelForm kotas={kotas} regions={regions} onSave={handleAddBengkel} />
+              )}
+            </>
+          )}
+
+          {section !== 'mds' && section !== 'bengkels' && (
+            <>
+              <div className="mb-3 flex flex-wrap gap-2 justify-end">
+                <Button variant="secondary" size="sm" onClick={() => setMasterImportOpen(true)}>
+                  <FileSpreadsheet className="w-3.5 h-3.5" />Import Excel
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => downloadMasterTemplate(section)}>
+                  <Download className="w-3.5 h-3.5" />Template CSV
+                </Button>
+              </div>
+              <div className="flex gap-2 mb-4">
+                <Input placeholder={`Tambah ${current.label.toLowerCase()}…`} value={newItem}
+                  onChange={e => setNewItem(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAdd()} />
+                {needsRegion && (
+                  <div className="w-44 shrink-0">
+                    <Select value={newItemRegion} onChange={e => setNewItemRegion(e.target.value)}>
+                      <option value="">Pilih region…</option>
+                      {regions.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    </Select>
+                  </div>
+                )}
+                <Button onClick={handleAdd} variant="primary"><Plus className="w-4 h-4" />Tambah</Button>
+              </div>
+            </>
+          )}
+
+          {section === 'mds' && (
+            <>
+              {!editingMD && (
+                <div className="mb-3 flex flex-wrap gap-2 justify-end">
+                  <Button variant="secondary" size="sm" onClick={() => setMasterImportOpen(true)}>
+                    <FileSpreadsheet className="w-3.5 h-3.5" />Import Excel
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => downloadMasterTemplate('mds')}>
+                    <Download className="w-3.5 h-3.5" />Template CSV
+                  </Button>
+                </div>
+              )}
+              {editingMD ? (
+                <MDForm key={editingMD.id} regions={regions} initial={editingMD} onSave={handleUpdateMD} onCancel={() => setEditingMDId(null)} />
+              ) : (
+                <MDForm regions={regions} onSave={handleAddMD} />
+              )}
+              {!MOCK_MODE && (
+                <div className="mb-4 p-3 bg-amber-600/10 border border-amber-600/20 rounded-lg flex gap-2 text-xs">
+                  <Shield className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div className="text-amber-400">
+                    Mode produksi: buat akun MD butuh Edge Function <span className="font-mono">admin-create-md</span> ter-deploy. Alternatif manual: <span className="font-mono">Supabase → Authentication → Users</span>.
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          <div className="space-y-1.5">
+            {current.items.length === 0 ? (
+              <div className="text-center py-8 text-sm text-zinc-500">Belum ada data.</div>
+            ) : current.items.map((item, i) => (
+              <div key={item.id}
+                className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-zinc-950 border transition group ${
+                  (editingBengkelId === item.id || editingMDId === item.id) ? 'border-amber-600/40 ring-1 ring-amber-600/20' : 'border-zinc-800 hover:border-zinc-700'
+                }`}>
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <span className="text-[10px] font-mono text-zinc-600 w-6">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="text-sm text-zinc-200 truncate">{current.getName(item)}</span>
+                  {section === 'bengkels' && (
+                    <span className={`ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded ${item.lat != null && item.lng != null ? 'bg-emerald-600/10 text-emerald-400' : 'bg-zinc-800/50 text-zinc-500'}`}>
+                      {item.lat != null && item.lng != null ? `${item.lat.toFixed(3)}, ${item.lng.toFixed(3)}` : 'no-gps'}
+                    </span>
+                  )}
+                  {(section === 'distributors' || section === 'kotas') && (
+                    <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded ${item.region_id ? 'bg-sky-600/10 text-sky-400' : 'bg-zinc-800/50 text-zinc-500'}`}>
+                      {item.region?.name || regionName(item.region_id) || 'no-region'}
+                    </span>
+                  )}
+                  {section === 'mds' && (
+                    <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded uppercase font-medium ${item.role === 'admin' ? 'bg-rose-600/10 text-rose-400' : item.role === 'bp' ? 'bg-amber-600/10 text-amber-400' : 'bg-sky-600/10 text-sky-400'}`}>
+                      {item.role}{item.region_id ? ` · ${regionName(item.region_id) || ''}` : ''}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  {section === 'mds' && (
+                    <button onClick={() => setEditingMDId(item.id)}
+                      className="opacity-0 group-hover:opacity-100 transition w-7 h-7 rounded-md hover:bg-amber-600/10 hover:text-amber-400 text-zinc-500 flex items-center justify-center"
+                      title="Edit akun">
+                      <Activity className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {section === 'bengkels' && (
+                    <button onClick={() => setEditingBengkelId(item.id)}
+                      className="opacity-0 group-hover:opacity-100 transition w-7 h-7 rounded-md hover:bg-amber-600/10 hover:text-amber-400 text-zinc-500 flex items-center justify-center"
+                      title="Edit bengkel">
+                      <Activity className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {section !== 'mds' && (
+                    <button onClick={() => handleDelete(item.id)}
+                      className="opacity-0 group-hover:opacity-100 transition w-7 h-7 rounded-md hover:bg-rose-600/10 hover:text-rose-400 text-zinc-500 flex items-center justify-center"
+                      title="Hapus">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {importOpen && (
+        <BengkelImportModal
+          kotas={kotas}
+          regions={regions}
+          bengkels={bengkels}
+          onClose={() => setImportOpen(false)}
+          onImported={onChange}
+        />
+      )}
+
+      {masterImportOpen && (
+        <MasterImportModal
+          section={section}
+          ctx={{ regions, kotas, distributors, mds }}
+          onClose={() => setMasterImportOpen(false)}
+          onImported={onChange}
+        />
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// SHARED
+// ============================================================
+
+function Loading() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <Loader2 className="w-6 h-6 text-zinc-500 animate-spin" />
+    </div>
+  );
+}
+
+// ============================================================
+// ROOT APP
+// ============================================================
+
+export default function App() {
+  const [profile, setProfile] = useState(null);
+  const [bootstrapping, setBootstrapping] = useState(true);
+
+  useEffect(() => {
+    api.getCurrentProfile().then(p => {
+      setProfile(p);
+      setBootstrapping(false);
+    });
+  }, []);
+
+  const handleLogin = (p) => setProfile(p);
+  const handleLogout = async () => {
+    await api.signOut();
+    setProfile(null);
+  };
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-zinc-100" style={{ fontFamily: "'Manrope', system-ui, sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Archivo:wght@500;600;700;800;900&display=swap');
+        h1, h2, h3, .font-display { font-family: 'Archivo', sans-serif; letter-spacing: -0.02em; }
+      `}</style>
+
+      {bootstrapping ? <Loading /> :
+       !profile ? <LoginScreen onLogin={handleLogin} /> :
+       <>
+        <header className="sticky top-0 z-40 backdrop-blur-xl bg-zinc-950/80 border-b border-zinc-800">
+          <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <img src="/mobil1-logo.png" alt="Mobil1" className="h-9 w-auto shrink-0" />
+              <div className="min-w-0">
+                <div className="font-display font-bold text-sm text-zinc-100 leading-tight">Mobil1 POSM</div>
+                <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{profile.role === 'md' ? 'MD Field Operations' : 'Admin Console'}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <div className="hidden sm:flex items-center gap-2 text-zinc-400">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center text-[10px] font-bold text-white">
+                  {profile.full_name.charAt(0)}
+                </div>
+                <span>{profile.full_name}</span>
+              </div>
+              <button onClick={handleLogout} className="text-zinc-500 hover:text-rose-400 transition flex items-center gap-1 px-2 py-1">
+                <LogOut className="w-3.5 h-3.5" /><span className="hidden sm:inline">Logout</span>
+              </button>
+            </div>
+          </div>
+          {MOCK_MODE && (
+            <div className="bg-amber-600/10 border-t border-amber-600/20 px-4 py-1.5 text-center text-[11px] text-amber-400">
+              🟡 Mode Demo (Mock Data) — set .env.local untuk pakai Supabase
+            </div>
+          )}
+        </header>
+
+        <main className="px-4 py-6">
+          {profile.role === 'md'
+            ? <MDView currentMD={profile} />
+            : <AdminView />}
+        </main>
+
+        <footer className="border-t border-zinc-800 py-6 mt-8">
+          <div className="max-w-6xl mx-auto px-4 text-center text-xs text-zinc-600">
+            Mobil1 POSM · v1.0
+          </div>
+        </footer>
+       </>
+      }
+    </div>
+  );
+}

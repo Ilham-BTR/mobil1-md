@@ -1,0 +1,6 @@
+# Untuk Supabase CLI — `supabase link` akan baca file ini.
+# Project ID didapat dari URL dashboard: https://supabase.com/dashboard/project/<PROJECT_ID>
+project_id = "your-project-id"
+
+[functions.get-upload-url]
+verify_jwt = false  # JWT divalidasi manual di dalam function (lebih fleksibel)

@@ -1,0 +1,457 @@
+// src/lib/api.js
+// Data access layer untuk Mobil1 POSM Tracker.
+// Semua query Supabase di-route lewat sini biar App.jsx gak penuh boilerplate.
+// Mock fallback otomatis aktif kalau .env belum di-set.
+
+import { supabase, MOCK_MODE } from './supabase';
+import { uploadAllVisitPhotos } from './storage';
+import { SEED_REGIONS, SEED_DISTRIBUTORS, SEED_KOTAS, SEED_BENGKELS } from './seedData';
+import { clearPhotos } from './photoStore';
+
+// ============================================================
+// MOCK DATA (untuk dev tanpa Supabase) — di-persist ke localStorage
+// ============================================================
+// Bump versi ini tiap kali seed data berubah → localStorage lama diabaikan, seed baru ke-load.
+const MOCK_STORAGE_KEY = 'mobil1_mock_data_v2';
+
+// State default kalau localStorage belum ada isinya — di-seed dari CSV (lihat scripts/generate-seed.mjs)
+const DEFAULT_MOCK = {
+  regions: SEED_REGIONS,
+  kotas: SEED_KOTAS,
+  distributors: SEED_DISTRIBUTORS,
+  bengkels: SEED_BENGKELS,
+  // Akun login default: 1 admin + 1 MD
+  profiles: [
+    { id: 'u1', email: 'budi@mobil1.id',  full_name: 'Budi Santoso', role: 'md',    region_id: null, monthly_target: 40 },
+    { id: 'u4', email: 'admin@mobil1.id', full_name: 'Admin Pusat',  role: 'admin', region_id: null, monthly_target: 0 },
+  ],
+  visits: [],
+};
+
+// Load dari localStorage; fallback ke default
+function loadMockData() {
+  if (typeof localStorage === 'undefined') return structuredClone(DEFAULT_MOCK);
+  try {
+    const raw = localStorage.getItem(MOCK_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Pastikan semua key ada (kalau struktur lama)
+      return { ...structuredClone(DEFAULT_MOCK), ...parsed };
+    }
+  } catch (e) { console.warn('Gagal load mock data dari localStorage:', e); }
+  return structuredClone(DEFAULT_MOCK);
+}
+
+const MOCK_DATA = loadMockData();
+
+// Simpan MOCK_DATA ke localStorage (dipanggil tiap mutasi)
+function persistMock() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(MOCK_DATA));
+  } catch (e) { console.warn('Gagal simpan mock data ke localStorage:', e); }
+}
+
+// Reset semua data demo ke default (panggil dari console: window.__resetMockData())
+export function resetMockData() {
+  Object.assign(MOCK_DATA, structuredClone(DEFAULT_MOCK));
+  persistMock();
+  clearPhotos();  // hapus juga foto di IndexedDB
+}
+if (typeof window !== 'undefined') window.__resetMockData = resetMockData;
+
+// ============================================================
+// AUTH
+// ============================================================
+export async function signIn(email, password) {
+  if (MOCK_MODE) {
+    await new Promise(r => setTimeout(r, 600));
+    const profile = MOCK_DATA.profiles.find(p => p.email === email.toLowerCase());
+    // Password yang diterima: password akun ini (kalau di-set) ATAU 'mobil1' (default demo)
+    const expected = profile?.password || 'mobil1';
+    if (!profile || (password !== expected && password !== 'mobil1')) {
+      throw new Error('Email atau password salah');
+    }
+    localStorage.setItem('mock_user_id', profile.id);
+    return profile;
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+
+  const { data: profile, error: pError } = await supabase
+    .from('profiles')
+    .select('*, region:regions(*)')
+    .eq('id', data.user.id)
+    .single();
+  if (pError) throw pError;
+
+  return profile;
+}
+
+export async function signOut() {
+  if (MOCK_MODE) {
+    localStorage.removeItem('mock_user_id');
+    return;
+  }
+  await supabase.auth.signOut();
+}
+
+export async function sendPasswordReset(email) {
+  if (MOCK_MODE) {
+    await new Promise(r => setTimeout(r, 800));
+    return { ok: true };
+  }
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/reset-password',
+  });
+  if (error) throw error;
+  return { ok: true };
+}
+
+export async function getCurrentProfile() {
+  if (MOCK_MODE) {
+    const id = localStorage.getItem('mock_user_id');
+    return MOCK_DATA.profiles.find(p => p.id === id) || null;
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*, region:regions(*)')
+    .eq('id', user.id)
+    .single();
+  return profile;
+}
+
+// ============================================================
+// MASTER DATA
+// ============================================================
+export async function fetchRegions() {
+  if (MOCK_MODE) return [...MOCK_DATA.regions];
+  const { data, error } = await supabase.from('regions').select('*').order('name');
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchKotas() {
+  if (MOCK_MODE) return [...MOCK_DATA.kotas];
+  const { data, error } = await supabase.from('kotas').select('*, region:regions(*)').order('name');
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchDistributors() {
+  if (MOCK_MODE) return [...MOCK_DATA.distributors];
+  const { data, error } = await supabase.from('distributors').select('*, region:regions(*)').order('name');
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchBengkels() {
+  if (MOCK_MODE) return [...MOCK_DATA.bengkels];
+  const { data, error } = await supabase
+    .from('bengkels')
+    .select('*, kota:kotas(*, region:regions(*))')
+    .order('code');
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchMDs() {
+  if (MOCK_MODE) return MOCK_DATA.profiles.filter(p => p.role === 'md');
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('role', 'md')
+    .order('full_name');
+  if (error) throw error;
+  return data;
+}
+
+export async function addMaster(table, payload) {
+  if (MOCK_MODE) {
+    const id = 'new_' + Date.now();
+    const item = { id, ...payload };
+    MOCK_DATA[table].push(item);
+    persistMock();
+    return item;
+  }
+  const { data, error } = await supabase.from(table).insert(payload).select().single();
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Bulk insert bengkels (untuk import dari Excel/CSV).
+ * Payload sudah ter-validate di client. Insert dilakukan dalam batch agar
+ * tidak hit limit body size & memberi progress feedback per chunk.
+ *
+ * @param {Array<Object>} rows - payload siap insert (code, name, kota_id, distributor_id, lat, lng)
+ * @param {(done:number,total:number)=>void} [onProgress] - callback opsional per batch
+ * @returns {Promise<{inserted:number, errors:Array<{row:number, message:string}>}>}
+ */
+export async function bulkAddBengkels(rows, onProgress) {
+  const BATCH = 50;
+  const result = { inserted: 0, errors: [] };
+
+  if (MOCK_MODE) {
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      try {
+        // Cek dupe by code di mock
+        if (MOCK_DATA.bengkels.some(b => b.code === r.code)) {
+          result.errors.push({ row: i + 1, message: `Kode ${r.code} sudah ada` });
+        } else {
+          MOCK_DATA.bengkels.push({ id: 'new_' + Date.now() + '_' + i, ...r });
+          result.inserted++;
+        }
+      } catch (e) {
+        result.errors.push({ row: i + 1, message: e.message });
+      }
+      if (onProgress && (i + 1) % BATCH === 0) onProgress(i + 1, rows.length);
+    }
+    persistMock();
+    onProgress?.(rows.length, rows.length);
+    return result;
+  }
+
+  // Supabase: insert per batch (gunakan upsert via on_conflict agar duplicate code bisa di-handle)
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const chunk = rows.slice(i, i + BATCH);
+    const { data, error } = await supabase
+      .from('bengkels')
+      .insert(chunk)
+      .select('id, code');
+    if (error) {
+      // Kalau batch error karena 1 dupe, fall back ke per-row agar yang lain tetap insert
+      for (let j = 0; j < chunk.length; j++) {
+        const single = chunk[j];
+        const { error: e } = await supabase.from('bengkels').insert(single).select('id').single();
+        if (e) result.errors.push({ row: i + j + 1, message: e.message });
+        else result.inserted++;
+      }
+    } else {
+      result.inserted += data?.length || chunk.length;
+    }
+    onProgress?.(Math.min(i + BATCH, rows.length), rows.length);
+  }
+  return result;
+}
+
+/**
+ * Bulk insert master sederhana (regions, distributors, kotas).
+ * Payload sudah ter-validate & ter-enrich di client (kotas sudah punya region_id).
+ * @param {string} table - 'regions' | 'distributors' | 'kotas'
+ * @param {Array<Object>} rows
+ * @param {(done:number,total:number)=>void} [onProgress]
+ * @returns {Promise<{inserted:number, errors:Array<{row:number,message:string}>}>}
+ */
+export async function bulkAddMaster(table, rows, onProgress) {
+  const BATCH = 100;
+  const result = { inserted: 0, errors: [] };
+
+  if (MOCK_MODE) {
+    for (let i = 0; i < rows.length; i++) {
+      MOCK_DATA[table].push({ id: 'new_' + Date.now() + '_' + i, ...rows[i] });
+      result.inserted++;
+    }
+    persistMock();
+    onProgress?.(rows.length, rows.length);
+    return result;
+  }
+
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const chunk = rows.slice(i, i + BATCH);
+    const { data, error } = await supabase.from(table).insert(chunk).select('id');
+    if (error) {
+      // fallback per-row biar yang valid tetap masuk
+      for (let j = 0; j < chunk.length; j++) {
+        const { error: e } = await supabase.from(table).insert(chunk[j]).select('id').single();
+        if (e) result.errors.push({ row: i + j + 1, message: e.message });
+        else result.inserted++;
+      }
+    } else {
+      result.inserted += data?.length || chunk.length;
+    }
+    onProgress?.(Math.min(i + BATCH, rows.length), rows.length);
+  }
+  return result;
+}
+
+/**
+ * Bulk create akun MD.
+ * MD = auth user + profile, jadi di real mode WAJIB lewat Edge Function
+ * (pakai service_role untuk createUser). Di mock mode cukup push ke profiles.
+ *
+ * @param {Array<Object>} rows - { email, full_name, role, region_id, monthly_target, password }
+ * @param {(done:number,total:number)=>void} [onProgress]
+ * @returns {Promise<{inserted:number, errors:Array<{row:number,message:string}>}>}
+ */
+export async function bulkCreateMDs(rows, onProgress) {
+  const result = { inserted: 0, errors: [] };
+
+  if (MOCK_MODE) {
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (MOCK_DATA.profiles.some(p => p.email === r.email.toLowerCase())) {
+        result.errors.push({ row: i + 1, message: `Email ${r.email} sudah ada` });
+      } else {
+        MOCK_DATA.profiles.push({
+          id: 'new_md_' + Date.now() + '_' + i,
+          email: r.email.toLowerCase(),
+          full_name: r.full_name,
+          role: r.role || 'md',
+          region_id: r.region_id || null,
+          monthly_target: r.monthly_target || 30,
+          password: r.password || 'mobil1',  // mock: simpan password biar bisa login
+        });
+        result.inserted++;
+      }
+      onProgress?.(i + 1, rows.length);
+    }
+    persistMock();
+    return result;
+  }
+
+  // Real Supabase: panggil edge function yang pakai service_role
+  const { data, error } = await supabase.functions.invoke('admin-create-md', {
+    body: { users: rows },
+  });
+  if (error) throw new Error(`Edge function gagal: ${error.message}`);
+  onProgress?.(rows.length, rows.length);
+  return data || result;
+}
+
+export async function updateMaster(table, id, patch) {
+  if (MOCK_MODE) {
+    const idx = MOCK_DATA[table].findIndex(x => x.id === id);
+    if (idx === -1) throw new Error('Item tidak ditemukan');
+    MOCK_DATA[table][idx] = { ...MOCK_DATA[table][idx], ...patch };
+    persistMock();
+    return MOCK_DATA[table][idx];
+  }
+  const { data, error } = await supabase.from(table).update(patch).eq('id', id).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteMaster(table, id) {
+  if (MOCK_MODE) {
+    MOCK_DATA[table] = MOCK_DATA[table].filter(x => x.id !== id);
+    persistMock();
+    return;
+  }
+  const { error } = await supabase.from(table).delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ============================================================
+// VISITS
+// ============================================================
+export async function fetchVisits({ mdId, month } = {}) {
+  if (MOCK_MODE) {
+    let v = [...MOCK_DATA.visits];
+    if (mdId) v = v.filter(x => x.md_id === mdId);
+    if (month) v = v.filter(x => x.visit_date.startsWith(month));
+    return v.sort((a, b) => b.visit_date.localeCompare(a.visit_date));
+  }
+
+  let query = supabase
+    .from('visit_details')
+    .select('*')
+    .order('visit_date', { ascending: false });
+
+  if (mdId) query = query.eq('md_id', mdId);
+  if (month) {
+    const start = month + '-01';
+    const [y, m] = month.split('-');
+    const lastDay = new Date(Number(y), Number(m), 0).getDate();
+    const end = `${month}-${String(lastDay).padStart(2, '0')}`;
+    query = query.gte('visit_date', start).lte('visit_date', end);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Create visit: upload photos to B2, then insert row.
+ * Kalau bengkel belum punya lat/lng di master, dan MD captured GPS,
+ * otomatis backfill bengkels.lat/lng via RPC (idempotent).
+ *
+ * @param {Object} args - { mdId, bengkelId, distributorId, visitDate, picName, picPhone, status,
+ *                          remarks, lat, lng, photos, backfillBengkelCoords? }
+ * @returns {Promise<{ visit: Object, bengkelBackfilled: boolean }>}
+ */
+export async function createVisit(args) {
+  // Generate UUID locally so we can use it for photo paths before insert
+  const visitId = crypto.randomUUID();
+
+  // 1. Upload all photos in parallel
+  const photoUrls = await uploadAllVisitPhotos(args.photos, visitId);
+
+  // 2. Insert visit row
+  const payload = {
+    id: visitId,
+    md_id: args.mdId,
+    bengkel_id: args.bengkelId,
+    distributor_id: args.distributorId || null,
+    visit_date: args.visitDate,
+    pic_name: args.picName,
+    pic_phone: args.picPhone,
+    status: args.status,
+    remarks: args.remarks || null,
+    visit_lat: args.lat,
+    visit_lng: args.lng,
+    ...photoUrls,
+  };
+
+  const canBackfill = args.backfillBengkelCoords && args.lat != null && args.lng != null;
+
+  if (MOCK_MODE) {
+    MOCK_DATA.visits.unshift({ ...payload, created_at: new Date().toISOString() });
+    let bengkelBackfilled = false;
+    if (canBackfill) {
+      const b = MOCK_DATA.bengkels.find(x => x.id === args.bengkelId);
+      if (b && (b.lat == null || b.lng == null)) {
+        b.lat = args.lat;
+        b.lng = args.lng;
+        bengkelBackfilled = true;
+      }
+    }
+    persistMock();
+    return { visit: payload, bengkelBackfilled };
+  }
+
+  const { data, error } = await supabase
+    .from('visits')
+    .insert(payload)
+    .select()
+    .single();
+  if (error) throw error;
+
+  // Backfill bengkel coords (best-effort — error di sini tidak boleh gagalkan visit yang sudah saved)
+  let bengkelBackfilled = false;
+  if (canBackfill) {
+    try {
+      const { data: ok, error: bfErr } = await supabase.rpc('backfill_bengkel_coords', {
+        p_bengkel_id: args.bengkelId,
+        p_lat: args.lat,
+        p_lng: args.lng,
+      });
+      if (bfErr) {
+        console.warn('Backfill bengkel coords gagal:', bfErr.message);
+      } else {
+        bengkelBackfilled = !!ok;
+      }
+    } catch (e) {
+      console.warn('Backfill RPC error:', e);
+    }
+  }
+
+  return { visit: data, bengkelBackfilled };
+}
