@@ -461,8 +461,22 @@ const PHOTO_LABELS = {
 };
 const PHOTO_KEYS = Object.keys(PHOTO_LABELS);
 
-function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose }) {
+function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDeleted }) {
   const [lightboxIdx, setLightboxIdx] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.deleteVisit(visit.id);
+      onDeleted?.(visit.id);
+      onClose();
+    } catch (err) {
+      alert('Gagal hapus visit: ' + err.message);
+      setDeleting(false);
+    }
+  };
 
   // Kunci scroll body selama modal kebuka — biar background gak ikut scroll
   useEffect(() => {
@@ -653,6 +667,28 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose }) {
             <span>Visit ID: <span className="font-mono text-zinc-400">{visit.id?.slice(0, 8)}…</span></span>
             {visit.created_at && <span>Dibuat: {new Date(visit.created_at).toLocaleString('id-ID')}</span>}
           </div>
+
+          {/* Danger zone: hapus visit */}
+          {onDeleted && (
+            <div className="pt-3 mt-1 border-t border-zinc-800/50">
+              {!confirmDelete ? (
+                <button onClick={() => setConfirmDelete(true)}
+                  className="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1.5 transition">
+                  <Trash2 className="w-3.5 h-3.5" />Hapus Visit ini
+                </button>
+              ) : (
+                <div className="flex items-center gap-2 p-2.5 bg-rose-600/10 border border-rose-600/30 rounded-lg">
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span className="text-xs text-rose-300 flex-1">Hapus visit + semua fotonya? Tidak bisa dibatalkan.</span>
+                  <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(false)} disabled={deleting}>Batal</Button>
+                  <button onClick={handleDelete} disabled={deleting}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-1.5 disabled:opacity-60">
+                    {deleting ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Menghapus…</> : <><Trash2 className="w-3.5 h-3.5" />Ya, Hapus</>}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1629,6 +1665,7 @@ function AdminView() {
           distributor={detailDistributor}
           md={detailMD}
           onClose={() => setDetailVisitId(null)}
+          onDeleted={() => { setDetailVisitId(null); loadAll(); }}
         />
       )}
     </div>

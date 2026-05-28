@@ -6,7 +6,7 @@
 import { supabase, MOCK_MODE } from './supabase';
 import { uploadAllVisitPhotos } from './storage';
 import { SEED_REGIONS, SEED_DISTRIBUTORS, SEED_KOTAS, SEED_BENGKELS } from './seedData';
-import { clearPhotos } from './photoStore';
+import { clearPhotos, deletePhotosByVisit } from './photoStore';
 
 // ============================================================
 // MOCK DATA (untuk dev tanpa Supabase) — di-persist ke localStorage
@@ -455,4 +455,34 @@ export async function createVisit(args) {
   }
 
   return { visit: data, bengkelBackfilled };
+}
+
+/**
+ * Hapus 1 visit beserta foto-fotonya.
+ * Mock: hapus dari MOCK_DATA.visits + foto IndexedDB.
+ * Produksi: hapus file di Storage (visit-photos/visits/{id}/*) lalu delete row.
+ */
+export async function deleteVisit(visitId) {
+  if (MOCK_MODE) {
+    MOCK_DATA.visits = MOCK_DATA.visits.filter(v => v.id !== visitId);
+    persistMock();
+    await deletePhotosByVisit(visitId);
+    return;
+  }
+
+  // 1. Hapus foto di Storage (best-effort)
+  try {
+    const folder = `visits/${visitId}`;
+    const { data: files } = await supabase.storage.from('visit-photos').list(folder);
+    if (files && files.length) {
+      const paths = files.map(f => `${folder}/${f.name}`);
+      await supabase.storage.from('visit-photos').remove(paths);
+    }
+  } catch (e) {
+    console.warn('Hapus foto Storage gagal (lanjut hapus row):', e);
+  }
+
+  // 2. Hapus row visit (RLS: admin/bp boleh delete)
+  const { error } = await supabase.from('visits').delete().eq('id', visitId);
+  if (error) throw error;
 }

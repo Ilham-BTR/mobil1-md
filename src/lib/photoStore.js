@@ -57,6 +57,31 @@ export async function getPhotoURL(key) {
   }
 }
 
+// Hapus semua foto milik 1 visit (key prefix "visitId/")
+export async function deletePhotosByVisit(visitId) {
+  try {
+    const db = await openDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      const store = tx.objectStore(STORE);
+      const req = store.openCursor();
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) {
+          if (String(cursor.key).startsWith(visitId + '/')) cursor.delete();
+          cursor.continue();
+        }
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (e) { console.warn('deletePhotosByVisit gagal:', e); }
+  // bersihkan cache URL
+  urlCache.forEach((url, key) => {
+    if (key.startsWith(visitId + '/')) { URL.revokeObjectURL(url); urlCache.delete(key); }
+  });
+}
+
 // Hapus semua foto (dipanggil dari resetMockData)
 export async function clearPhotos() {
   try {
