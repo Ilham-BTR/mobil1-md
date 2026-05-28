@@ -111,6 +111,11 @@ const visitToCSVRow = (v, ctx) => {
     visit_lat: v.visit_lat ?? '',
     visit_lng: v.visit_lng ?? '',
     photo_count: photoCount,
+    // Link tiap foto (URL Supabase Storage di produksi). Header = label rapi.
+    ...Object.fromEntries(PHOTO_KEYS.map(k => [
+      'link_' + k.replace(/^photo_/, ''),   // mis. link_tampak_depan, link_in, ...
+      typeof v[k] === 'string' && v[k].startsWith('http') ? v[k] : (v[k] ? '(foto lokal/idb)' : ''),
+    ])),
     created_at: v.created_at || '',
   };
 };
