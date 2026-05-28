@@ -3223,14 +3223,6 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange }) {
               ) : (
                 <MDForm regions={regions} onSave={handleAddMD} />
               )}
-              {!MOCK_MODE && (
-                <div className="mb-4 p-3 bg-amber-600/10 border border-amber-600/20 rounded-lg flex gap-2 text-xs">
-                  <Shield className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                  <div className="text-amber-400">
-                    Mode produksi: buat akun MD butuh Edge Function <span className="font-mono">admin-create-md</span> ter-deploy. Alternatif manual: <span className="font-mono">Supabase → Authentication → Users</span>.
-                  </div>
-                </div>
-              )}
             </>
           )}
 
