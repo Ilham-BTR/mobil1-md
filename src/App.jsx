@@ -104,6 +104,7 @@ const visitToCSVRow = (v, ctx) => {
     pic_name: v.pic_name || '',
     pic_phone: v.pic_phone || '',
     status: v.status,
+    sub_type: v.sub_type || '',
     remarks: v.remarks || '',
     bengkel_lat: b?.lat ?? '',
     bengkel_lng: b?.lng ?? '',
@@ -497,7 +498,10 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose }) {
             <h2 className="font-display font-bold text-lg text-zinc-100 truncate">{bengkel?.name || visit.bengkel_name || '—'}</h2>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <StatusBadge status={visit.status} />
+            <div className="flex flex-col items-end gap-1">
+              <StatusBadge status={visit.status} />
+              {visit.sub_type && <span className="text-[10px] text-zinc-400">{visit.sub_type}</span>}
+            </div>
             <button onClick={onClose} className="w-9 h-9 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 flex items-center justify-center">
               <X className="w-4 h-4" />
             </button>
@@ -692,13 +696,17 @@ const InfoCell = ({ icon: Icon, label, value }) => (
 // ============================================================
 
 const STATUS_STYLES = {
-  Pemasangan:        { bg: 'bg-emerald-600/100/10', text: 'text-emerald-400', border: 'border-emerald-500/30', dot: 'bg-emerald-400' },
-  Revisit:           { bg: 'bg-sky-600/100/10',     text: 'text-sky-400',     border: 'border-sky-500/30',     dot: 'bg-sky-400' },
-  Maintenance:       { bg: 'bg-amber-600/100/10',   text: 'text-amber-400',   border: 'border-amber-500/30',   dot: 'bg-amber-400' },
-  'Delivery Gimmic': { bg: 'bg-violet-600/100/10',  text: 'text-violet-400',  border: 'border-violet-500/30',  dot: 'bg-violet-400' },
+  Pemasangan: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/30', dot: 'bg-emerald-400' },
+  Revisit:    { bg: 'bg-sky-500/10',     text: 'text-sky-400',     border: 'border-sky-500/30',     dot: 'bg-sky-400' },
 };
 
-const STATUS_OPTIONS = ['Pemasangan', 'Revisit', 'Maintenance', 'Delivery Gimmic'];
+// Status induk (2) → daftar sub-tipe (anak)
+const STATUS_OPTIONS = ['Pemasangan', 'Revisit'];
+const STATUS_SUBTYPES = {
+  'Pemasangan': ['Deploy POSM New', 'Replace POSM Old'],
+  'Revisit':    ['Maintenance', 'Delivery Gimmick'],
+};
+const ALL_SUBTYPES = ['Deploy POSM New', 'Replace POSM Old', 'Maintenance', 'Delivery Gimmick'];
 
 const StatusBadge = ({ status }) => {
   const s = STATUS_STYLES[status] || STATUS_STYLES.Pemasangan;
@@ -1234,7 +1242,7 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
     distributorId: '',
     date: new Date().toISOString().slice(0, 10),
     pic: '', phone: '',
-    status: 'Pemasangan', remarks: '',
+    status: 'Pemasangan', subType: '', remarks: '',
     photos: { tampakDepan: null, in: null, out: null, spandukBefore: null, spandukAfter: null, posterBefore: null, posterAfter: null },
   });
   const [submitting, setSubmitting] = useState(false);
@@ -1288,7 +1296,7 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
 
   const requiredPhotos = ['in', 'tampakDepan', 'out'];
   const hasAllRequiredPhotos = requiredPhotos.every(k => form.photos[k]?.status === 'ready');
-  const canSubmit = form.bengkelId && form.distributorId && form.pic && form.phone && hasAllRequiredPhotos && !anyCompressing && !submitting;
+  const canSubmit = form.bengkelId && form.distributorId && form.subType && form.pic && form.phone && hasAllRequiredPhotos && !anyCompressing && !submitting;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -1310,6 +1318,7 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
         picName: form.pic,
         picPhone: form.phone,
         status: form.status,
+        subType: form.subType,
         remarks: form.remarks,
         lat, lng,
         photos: form.photos,
@@ -1464,13 +1473,33 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
         <Field label="Status Kunjungan" required>
           <div className="grid grid-cols-2 gap-2">
             {STATUS_OPTIONS.map(s => (
-              <button key={s} onClick={() => setForm({ ...form, status: s })}
+              <button key={s} onClick={() => setForm({ ...form, status: s, subType: '' })}
                 className={`py-2.5 rounded-lg text-xs font-medium border transition ${
                   form.status === s ? `${STATUS_STYLES[s].bg} ${STATUS_STYLES[s].text} ${STATUS_STYLES[s].border}` : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-300'
-                }`}>{s}</button>
+                }`}>{s === 'Pemasangan' ? 'Pemasangan / Deployment' : s}</button>
             ))}
           </div>
         </Field>
+
+        {/* Sub-tipe: muncul sesuai status induk */}
+        <Field label={form.status === 'Pemasangan' ? 'Jenis Pemasangan' : 'Jenis Revisit'} required>
+          <div className="grid grid-cols-2 gap-2">
+            {(STATUS_SUBTYPES[form.status] || []).map(sub => (
+              <button key={sub} onClick={() => setForm({ ...form, subType: sub })}
+                className={`py-2.5 rounded-lg text-xs font-medium border transition ${
+                  form.subType === sub
+                    ? `${STATUS_STYLES[form.status].bg} ${STATUS_STYLES[form.status].text} ${STATUS_STYLES[form.status].border}`
+                    : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-300'
+                }`}>{sub}</button>
+            ))}
+          </div>
+          {!form.subType && (
+            <p className="text-[11px] text-amber-400 mt-1.5 flex items-center gap-1.5">
+              <AlertCircle className="w-3 h-3" />Pilih jenis {form.status === 'Pemasangan' ? 'pemasangan' : 'revisit'}.
+            </p>
+          )}
+        </Field>
+
         <Field label="Remarks">
           <Textarea rows={3} placeholder="Catatan tambahan…" value={form.remarks} onChange={e => setForm({ ...form, remarks: e.target.value })} />
         </Field>
@@ -1628,7 +1657,7 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
 
       if (filters.search.trim()) {
         const q = filters.search.toLowerCase();
-        const haystack = `${b?.code || ''} ${b?.name || v.bengkel_name || ''} ${md?.full_name || v.md_name || ''} ${v.pic_name || ''}`.toLowerCase();
+        const haystack = `${b?.code || ''} ${b?.name || v.bengkel_name || ''} ${md?.full_name || v.md_name || ''} ${v.pic_name || ''} ${v.sub_type || ''}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;
@@ -1708,7 +1737,10 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
                     <Camera className="w-3 h-3 shrink-0" /><span className="shrink-0">{photoCount}/7</span>
                   </div>
                 </div>
-                <StatusBadge status={v.status} />
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <StatusBadge status={v.status} />
+                  {v.sub_type && <span className="text-[10px] text-zinc-500">{v.sub_type}</span>}
+                </div>
                 <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-red-300 transition shrink-0" />
               </button>
             );

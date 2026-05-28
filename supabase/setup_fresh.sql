@@ -20,7 +20,7 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 
 do $$ begin
-  create type visit_status as enum ('Pemasangan', 'Revisit', 'Maintenance', 'Delivery Gimmic');
+  create type visit_status as enum ('Pemasangan', 'Revisit');
 exception when duplicate_object then null; end $$;
 
 -- TABLE: profiles
@@ -98,6 +98,7 @@ create table if not exists visits (
   pic_phone text not null,
   distributor_id uuid references distributors(id) on delete set null,
   status visit_status not null default 'Pemasangan',
+  sub_type text,  -- Pemasangan: Deploy POSM New|Replace POSM Old · Revisit: Maintenance|Delivery Gimmick
   remarks text,
   visit_lat double precision,
   visit_lng double precision,
@@ -218,10 +219,12 @@ create or replace view md_monthly_performance as
 select p.id as md_id, p.full_name as md_name, p.monthly_target,
   date_trunc('month', v.visit_date)::date as month,
   count(*) as visits_actual,
-  count(*) filter (where v.status = 'Pemasangan')      as visits_pemasangan,
-  count(*) filter (where v.status = 'Revisit')         as visits_revisit,
-  count(*) filter (where v.status = 'Maintenance')     as visits_maintenance,
-  count(*) filter (where v.status = 'Delivery Gimmic') as visits_delivery_gimmic,
+  count(*) filter (where v.status = 'Pemasangan') as visits_pemasangan,
+  count(*) filter (where v.status = 'Revisit')    as visits_revisit,
+  count(*) filter (where v.sub_type = 'Deploy POSM New')   as sub_deploy_new,
+  count(*) filter (where v.sub_type = 'Replace POSM Old')  as sub_replace_old,
+  count(*) filter (where v.sub_type = 'Maintenance')       as sub_maintenance,
+  count(*) filter (where v.sub_type = 'Delivery Gimmick')  as sub_gimmick,
   round(100.0 * count(*) / nullif(p.monthly_target, 0), 1) as achievement_pct
 from profiles p
 left join visits v on v.md_id = p.id

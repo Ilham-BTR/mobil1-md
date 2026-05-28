@@ -404,6 +404,7 @@ export async function createVisit(args) {
     pic_name: args.picName,
     pic_phone: args.picPhone,
     status: args.status,
+    sub_type: args.subType || null,
     remarks: args.remarks || null,
     visit_lat: args.lat,
     visit_lng: args.lng,
