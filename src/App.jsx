@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import imageCompression from 'browser-image-compression';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend
+  ResponsiveContainer, Legend, Cell, ReferenceLine
 } from 'recharts';
 import {
   MapPin, Camera, Calendar, User, Building2, Check, X,
@@ -1249,15 +1249,166 @@ function MDView({ currentMD, refreshKey }) {
         <button onClick={() => setTab('new')} className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition ${tab === 'new' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>
           <ClipboardList className="w-4 h-4 inline mr-2" /> Visit Baru
         </button>
+        <button onClick={() => setTab('progress')} className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition ${tab === 'progress' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>
+          <LayoutDashboard className="w-4 h-4 inline mr-2" /> Progres
+        </button>
         <button onClick={() => setTab('history')} className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition ${tab === 'history' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>
           <Activity className="w-4 h-4 inline mr-2" /> History ({visits.length})
         </button>
       </div>
 
-      {tab === 'new'
-        ? <VisitForm currentMD={currentMD} bengkels={bengkels} regions={regions} kotas={kotas} distributors={distributors} onSubmitted={() => { reloadVisits(); setTab('history'); }} />
-        : <VisitHistory visits={visits} bengkels={bengkels} kotas={kotas} distributors={distributors} />
-      }
+      {tab === 'new' && <VisitForm currentMD={currentMD} bengkels={bengkels} regions={regions} kotas={kotas} distributors={distributors} onSubmitted={() => { reloadVisits(); setTab('history'); }} />}
+      {tab === 'progress' && <MDDashboard currentMD={currentMD} visits={visits} bengkels={bengkels} kotas={kotas} />}
+      {tab === 'history' && <VisitHistory visits={visits} bengkels={bengkels} kotas={kotas} distributors={distributors} />}
+    </div>
+  );
+}
+
+// Dashboard MD — progres target bulanan + tracking per hari
+function MDDashboard({ currentMD, visits, bengkels, kotas }) {
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  const availableMonths = useMemo(() => {
+    const set = new Set(visits.map(v => v.visit_date.slice(0, 7)));
+    set.add(todayStr.slice(0, 7)); // selalu sertakan bulan ini
+    return [...set].sort().reverse();
+  }, [visits, todayStr]);
+
+  const [month, setMonth] = useState(todayStr.slice(0, 7));
+
+  const monthVisits = useMemo(
+    () => visits.filter(v => v.visit_date.startsWith(month)),
+    [visits, month]
+  );
+
+  const monthlyTarget = currentMD.monthly_target || 30;
+  const totalThisMonth = monthVisits.length;
+  const achievement = monthlyTarget > 0 ? Math.round((totalThisMonth / monthlyTarget) * 100) : 0;
+  const sisaTarget = Math.max(monthlyTarget - totalThisMonth, 0);
+  const pemasangan = monthVisits.filter(v => v.status === 'Pemasangan').length;
+  const revisit = monthVisits.filter(v => v.status === 'Revisit').length;
+
+  // Hitung jumlah hari dalam bulan terpilih
+  const [yy, mm] = month.split('-').map(Number);
+  const daysInMonth = new Date(yy, mm, 0).getDate();
+
+  // Target harian ≈ target bulanan dibagi 26 hari kerja (mis. 178/26 ≈ 7)
+  const dailyTarget = Math.max(1, Math.round(monthlyTarget / 26));
+
+  // Data per hari
+  const dailyData = useMemo(() => {
+    const counts = {};
+    monthVisits.forEach(v => {
+      const d = Number(v.visit_date.slice(8, 10));
+      counts[d] = (counts[d] || 0) + 1;
+    });
+    return Array.from({ length: daysInMonth }, (_, i) => {
+      const day = i + 1;
+      return { day: String(day), Visit: counts[day] || 0 };
+    });
+  }, [monthVisits, daysInMonth]);
+
+  const isCurrentMonth = month === todayStr.slice(0, 7);
+  const todayCount = isCurrentMonth ? (dailyData[Number(todayStr.slice(8, 10)) - 1]?.Visit || 0) : 0;
+  const activeDays = dailyData.filter(d => d.Visit > 0).length;
+  const bestDay = dailyData.reduce((b, d) => (d.Visit > b.Visit ? d : b), { day: '-', Visit: 0 });
+  const avgPerActiveDay = activeDays > 0 ? (totalThisMonth / activeDays).toFixed(1) : '0';
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
+        <div>
+          <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display">Progres Target</h2>
+          <p className="text-sm text-zinc-500 mt-1">{currentMD.full_name} · tracking visit per hari</p>
+        </div>
+        <div className="w-40">
+          <Select value={month} onChange={e => setMonth(e.target.value)}>
+            {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
+          </Select>
+        </div>
+      </div>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        {[
+          { label: 'Visit Bulan Ini', value: totalThisMonth, sub: `dari ${monthlyTarget} target`, icon: Activity, color: 'red' },
+          { label: 'Achievement', value: `${achievement}%`, sub: 'pencapaian target', icon: Target, color: 'emerald' },
+          { label: isCurrentMonth ? 'Visit Hari Ini' : 'Hari Aktif', value: isCurrentMonth ? todayCount : activeDays, sub: isCurrentMonth ? `target ${dailyTarget}/hari` : 'hari ada visit', icon: Check, color: 'sky' },
+          { label: 'Sisa Target', value: sisaTarget, sub: sisaTarget === 0 ? 'target tercapai 🎉' : 'visit lagi', icon: ClipboardList, color: 'amber' },
+        ].map((k, i) => (
+          <div key={i} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-zinc-500 uppercase tracking-wider font-medium">{k.label}</span>
+              <k.icon className={`w-4 h-4 text-${k.color}-500`} />
+            </div>
+            <div className="text-2xl font-bold text-zinc-100 mb-0.5">{k.value}</div>
+            <div className="text-xs text-zinc-500">{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Progress bar bulanan */}
+      <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 mb-5">
+        <div className="flex items-center justify-between text-sm mb-2">
+          <span className="text-zinc-400">Pencapaian bulan {month}</span>
+          <span className="font-semibold text-zinc-100">{totalThisMonth}<span className="text-zinc-500">/{monthlyTarget}</span></span>
+        </div>
+        <div className="h-2.5 bg-zinc-800/60 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${achievement >= 80 ? 'bg-emerald-500' : achievement >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`}
+            style={{ width: `${Math.min(achievement, 100)}%` }}
+          />
+        </div>
+        <div className="flex items-center justify-between text-[11px] text-zinc-500 mt-2">
+          <span>Pemasangan: <span className="text-emerald-400 font-medium">{pemasangan}</span> · Revisit: <span className="text-sky-400 font-medium">{revisit}</span></span>
+          <span>{achievement}%</span>
+        </div>
+      </div>
+
+      {/* Chart per hari */}
+      <Section title="Visit per Hari" subtitle={`${month} · target ${dailyTarget}/hari (garis putus)`} icon={Activity}>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={dailyData} margin={{ top: 10, right: 10, bottom: 0, left: -24 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+              <XAxis dataKey="day" stroke="#71717a" tick={{ fontSize: 10 }} interval={daysInMonth > 20 ? 2 : 0} />
+              <YAxis stroke="#71717a" tick={{ fontSize: 11 }} allowDecimals={false} />
+              <Tooltip
+                contentStyle={{ background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', fontSize: '12px' }}
+                cursor={{ fill: 'rgba(239,68,68,0.05)' }}
+                labelFormatter={(d) => `Tanggal ${d}`}
+              />
+              <ReferenceLine y={dailyTarget} stroke="#a1a1aa" strokeDasharray="4 4" />
+              <Bar dataKey="Visit" radius={[4, 4, 0, 0]}>
+                {dailyData.map((d, i) => (
+                  <Cell key={i} fill={d.Visit >= dailyTarget ? '#10b981' : d.Visit > 0 ? '#dc2626' : '#3f3f46'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 mt-4">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-center">
+            <div className="text-lg font-bold text-zinc-100">{activeDays}</div>
+            <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Hari Aktif</div>
+          </div>
+          <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-center">
+            <div className="text-lg font-bold text-zinc-100">{avgPerActiveDay}</div>
+            <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Rata2 / Hari</div>
+          </div>
+          <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-center">
+            <div className="text-lg font-bold text-zinc-100">{bestDay.Visit > 0 ? `${bestDay.Visit}` : '0'}</div>
+            <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Terbanyak {bestDay.Visit > 0 ? `(tgl ${bestDay.day})` : ''}</div>
+          </div>
+        </div>
+      </Section>
+
+      {monthVisits.length === 0 && (
+        <div className="text-center text-zinc-500 text-sm py-8">
+          Belum ada visit di bulan ini. Mulai dari tab <span className="text-red-400 font-medium">Visit Baru</span>.
+        </div>
+      )}
     </div>
   );
 }
