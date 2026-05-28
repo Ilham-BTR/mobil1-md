@@ -1341,7 +1341,6 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
 
   const setPhoto = (key, val) => setForm(f => ({ ...f, photos: { ...f.photos, [key]: val } }));
   const photoCount = Object.values(form.photos).filter(p => p?.status === 'ready').length;
-  const totalSize = Object.values(form.photos).filter(p => p?.status === 'ready').reduce((s, p) => s + p.compressedSize, 0);
   const anyCompressing = Object.values(form.photos).some(p => p?.status === 'compressing');
 
   const requiredPhotos = ['in', 'tampakDepan', 'out'];
@@ -1494,7 +1493,7 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
         </Field>
       </Section>
 
-      <Section title="Dokumentasi Foto" subtitle={`${photoCount} / 7 foto · Total: ${formatSize(totalSize)} (terkompres)`} icon={Camera}>
+      <Section title="Dokumentasi Foto" subtitle={`${photoCount} / 7 foto`} icon={Camera}>
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Saat Tiba</div>
         <div className="grid grid-cols-3 gap-3">
           <PhotoTile label="Foto In" required photo={form.photos.in} onChange={v => setPhoto('in', v)} />
