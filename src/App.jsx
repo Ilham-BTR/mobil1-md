@@ -153,7 +153,7 @@ const BengkelMap = ({
 }) => {
   const hasBengkel = lat != null && lng != null;
   const hasUser = userLat != null && userLng != null;
-  const userPinDraggable = !hasBengkel && !!onUserLocationChange;
+  const userPinDraggable = false; // pin tidak bisa digeser — pakai titik long/lat GPS apa adanya
 
   // Empty state: bengkel ✗ AND user ✗ → tampilkan placeholder + retry GPS
   if (!hasBengkel && !hasUser) {
@@ -186,16 +186,6 @@ const BengkelMap = ({
 
   return (
     <div className="rounded-xl overflow-hidden border border-zinc-800">
-      {/* Banner kalau bengkel belum punya koordinat */}
-      {!hasBengkel && (
-        <div className="bg-amber-600/10 border-b border-amber-600/20 px-3 py-2 flex items-start gap-2 text-[11px] text-amber-400">
-          <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-          <span>
-            Bengkel ini belum punya koordinat di master data. <span className="text-amber-300 font-medium">GPS Anda dipakai sebagai lokasi visit</span> — drag pin biru kalau posisinya geser dari titik bengkel sebenarnya.
-          </span>
-        </div>
-      )}
-
       <MapContainer
         center={center}
         zoom={16}
@@ -1502,12 +1492,6 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
         <div className="grid grid-cols-3 gap-3">
           <PhotoTile label="Foto Out" required photo={form.photos.out} onChange={v => setPhoto('out', v)} />
         </div>
-        {photoCount > 0 && (
-          <div className="mt-3 p-2.5 bg-emerald-600/10 border border-emerald-200 rounded-lg flex items-center gap-2 text-xs">
-            <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-            <span className="text-emerald-400">Foto sudah dikompres siap upload ke B2. Hemat bandwidth ~85-90%.</span>
-          </div>
-        )}
       </Section>
 
       <Section title="Status & Remarks" icon={Check}>
