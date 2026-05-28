@@ -1297,6 +1297,8 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
   const [submitted, setSubmitted] = useState(false);
   const [backfilled, setBackfilled] = useState(false);
   const [error, setError] = useState('');
+  // Lock sinkron — cegah dobel submit dari double-tap cepat (sebelum state submitting ke-render)
+  const submitLock = useRef(false);
 
   // GPS user state — di-capture saat bengkel dipilih
   const [gps, setGps] = useState({ status: 'idle', lat: null, lng: null, accuracy: null, error: null });
@@ -1347,7 +1349,8 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
   const canSubmit = form.bengkelId && form.distributorId && form.subType && form.pic && form.phone && hasAllRequiredPhotos && !anyCompressing && !submitting;
 
   const handleSubmit = async () => {
-    if (!canSubmit) return;
+    if (submitLock.current || !canSubmit) return;  // guard sinkron, gak nunggu re-render
+    submitLock.current = true;
     setSubmitting(true); setError('');
 
     try {
@@ -1380,6 +1383,7 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
       console.error(err);
       setError(err.message || 'Gagal menyimpan visit');
       setSubmitting(false);
+      submitLock.current = false;  // error → boleh coba lagi
     }
   };
 
