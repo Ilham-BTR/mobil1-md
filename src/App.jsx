@@ -464,6 +464,13 @@ const PHOTO_KEYS = Object.keys(PHOTO_LABELS);
 function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose }) {
   const [lightboxIdx, setLightboxIdx] = useState(null);
 
+  // Kunci scroll body selama modal kebuka — biar background gak ikut scroll
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   // Esc handler
   useEffect(() => {
     const onKey = (e) => {
@@ -651,7 +658,7 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose }) {
 
       {/* Lightbox */}
       {lightboxIdx != null && availablePhotos[lightboxIdx] && (
-        <div className="fixed inset-0 z-[2000] bg-zinc-950/95 flex items-center justify-center p-4"
+        <div className="fixed inset-0 z-[2000] bg-black flex items-center justify-center p-4"
              onClick={() => setLightboxIdx(null)}>
           <button onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx - 1 + availablePhotos.length) % availablePhotos.length); }}
             className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-100 flex items-center justify-center">
@@ -673,7 +680,7 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose }) {
               </div>
             ) : (
               <StoredImage src={availablePhotos[lightboxIdx].url} alt={availablePhotos[lightboxIdx].label}
-                   className="max-w-full max-h-[80vh] object-contain rounded-lg" />
+                   className="max-w-full max-h-[85vh] object-contain rounded-lg" />
             )}
             <div className="bg-zinc-950/95 backdrop-blur px-4 py-2 rounded-full text-sm text-zinc-200 flex items-center gap-3">
               <span className="font-semibold">{availablePhotos[lightboxIdx].label}</span>
