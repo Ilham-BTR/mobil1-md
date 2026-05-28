@@ -975,8 +975,6 @@ const PhotoTile = ({ label, photo, onChange, required }) => {
   };
 
   const hasPhoto = !!photo;
-  const savedPercent = photo?.status === 'ready' && photo.originalSize
-    ? Math.round((1 - photo.compressedSize / photo.originalSize) * 100) : 0;
 
   return (
     <div className="relative group">
@@ -1000,17 +998,9 @@ const PhotoTile = ({ label, photo, onChange, required }) => {
               </div>
             )}
             {photo.status === 'ready' && (
-              <>
-                <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-emerald-600/100 flex items-center justify-center shadow-lg">
-                  <Check className="w-3 h-3 text-zinc-900" strokeWidth={3} />
-                </div>
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-zinc-950 via-zinc-950/70 to-transparent px-1.5 py-1.5">
-                  <div className="text-[9px] font-mono text-white/90 text-center leading-tight">
-                    {(photo.compressedSize / 1024).toFixed(0)}KB
-                    {savedPercent > 0 && <span className="text-emerald-400 ml-1">↓{savedPercent}%</span>}
-                  </div>
-                </div>
-              </>
+              <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg">
+                <Check className="w-3 h-3 text-zinc-900" strokeWidth={3} />
+              </div>
             )}
             {photo.status === 'error' && (
               <div className="absolute inset-0 bg-rose-600/10 flex flex-col items-center justify-center gap-1">
