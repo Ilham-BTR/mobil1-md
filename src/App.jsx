@@ -3575,6 +3575,7 @@ export default function App() {
   useEffect(() => {
     api.getCurrentProfile().then(p => {
       setProfile(p);
+      if (p?.role === 'md') setWelcome(true); // tampilkan ringkasan tiap buka app (sesi di-restore)
       setBootstrapping(false);
     });
   }, []);
