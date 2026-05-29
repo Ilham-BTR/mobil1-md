@@ -20,6 +20,9 @@ import { MOCK_MODE } from './lib/supabase';
 import * as api from './lib/api';
 import { getPhotoURL } from './lib/photoStore';
 
+// Saklar fitur passkey/biometrik. Set true untuk menghidupkan kembali login biometrik.
+const PASSKEY_ENABLED = false;
+
 // Custom pin marker factory (inline SVG via divIcon — no asset path issues)
 const makePinIcon = (color = '#dc2626', pulse = true) => L.divIcon({
   className: 'mobil1-marker',
@@ -1132,7 +1135,7 @@ function LoginScreen({ onLogin }) {
             {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Memverifikasi…</> : <>Sign In<ChevronRight className="w-4 h-4" /></>}
           </Button>
 
-          {bioSupported && (
+          {PASSKEY_ENABLED && bioSupported && (
             <div className="mt-4 pt-4 border-t border-zinc-800">
               <button
                 type="button"
@@ -1496,6 +1499,7 @@ function PasskeyEnrollBanner() {
 
   useEffect(() => {
     let cancelled = false;
+    if (!PASSKEY_ENABLED) return;
     if (localStorage.getItem(PK_DISMISS_KEY) === '1') return;
     api.isPasskeySupported().then(ok => { if (!cancelled && ok) setShow(true); });
     return () => { cancelled = true; };
@@ -3839,7 +3843,7 @@ export default function App() {
                 </div>
                 <span>{profile.full_name}</span>
               </div>
-              {!MOCK_MODE && (
+              {PASSKEY_ENABLED && !MOCK_MODE && (
                 <button onClick={() => setPasskeyOpen(true)} title="Kelola passkey"
                   className="text-zinc-500 hover:text-zinc-200 transition flex items-center gap-1 px-2 py-1">
                   <Fingerprint className="w-3.5 h-3.5" /><span className="hidden sm:inline">Passkey</span>
