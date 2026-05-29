@@ -1244,6 +1244,138 @@ function ForgotPasswordScreen({ onBack }) {
 // MD VIEW — Form & History
 // ============================================================
 
+// Kelola passkey: lihat perangkat terdaftar, tambah passkey di HP ini, hapus perangkat
+function PasskeyManagerModal({ onClose }) {
+  const [items, setItems] = useState(null); // null = loading
+  const [supported, setSupported] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [okMsg, setOkMsg] = useState('');
+
+  const reload = async () => {
+    try {
+      const list = await api.listPasskeys();
+      setItems(list);
+    } catch (err) {
+      setError(err.message || 'Gagal memuat passkey');
+      setItems([]);
+    }
+  };
+
+  useEffect(() => {
+    api.isPasskeySupported().then(setSupported);
+    reload();
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  const fmt = (s) => s ? new Date(s).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+  const shortLabel = (lbl) => {
+    if (!lbl) return 'Perangkat';
+    if (/iphone|ipad/i.test(lbl)) return 'iPhone / iPad';
+    if (/android/i.test(lbl)) return 'Android';
+    if (/macintosh|mac os/i.test(lbl)) return 'Mac';
+    if (/windows/i.test(lbl)) return 'Windows';
+    return lbl.slice(0, 40);
+  };
+
+  const handleAdd = async () => {
+    setBusy(true); setError(''); setOkMsg('');
+    try {
+      await api.enablePasskey();
+      setOkMsg('Passkey baru ditambahkan.');
+      localStorage.setItem(PK_DISMISS_KEY, '1');
+      await reload();
+    } catch (err) {
+      setError(err.message || 'Gagal menambah passkey');
+    }
+    setBusy(false);
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Hapus passkey perangkat ini? Login biometrik di perangkat tsb tidak akan berfungsi lagi.')) return;
+    setBusy(true); setError(''); setOkMsg('');
+    try {
+      await api.deletePasskey(id);
+      await reload();
+    } catch (err) {
+      setError(err.message || 'Gagal menghapus passkey');
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[2000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Fingerprint className="w-5 h-5 text-red-400" />
+            <h2 className="text-lg font-bold text-zinc-100 font-display">Kelola Passkey</h2>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 flex items-center justify-center transition">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <p className="text-xs text-zinc-500">
+            Passkey = login biometrik tanpa password. Tiap perangkat punya passkey sendiri; password tidak pernah disimpan.
+          </p>
+
+          {error && (
+            <div className="p-2.5 bg-rose-600/10 border border-rose-600/30 rounded-lg text-xs text-rose-400 flex items-start gap-2">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />{error}
+            </div>
+          )}
+          {okMsg && (
+            <div className="p-2.5 bg-emerald-600/10 border border-emerald-600/30 rounded-lg text-xs text-emerald-400 flex items-center gap-2">
+              <Check className="w-3.5 h-3.5 shrink-0" />{okMsg}
+            </div>
+          )}
+
+          {/* Daftar perangkat */}
+          {items === null ? (
+            <div className="flex items-center justify-center py-8 text-zinc-500 text-sm gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />Memuat…
+            </div>
+          ) : items.length === 0 ? (
+            <div className="text-center py-6 text-sm text-zinc-500">Belum ada passkey terdaftar.</div>
+          ) : (
+            <div className="space-y-2">
+              {items.map(p => (
+                <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl bg-zinc-950 border border-zinc-800">
+                  <Fingerprint className="w-4 h-4 text-zinc-500 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-zinc-200 truncate">{shortLabel(p.device_label)}</div>
+                    <div className="text-[10px] text-zinc-500">Dibuat {fmt(p.created_at)} · Dipakai {fmt(p.last_used_at)}</div>
+                  </div>
+                  <button onClick={() => handleDelete(p.id)} disabled={busy}
+                    className="w-8 h-8 rounded-md hover:bg-rose-600/10 hover:text-rose-400 text-zinc-500 flex items-center justify-center transition disabled:opacity-50">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Tambah passkey di perangkat ini */}
+          {supported ? (
+            <Button variant="primary" onClick={handleAdd} disabled={busy} className="w-full">
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              Tambah passkey di perangkat ini
+            </Button>
+          ) : (
+            <p className="text-[11px] text-zinc-600 text-center">
+              Perangkat ini tidak mendukung biometrik / passkey (atau bukan HTTPS).
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Popup ringkasan target — muncul sekali tiap MD login
 function MDWelcomeModal({ currentMD, visits, onClose, onGoProgress }) {
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -3661,6 +3793,7 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [welcome, setWelcome] = useState(false); // popup ringkasan saat MD baru login
+  const [passkeyOpen, setPasskeyOpen] = useState(false);
 
   useEffect(() => {
     api.getCurrentProfile().then(p => {
@@ -3706,6 +3839,12 @@ export default function App() {
                 </div>
                 <span>{profile.full_name}</span>
               </div>
+              {!MOCK_MODE && (
+                <button onClick={() => setPasskeyOpen(true)} title="Kelola passkey"
+                  className="text-zinc-500 hover:text-zinc-200 transition flex items-center gap-1 px-2 py-1">
+                  <Fingerprint className="w-3.5 h-3.5" /><span className="hidden sm:inline">Passkey</span>
+                </button>
+              )}
               <button onClick={handleLogout} className="text-zinc-500 hover:text-rose-400 transition flex items-center gap-1 px-2 py-1">
                 <LogOut className="w-3.5 h-3.5" /><span className="hidden sm:inline">Logout</span>
               </button>
@@ -3717,6 +3856,8 @@ export default function App() {
             </div>
           )}
         </header>
+
+        {passkeyOpen && <PasskeyManagerModal onClose={() => setPasskeyOpen(false)} />}
 
         <main className="px-4 py-6">
           {profile.role === 'md'
