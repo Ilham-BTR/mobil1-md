@@ -1215,7 +1215,118 @@ function ForgotPasswordScreen({ onBack }) {
 // MD VIEW — Form & History
 // ============================================================
 
-function MDView({ currentMD, refreshKey }) {
+// Popup ringkasan target — muncul sekali tiap MD login
+function MDWelcomeModal({ currentMD, visits, onClose, onGoProgress }) {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const month = todayStr.slice(0, 7);
+  const [yy, mm] = month.split('-').map(Number);
+  const lastDay = new Date(yy, mm, 0).getDate();
+  const todayDay = Number(todayStr.slice(8, 10));
+  const daysLeft = Math.max(lastDay - todayDay + 1, 0); // termasuk hari ini
+
+  const monthVisits = visits.filter(v => v.visit_date.startsWith(month));
+  const monthlyTarget = currentMD.monthly_target || 30;
+  const done = monthVisits.length;
+  const achievement = monthlyTarget > 0 ? Math.round((done / monthlyTarget) * 100) : 0;
+  const sisaTarget = Math.max(monthlyTarget - done, 0);
+  const todayCount = visits.filter(v => v.visit_date === todayStr).length;
+  const perDayNeeded = daysLeft > 0 ? Math.ceil(sisaTarget / daysLeft) : sisaTarget;
+  const tercapai = sisaTarget === 0;
+
+  const tglLabel = new Date(todayStr).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-[2000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-[fadeIn_0.2s_ease-out]"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="relative px-5 pt-5 pb-4 bg-gradient-to-br from-red-600/20 to-zinc-900 border-b border-zinc-800">
+          <button onClick={onClose} className="absolute top-3 right-3 w-8 h-8 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 flex items-center justify-center transition">
+            <X className="w-4 h-4" />
+          </button>
+          <div className="text-xs text-zinc-400 uppercase tracking-wider">{tglLabel}</div>
+          <h2 className="text-xl font-bold text-zinc-100 font-display mt-1">Halo, {currentMD.full_name.split(' ')[0]} 👋</h2>
+          <p className="text-sm text-zinc-400 mt-0.5">
+            {tercapai
+              ? 'Target bulan ini sudah tercapai. Mantap! 🎉'
+              : `Sisa ${daysLeft} hari untuk kejar target bulan ini.`}
+          </p>
+        </div>
+
+        {/* Stat grid */}
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-3 gap-2.5">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-center">
+              <div className="text-2xl font-bold text-zinc-100">{daysLeft}</div>
+              <div className="text-[10px] text-zinc-500 uppercase tracking-wider mt-0.5">Sisa Hari</div>
+            </div>
+            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-center">
+              <div className="text-2xl font-bold text-zinc-100">{done}<span className="text-sm text-zinc-500">/{monthlyTarget}</span></div>
+              <div className="text-[10px] text-zinc-500 uppercase tracking-wider mt-0.5">Visit</div>
+            </div>
+            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-center">
+              <div className={`text-2xl font-bold ${achievement >= 80 ? 'text-emerald-400' : achievement >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>{achievement}%</div>
+              <div className="text-[10px] text-zinc-500 uppercase tracking-wider mt-0.5">Achievement</div>
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div>
+            <div className="h-2.5 bg-zinc-800/60 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${achievement >= 80 ? 'bg-emerald-500' : achievement >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                style={{ width: `${Math.min(achievement, 100)}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Yang belum terlaksana */}
+          {tercapai ? (
+            <div className="flex items-center gap-2.5 p-3 rounded-xl bg-emerald-600/10 border border-emerald-600/20">
+              <Check className="w-5 h-5 text-emerald-400 shrink-0" />
+              <span className="text-sm text-emerald-300">Semua target sudah terpenuhi. Visit tambahan dihitung sebagai bonus.</span>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-950 border border-zinc-800">
+                <span className="text-sm text-zinc-400 flex items-center gap-2"><Target className="w-4 h-4 text-amber-400" />Belum terlaksana</span>
+                <span className="text-sm font-semibold text-zinc-100">{sisaTarget} visit</span>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-950 border border-zinc-800">
+                <span className="text-sm text-zinc-400 flex items-center gap-2"><Activity className="w-4 h-4 text-red-400" />Perlu per hari</span>
+                <span className="text-sm font-semibold text-zinc-100">±{perDayNeeded} visit/hari</span>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-950 border border-zinc-800">
+                <span className="text-sm text-zinc-400 flex items-center gap-2"><Check className="w-4 h-4 text-sky-400" />Visit hari ini</span>
+                <span className="text-sm font-semibold text-zinc-100">{todayCount}</span>
+              </div>
+            </div>
+          )}
+
+          {/* CTA */}
+          <div className="flex gap-2 pt-1">
+            <Button variant="secondary" onClick={onGoProgress} className="flex-1">
+              <LayoutDashboard className="w-4 h-4" />Lihat Progres
+            </Button>
+            <Button variant="primary" onClick={onClose} className="flex-1">
+              <ClipboardList className="w-4 h-4" />Mulai Visit
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
   const [tab, setTab] = useState('new');
   const [visits, setVisits] = useState([]);
   const [bengkels, setBengkels] = useState([]);
@@ -1245,6 +1356,14 @@ function MDView({ currentMD, refreshKey }) {
 
   return (
     <div className="max-w-2xl mx-auto">
+      {welcome && (
+        <MDWelcomeModal
+          currentMD={currentMD}
+          visits={visits}
+          onClose={onWelcomeClose}
+          onGoProgress={() => { onWelcomeClose?.(); setTab('progress'); }}
+        />
+      )}
       <div className="flex gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-xl mb-5">
         <button onClick={() => setTab('new')} className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition ${tab === 'new' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>
           <ClipboardList className="w-4 h-4 inline mr-2" /> Visit Baru
@@ -3451,6 +3570,7 @@ function Loading() {
 export default function App() {
   const [profile, setProfile] = useState(null);
   const [bootstrapping, setBootstrapping] = useState(true);
+  const [welcome, setWelcome] = useState(false); // popup ringkasan saat MD baru login
 
   useEffect(() => {
     api.getCurrentProfile().then(p => {
@@ -3459,10 +3579,14 @@ export default function App() {
     });
   }, []);
 
-  const handleLogin = (p) => setProfile(p);
+  const handleLogin = (p) => {
+    setProfile(p);
+    if (p?.role === 'md') setWelcome(true);
+  };
   const handleLogout = async () => {
     await api.signOut();
     setProfile(null);
+    setWelcome(false);
   };
 
   return (
@@ -3505,7 +3629,7 @@ export default function App() {
 
         <main className="px-4 py-6">
           {profile.role === 'md'
-            ? <MDView currentMD={profile} />
+            ? <MDView currentMD={profile} welcome={welcome} onWelcomeClose={() => setWelcome(false)} />
             : <AdminView />}
         </main>
 
