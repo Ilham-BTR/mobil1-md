@@ -1020,47 +1020,6 @@ const PhotoTile = ({ label, photo, onChange, required }) => {
 // LOGIN SCREEN
 // ============================================================
 
-// ── Biometric (WebAuthn) helpers — login cepat pakai sidik jari/Face ID di perangkat ──
-// Catatan: tanpa server WebAuthn, ini "soft auth" — prompt biometrik OS dipakai sebagai
-// gerbang untuk membuka kredensial yang tersimpan lokal di perangkat (per-device).
-const BIO_KEY = 'mobil1_bio_v1';
-const bufToB64url = (buf) =>
-  btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-const b64urlToBuf = (s) => {
-  const pad = s.length % 4 ? '='.repeat(4 - (s.length % 4)) : '';
-  const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/') + pad);
-  const u = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-  return u;
-};
-async function registerBiometric(email) {
-  const challenge = crypto.getRandomValues(new Uint8Array(32));
-  const userId = crypto.getRandomValues(new Uint8Array(16));
-  const cred = await navigator.credentials.create({
-    publicKey: {
-      challenge,
-      rp: { name: 'Mobil1 POSM', id: location.hostname },
-      user: { id: userId, name: email, displayName: email },
-      pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
-      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
-      timeout: 60000,
-      attestation: 'none',
-    },
-  });
-  return cred;
-}
-async function authBiometric(credentialIdB64) {
-  const challenge = crypto.getRandomValues(new Uint8Array(32));
-  await navigator.credentials.get({
-    publicKey: {
-      challenge,
-      allowCredentials: [{ type: 'public-key', id: b64urlToBuf(credentialIdB64) }],
-      userVerification: 'required',
-      timeout: 60000,
-    },
-  });
-}
-
 function LoginScreen({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -1070,23 +1029,11 @@ function LoginScreen({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [bioSupported, setBioSupported] = useState(false);
-  const [bioCred, setBioCred] = useState(null); // { credentialId, email, password }
   const [bioBusy, setBioBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      if (window.PublicKeyCredential && navigator.credentials?.create) {
-        try {
-          const ok = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-          if (!cancelled) setBioSupported(!!ok);
-        } catch { /* abaikan */ }
-      }
-    })();
-    try {
-      const raw = localStorage.getItem(BIO_KEY);
-      if (raw) setBioCred(JSON.parse(raw));
-    } catch { /* abaikan */ }
+    api.isPasskeySupported().then(ok => { if (!cancelled) setBioSupported(ok); });
     return () => { cancelled = true; };
   }, []);
 
@@ -1101,40 +1048,16 @@ function LoginScreen({ onLogin }) {
     }
   };
 
-  // Login pakai biometrik (kredensial sudah terdaftar di perangkat)
-  const handleBioLogin = async () => {
-    if (!bioCred) return;
+  // Login pakai passkey (biometrik) — discoverable, tidak perlu ketik email
+  const handlePasskeyLogin = async () => {
     setError(''); setBioBusy(true);
     try {
-      await authBiometric(bioCred.credentialId);
-      const profile = await api.signIn(bioCred.email, bioCred.password);
+      const profile = await api.loginWithPasskey();
       onLogin(profile);
     } catch (err) {
-      setError(err.name === 'NotAllowedError' ? 'Verifikasi biometrik dibatalkan.' : (err.message || 'Login biometrik gagal'));
+      setError(err.message || 'Login passkey gagal');
       setBioBusy(false);
     }
-  };
-
-  // Aktifkan biometrik: verifikasi email+password dulu, lalu daftarkan sidik jari/Face ID
-  const handleBioRegister = async () => {
-    if (!email || !password) { setError('Isi email & password dulu untuk mengaktifkan biometrik.'); return; }
-    setError(''); setBioBusy(true);
-    try {
-      const profile = await api.signIn(email, password); // pastikan kredensial valid
-      const cred = await registerBiometric(email);
-      const stored = { credentialId: bufToB64url(cred.rawId), email, password };
-      localStorage.setItem(BIO_KEY, JSON.stringify(stored));
-      setBioCred(stored);
-      onLogin(profile);
-    } catch (err) {
-      setError(err.name === 'NotAllowedError' ? 'Pendaftaran biometrik dibatalkan.' : (err.message || 'Gagal mengaktifkan biometrik'));
-      setBioBusy(false);
-    }
-  };
-
-  const handleBioForget = () => {
-    localStorage.removeItem(BIO_KEY);
-    setBioCred(null);
   };
 
   if (forgotOpen) return <ForgotPasswordScreen onBack={() => setForgotOpen(false)} />;
@@ -1213,18 +1136,15 @@ function LoginScreen({ onLogin }) {
             <div className="mt-4 pt-4 border-t border-zinc-800">
               <button
                 type="button"
-                onClick={bioCred ? handleBioLogin : handleBioRegister}
-                disabled={bioBusy || loading || (!bioCred && (!email || !password))}
+                onClick={handlePasskeyLogin}
+                disabled={bioBusy || loading}
                 className="w-full flex items-center justify-center gap-2 py-2 text-xs text-zinc-400 hover:text-zinc-200 transition disabled:opacity-50 disabled:cursor-not-allowed">
                 {bioBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Fingerprint className="w-4 h-4" />}
-                {bioCred ? `Masuk dengan biometrik (${bioCred.email})` : 'Aktifkan biometrik (isi login dulu)'}
+                Masuk dengan biometrik / passkey
               </button>
-              {bioCred && (
-                <button type="button" onClick={handleBioForget}
-                  className="w-full text-center text-[10px] text-zinc-600 hover:text-rose-400 mt-1.5 transition">
-                  Lupakan biometrik di perangkat ini
-                </button>
-              )}
+              <p className="text-center text-[10px] text-zinc-600 mt-1.5">
+                Aktifkan dulu dari dalam app setelah login pertama.
+              </p>
             </div>
           )}
         </div>
@@ -1435,6 +1355,64 @@ function MDWelcomeModal({ currentMD, visits, onClose, onGoProgress }) {
   );
 }
 
+// Banner ajakan aktifkan passkey (muncul setelah login, hilang setelah enroll/ditutup)
+const PK_DISMISS_KEY = 'mobil1_pk_dismissed';
+function PasskeyEnrollBanner() {
+  const [show, setShow] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    if (localStorage.getItem(PK_DISMISS_KEY) === '1') return;
+    api.isPasskeySupported().then(ok => { if (!cancelled && ok) setShow(true); });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!show) return null;
+
+  const dismiss = () => { localStorage.setItem(PK_DISMISS_KEY, '1'); setShow(false); };
+
+  const enroll = async () => {
+    setBusy(true); setMsg('');
+    try {
+      await api.enablePasskey();
+      localStorage.setItem(PK_DISMISS_KEY, '1');
+      setMsg('ok');
+      setTimeout(() => setShow(false), 1500);
+    } catch (err) {
+      setMsg(err.message || 'Gagal mengaktifkan passkey');
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mb-4 rounded-xl border border-red-600/30 bg-red-600/10 p-3.5">
+      <div className="flex items-start gap-3">
+        <Fingerprint className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-zinc-100">Login lebih cepat dengan biometrik</div>
+          <div className="text-xs text-zinc-400 mt-0.5">
+            Aktifkan passkey di HP ini supaya lain kali cukup sidik jari / Face ID — tanpa ketik password.
+          </div>
+          {msg === 'ok'
+            ? <div className="text-xs text-emerald-400 mt-2 flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />Passkey aktif! Lain kali tinggal pakai biometrik.</div>
+            : msg
+              ? <div className="text-xs text-rose-400 mt-2">{msg}</div>
+              : null}
+          <div className="flex gap-2 mt-2.5">
+            <Button variant="primary" size="sm" onClick={enroll} disabled={busy}>
+              {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Fingerprint className="w-3.5 h-3.5" />}
+              Aktifkan
+            </Button>
+            <Button variant="ghost" size="sm" onClick={dismiss} disabled={busy}>Nanti saja</Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
   const [tab, setTab] = useState('new');
   const [visits, setVisits] = useState([]);
@@ -1473,6 +1451,7 @@ function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
           onGoProgress={() => { onWelcomeClose?.(); setTab('progress'); }}
         />
       )}
+      <PasskeyEnrollBanner />
       <div className="flex gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-xl mb-5">
         <button onClick={() => setTab('new')} className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition ${tab === 'new' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>
           <ClipboardList className="w-4 h-4 inline mr-2" /> Visit Baru

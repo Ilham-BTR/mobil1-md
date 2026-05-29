@@ -247,6 +247,40 @@ begin
 end; $$;
 grant execute on function backfill_bengkel_coords(uuid, double precision, double precision) to authenticated;
 
+-- WEBAUTHN / PASSKEY (login biometrik server-side; password tak disimpan)
+create table if not exists webauthn_credentials (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  credential_id text unique not null,
+  public_key text not null,
+  counter bigint not null default 0,
+  transports text[],
+  device_label text,
+  created_at timestamptz default now(),
+  last_used_at timestamptz
+);
+create index if not exists webauthn_creds_user_idx on webauthn_credentials(user_id);
+
+create table if not exists webauthn_challenges (
+  key text primary key,
+  user_id uuid,
+  expires_at timestamptz not null default (now() + interval '5 minutes')
+);
+
+alter table webauthn_credentials enable row level security;
+alter table webauthn_challenges enable row level security;
+
+drop policy if exists webauthn_creds_select_own on webauthn_credentials;
+create policy webauthn_creds_select_own on webauthn_credentials for select using (user_id = auth.uid());
+drop policy if exists webauthn_creds_delete_own on webauthn_credentials;
+create policy webauthn_creds_delete_own on webauthn_credentials for delete using (user_id = auth.uid());
+
+create or replace function cleanup_webauthn_challenges()
+returns void language sql security definer set search_path = public as $$
+  delete from webauthn_challenges where expires_at < now();
+$$;
+
 -- ============================================================
 -- SELESAI. Lanjut: supabase_seed.sql (data) + storage_setup.sql (foto)
+--   + deploy Edge Function `webauthn` (passkey)
 -- ============================================================

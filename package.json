@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@simplewebauthn/browser": "^13.3.0",
     "@supabase/supabase-js": "^2.46.1",
     "browser-image-compression": "^2.0.2",
     "leaflet": "^1.9.4",
