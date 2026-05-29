@@ -2383,7 +2383,7 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
               <XAxis dataKey="name" stroke="#71717a" tick={{ fontSize: 11 }} />
               <YAxis stroke="#71717a" tick={{ fontSize: 11 }} />
-              <Tooltip contentStyle={{ background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', fontSize: '12px' }} cursor={{ fill: 'rgba(239,68,68,0.05)' }} />
+              <Tooltip contentStyle={{ background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', fontSize: '12px' }} labelStyle={{ color: '#e4e4e7' }} itemStyle={{ color: '#e4e4e7' }} cursor={{ fill: 'rgba(239,68,68,0.05)' }} />
               <Legend wrapperStyle={{ fontSize: '12px' }} />
               <Bar dataKey="Target" fill="#3f3f46" radius={[4, 4, 0, 0]} />
               <Bar dataKey="Actual" fill="#dc2626" radius={[4, 4, 0, 0]} />
