@@ -623,6 +623,23 @@ export async function fetchAttendances(mdId, limit = 60) {
   return data || [];
 }
 
+// Rekap absen semua MD (admin) untuk 1 BULAN (YYYY-MM) — view attendance_details.
+export async function fetchAttendancesByMonth(month) {
+  const start = month + '-01';
+  const [y, m] = month.split('-');
+  const lastDay = new Date(Number(y), Number(m), 0).getDate();
+  const end = `${month}-${String(lastDay).padStart(2, '0')}`;
+  if (MOCK_MODE) return mockAtt().filter(a => a.date >= start && a.date <= end);
+  const { data, error } = await supabase
+    .from('attendance_details')
+    .select('*')
+    .gte('date', start).lte('date', end)
+    .order('date', { ascending: false })
+    .order('check_in_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
 // Rekap absen semua MD (admin) untuk 1 tanggal — view attendance_details.
 export async function fetchAttendanceRecap(date) {
   if (MOCK_MODE) return mockAtt().filter(a => a.date === date);

@@ -1769,53 +1769,90 @@ function AbsenForm({ kind, currentMD, todayStr, onCancel, onDone }) {
 
 // Rekap absen semua MD untuk admin (per tanggal)
 function AdminAbsenTab({ mds }) {
-  const [date, setDate] = useState(localDateStr());
+  const monthsList = useMemo(() => {
+    const arr = []; const now = new Date();
+    for (let i = 0; i < 12; i++) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); arr.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); }
+    return arr;
+  }, []);
+  const [month, setMonth] = useState(monthsList[0]);
+  const [mdId, setMdId] = useState('all');
+  const [search, setSearch] = useState('');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState(null);
-  const [search, setSearch] = useState('');
 
-  const load = async () => {
-    setLoading(true);
-    try { setRows(await api.fetchAttendanceRecap(date)); } catch (e) { console.error(e); setRows([]); }
-    finally { setLoading(false); }
+  useEffect(() => {
+    let on = true; setLoading(true);
+    api.fetchAttendancesByMonth(month)
+      .then(d => { if (on) { setRows(d); setLoading(false); } })
+      .catch(e => { console.error(e); if (on) { setRows([]); setLoading(false); } });
+    return () => { on = false; };
+  }, [month]);
+
+  const filteredRows = rows.filter(a => {
+    if (mdId !== 'all' && a.md_id !== mdId) return false;
+    if (search.trim() && !`${a.md_name || ''} ${a.md_email || ''}`.toLowerCase().includes(search.trim().toLowerCase())) return false;
+    return true;
+  });
+
+  const exportExcel = () => {
+    if (filteredRows.length === 0) return;
+    const data = filteredRows.map(a => ({
+      Tanggal: a.date,
+      'Nama MD': a.md_name || '',
+      Email: a.md_email || '',
+      'Jam Masuk': a.check_in_at ? fmtAbsenTime(a.check_in_at) : '',
+      'Jam Pulang': a.check_out_at ? fmtAbsenTime(a.check_out_at) : '',
+      'Jam Kerja': a.work_hours != null ? a.work_hours : '',
+      'GPS Masuk': a.check_in_lat != null ? `${a.check_in_lat}, ${a.check_in_lng}` : '',
+      'GPS Pulang': a.check_out_lat != null ? `${a.check_out_lat}, ${a.check_out_lng}` : '',
+      'Catatan Masuk': a.check_in_note || '',
+      'Catatan Pulang': a.check_out_note || '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Absen');
+    XLSX.writeFile(wb, `absen_${month}.xlsx`);
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [date]);
-
-  const isToday = date === localDateStr();
-  const addDays = (n) => { const d = new Date(date + 'T00:00:00'); d.setDate(d.getDate() + n); setDate(localDateStr(d)); };
-  const filteredRows = rows.filter(a => !search.trim() || `${a.md_name || ''} ${a.md_email || ''}`.toLowerCase().includes(search.trim().toLowerCase()));
-  const dateLabel = new Date(date + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const dLabel = (d) => new Date(d + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-3 mb-5 bg-zinc-950 border border-zinc-800 rounded-xl p-3">
-        <button onClick={() => addDays(-1)} className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200"><ChevronLeft className="w-5 h-5" /></button>
-        <div className="text-center">
-          <div className="text-sm font-semibold text-zinc-100">{dateLabel}</div>
-          <div className="text-xs text-zinc-500 mt-0.5">{rows.length} dari {mds.length} MD sudah absen</div>
+      <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
+        <div>
+          <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display">Rekap Absen</h2>
+          <p className="text-sm text-zinc-500 mt-1">{filteredRows.length} absen · bulan {month}</p>
         </div>
-        <button onClick={() => addDays(1)} disabled={isToday} className={`p-2 rounded-lg bg-zinc-800 text-zinc-200 ${isToday ? 'opacity-30' : 'hover:bg-zinc-700'}`}><ChevronRight className="w-5 h-5" /></button>
+        <Button variant="secondary" onClick={exportExcel} disabled={filteredRows.length === 0}><Download className="w-4 h-4" />Export Excel ({filteredRows.length})</Button>
       </div>
 
-      <div className="flex items-center gap-2 mb-4">
-        <div className="flex-1 relative">
+      <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 mb-5 grid grid-cols-2 md:grid-cols-3 gap-2">
+        <div className="col-span-2 md:col-span-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nama MD…"
             className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-600/50" />
         </div>
-        {!isToday && <button onClick={() => setDate(localDateStr())} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600/10 text-red-400 text-sm font-medium hover:bg-red-600/20"><CalendarDays className="w-4 h-4" />Hari ini</button>}
+        <Select value={month} onChange={e => setMonth(e.target.value)}>
+          {monthsList.map(m => <option key={m} value={m}>{m}</option>)}
+        </Select>
+        <Select value={mdId} onChange={e => setMdId(e.target.value)}>
+          <option value="all">Semua MD</option>
+          {mds.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+        </Select>
       </div>
 
       {loading ? <Loading /> : filteredRows.length === 0 ? (
-        <div className="text-center py-12 text-zinc-500 text-sm"><Users className="w-6 h-6 mx-auto mb-2 text-zinc-600" />{search ? 'Tidak ada MD cocok pencarian.' : 'Belum ada MD yang absen tanggal ini.'}</div>
+        <div className="text-center py-12 text-zinc-500 text-sm"><Users className="w-6 h-6 mx-auto mb-2 text-zinc-600" />{search || mdId !== 'all' ? 'Tidak ada absen sesuai filter.' : 'Belum ada absen di bulan ini.'}</div>
       ) : (
         <div className="space-y-3">
           {filteredRows.map(a => (
             <div key={a.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-bold text-zinc-100">{a.md_name || a.md_email || '—'}</span>
-                {a.work_hours != null && <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-600/10 px-2 py-0.5 rounded-full"><Clock className="w-3 h-3" />{a.work_hours} jam</span>}
+              <div className="flex items-center justify-between mb-3 gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-zinc-100 truncate">{a.md_name || a.md_email || '—'}</div>
+                  <div className="text-[11px] text-zinc-500">{dLabel(a.date)}</div>
+                </div>
+                {a.work_hours != null && <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-600/10 px-2 py-0.5 rounded-full shrink-0"><Clock className="w-3 h-3" />{a.work_hours} jam</span>}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 {[{ k: 'in', icon: LogIn, label: 'Masuk', time: a.check_in_at, photo: a.check_in_photo },
