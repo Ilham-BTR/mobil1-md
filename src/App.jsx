@@ -1554,12 +1554,15 @@ function PasskeyEnrollBanner() {
 // ABSEN MD (Masuk & Pulang) — selfie + GPS + catatan. Tabel attendances.
 // ============================================================
 const fmtAbsenTime = (iso) => iso ? new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '—';
+// Tanggal LOKAL (bukan UTC) agar absen tercatat di hari yang benar di Indonesia.
+const localDateStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 function AbsenTab({ currentMD }) {
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = localDateStr();
   const [att, setAtt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState(null); // null | 'in' | 'out'
+  const [view, setView] = useState('today'); // today | history
 
   const load = async () => {
     setLoading(true);
@@ -1589,30 +1592,92 @@ function AbsenTab({ currentMD }) {
 
   return (
     <div className="max-w-md mx-auto">
-      <div className="flex items-center gap-2 mb-4">
-        <CalendarDays className="w-4 h-4 text-red-400" /><span className="text-sm font-medium text-zinc-200">{dateLabel}</span>
+      <div className="flex gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-xl mb-4">
+        <button onClick={() => setView('today')} className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${view === 'today' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>Hari Ini</button>
+        <button onClick={() => setView('history')} className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${view === 'history' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>Riwayat</button>
       </div>
 
-      <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 mb-4 space-y-3">
-        <StatusRow icon={LogIn} label="Absen Masuk" time={att?.check_in_at} photo={att?.check_in_photo} done={checkedIn} />
-        <div className="border-t border-zinc-800" />
-        <StatusRow icon={LogOut} label="Absen Pulang" time={att?.check_out_at} photo={att?.check_out_photo} done={checkedOut} />
-        {checkedIn && checkedOut && (
-          <div className="flex items-center gap-2 pt-2 border-t border-zinc-800 text-emerald-400 text-xs font-medium">
-            <Check className="w-4 h-4" /> Absen hari ini lengkap. Terima kasih! 🎉
+      {view === 'history' ? <AbsenHistory currentMD={currentMD} /> : (
+        <>
+          <div className="flex items-center gap-2 mb-4">
+            <CalendarDays className="w-4 h-4 text-red-400" /><span className="text-sm font-medium text-zinc-200">{dateLabel}</span>
           </div>
-        )}
-      </div>
 
-      {!checkedIn ? (
-        mode === 'in'
-          ? <AbsenForm kind="in" currentMD={currentMD} todayStr={todayStr} onCancel={() => setMode(null)} onDone={() => { setMode(null); load(); }} />
-          : <Button variant="primary" size="lg" className="w-full" onClick={() => setMode('in')}><LogIn className="w-4 h-4" />Absen Masuk</Button>
-      ) : !checkedOut ? (
-        mode === 'out'
-          ? <AbsenForm kind="out" currentMD={currentMD} todayStr={todayStr} onCancel={() => setMode(null)} onDone={() => { setMode(null); load(); }} />
-          : <Button variant="secondary" size="lg" className="w-full" onClick={() => setMode('out')}><LogOut className="w-4 h-4" />Absen Pulang</Button>
-      ) : null}
+          <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 mb-4 space-y-3">
+            <StatusRow icon={LogIn} label="Absen Masuk" time={att?.check_in_at} photo={att?.check_in_photo} done={checkedIn} />
+            <div className="border-t border-zinc-800" />
+            <StatusRow icon={LogOut} label="Absen Pulang" time={att?.check_out_at} photo={att?.check_out_photo} done={checkedOut} />
+            {checkedIn && checkedOut && (
+              <div className="flex items-center gap-2 pt-2 border-t border-zinc-800 text-emerald-400 text-xs font-medium">
+                <Check className="w-4 h-4" /> Absen hari ini lengkap. Terima kasih! 🎉
+              </div>
+            )}
+          </div>
+
+          {!checkedIn ? (
+            mode === 'in'
+              ? <AbsenForm kind="in" currentMD={currentMD} todayStr={todayStr} onCancel={() => setMode(null)} onDone={() => { setMode(null); load(); }} />
+              : <Button variant="primary" size="lg" className="w-full" onClick={() => setMode('in')}><LogIn className="w-4 h-4" />Absen Masuk</Button>
+          ) : !checkedOut ? (
+            mode === 'out'
+              ? <AbsenForm kind="out" currentMD={currentMD} todayStr={todayStr} onCancel={() => setMode(null)} onDone={() => { setMode(null); load(); }} />
+              : <Button variant="secondary" size="lg" className="w-full" onClick={() => setMode('out')}><LogOut className="w-4 h-4" />Absen Pulang</Button>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+}
+
+// Riwayat absen milik MD sendiri (tanggal, jam masuk/pulang, jam kerja, foto).
+function AbsenHistory({ currentMD }) {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [lightbox, setLightbox] = useState(null);
+
+  useEffect(() => {
+    let on = true;
+    api.fetchAttendances(currentMD.id).then(d => { if (on) { setRows(d); setLoading(false); } }).catch(e => { console.error(e); setLoading(false); });
+    return () => { on = false; };
+  }, [currentMD.id]);
+
+  if (loading) return <Loading />;
+  if (rows.length === 0) return <div className="text-center py-12 text-zinc-500 text-sm">Belum ada riwayat absen.</div>;
+
+  const workHours = (a) => (a.check_in_at && a.check_out_at) ? ((new Date(a.check_out_at) - new Date(a.check_in_at)) / 3600000).toFixed(1) : null;
+  const dLabel = (d) => new Date(d + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+
+  return (
+    <div className="space-y-3">
+      {rows.map(a => {
+        const wh = workHours(a);
+        return (
+          <div key={a.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold text-zinc-100">{dLabel(a.date)}</span>
+              {wh != null && <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-600/10 px-2 py-0.5 rounded-full"><Clock className="w-3 h-3" />{wh} jam</span>}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {[{ icon: LogIn, label: 'Masuk', time: a.check_in_at, photo: a.check_in_photo },
+                { icon: LogOut, label: 'Pulang', time: a.check_out_at, photo: a.check_out_photo }].map((b, i) => (
+                <div key={i} className="flex items-center gap-2.5">
+                  {b.photo ? <StoredImage src={b.photo} alt={b.label} className="w-10 h-10 rounded-lg object-cover cursor-pointer" onClick={() => setLightbox(b.photo)} />
+                    : <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center"><b.icon className="w-4 h-4 text-zinc-500" /></div>}
+                  <div><div className="text-[11px] text-zinc-500">{b.label}</div><div className={`text-sm font-semibold ${b.time ? 'text-emerald-400' : 'text-zinc-500'}`}>{b.time ? fmtAbsenTime(b.time) : 'Belum'}</div></div>
+                </div>
+              ))}
+            </div>
+            {(a.check_in_note || a.check_out_note) && <p className="text-xs text-zinc-500 mt-3 pt-3 border-t border-zinc-800">{[a.check_in_note, a.check_out_note].filter(Boolean).join(' · ')}</p>}
+          </div>
+        );
+      })}
+
+      {lightbox && (
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
+          <StoredImage src={lightbox} alt="selfie" className="max-w-full max-h-full object-contain" />
+          <button className="absolute top-4 right-4 text-white"><X className="w-6 h-6" /></button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1704,10 +1769,11 @@ function AbsenForm({ kind, currentMD, todayStr, onCancel, onDone }) {
 
 // Rekap absen semua MD untuk admin (per tanggal)
 function AdminAbsenTab({ mds }) {
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(localDateStr());
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState(null);
+  const [search, setSearch] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -1716,8 +1782,9 @@ function AdminAbsenTab({ mds }) {
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [date]);
 
-  const isToday = date === new Date().toISOString().slice(0, 10);
-  const addDays = (n) => { const d = new Date(date + 'T00:00:00'); d.setDate(d.getDate() + n); setDate(d.toISOString().slice(0, 10)); };
+  const isToday = date === localDateStr();
+  const addDays = (n) => { const d = new Date(date + 'T00:00:00'); d.setDate(d.getDate() + n); setDate(localDateStr(d)); };
+  const filteredRows = rows.filter(a => !search.trim() || `${a.md_name || ''} ${a.md_email || ''}`.toLowerCase().includes(search.trim().toLowerCase()));
   const dateLabel = new Date(date + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
@@ -1728,14 +1795,23 @@ function AdminAbsenTab({ mds }) {
           <div className="text-sm font-semibold text-zinc-100">{dateLabel}</div>
           <div className="text-xs text-zinc-500 mt-0.5">{rows.length} dari {mds.length} MD sudah absen</div>
         </div>
-        <button onClick={() => !isToday && addDays(1)} disabled={isToday} className={`p-2 rounded-lg bg-zinc-800 text-zinc-200 ${isToday ? 'opacity-30' : 'hover:bg-zinc-700'}`}><ChevronRight className="w-5 h-5" /></button>
+        <button onClick={() => addDays(1)} disabled={isToday} className={`p-2 rounded-lg bg-zinc-800 text-zinc-200 ${isToday ? 'opacity-30' : 'hover:bg-zinc-700'}`}><ChevronRight className="w-5 h-5" /></button>
       </div>
 
-      {loading ? <Loading /> : rows.length === 0 ? (
-        <div className="text-center py-12 text-zinc-500 text-sm"><Users className="w-6 h-6 mx-auto mb-2 text-zinc-600" />Belum ada MD yang absen tanggal ini.</div>
+      <div className="flex items-center gap-2 mb-4">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nama MD…"
+            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-600/50" />
+        </div>
+        {!isToday && <button onClick={() => setDate(localDateStr())} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600/10 text-red-400 text-sm font-medium hover:bg-red-600/20"><CalendarDays className="w-4 h-4" />Hari ini</button>}
+      </div>
+
+      {loading ? <Loading /> : filteredRows.length === 0 ? (
+        <div className="text-center py-12 text-zinc-500 text-sm"><Users className="w-6 h-6 mx-auto mb-2 text-zinc-600" />{search ? 'Tidak ada MD cocok pencarian.' : 'Belum ada MD yang absen tanggal ini.'}</div>
       ) : (
         <div className="space-y-3">
-          {rows.map(a => (
+          {filteredRows.map(a => (
             <div key={a.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-bold text-zinc-100">{a.md_name || a.md_email || '—'}</span>

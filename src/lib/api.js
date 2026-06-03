@@ -610,6 +610,19 @@ export async function fetchTodayAttendance(mdId, date) {
   return data;
 }
 
+// Riwayat absen milik 1 MD (terbaru dulu). Query tabel langsung (RLS: MD lihat miliknya).
+export async function fetchAttendances(mdId, limit = 60) {
+  if (MOCK_MODE) return mockAtt().filter(a => a.md_id === mdId).sort((a, b) => b.date.localeCompare(a.date));
+  const { data, error } = await supabase
+    .from('attendances')
+    .select('*')
+    .eq('md_id', mdId)
+    .order('date', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data || [];
+}
+
 // Rekap absen semua MD (admin) untuk 1 tanggal — view attendance_details.
 export async function fetchAttendanceRecap(date) {
   if (MOCK_MODE) return mockAtt().filter(a => a.date === date);
