@@ -10,7 +10,8 @@ import {
   Map as MapIcon, Database, Target, Activity, Trash2,
   Users, Briefcase, Globe, ChevronDown, LogOut, Shield,
   Lock, Mail, Eye, EyeOff, AlertCircle, Fingerprint, Loader2,
-  Navigation, Phone, FileText, Download, Search, Upload, FileSpreadsheet
+  Navigation, Phone, FileText, Download, Search, Upload, FileSpreadsheet,
+  LogIn, Clock, CalendarDays
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Polyline, Circle } from 'react-leaflet';
 import L from 'leaflet';
@@ -1549,6 +1550,223 @@ function PasskeyEnrollBanner() {
   );
 }
 
+// ============================================================
+// ABSEN MD (Masuk & Pulang) — selfie + GPS + catatan. Tabel attendances.
+// ============================================================
+const fmtAbsenTime = (iso) => iso ? new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '—';
+
+function AbsenTab({ currentMD }) {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [att, setAtt] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [mode, setMode] = useState(null); // null | 'in' | 'out'
+
+  const load = async () => {
+    setLoading(true);
+    try { setAtt(await api.fetchTodayAttendance(currentMD.id, todayStr)); }
+    catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+
+  if (loading) return <Loading />;
+  const checkedIn = !!att?.check_in_at;
+  const checkedOut = !!att?.check_out_at;
+  const dateLabel = new Date(todayStr).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  const StatusRow = ({ icon: Icon, label, time, photo, done }) => (
+    <div className="flex items-center gap-3">
+      {photo ? <StoredImage src={photo} alt={label} className="w-11 h-11 rounded-lg object-cover" />
+        : <div className="w-11 h-11 rounded-lg bg-zinc-800 flex items-center justify-center"><Icon className="w-4 h-4 text-zinc-500" /></div>}
+      <div className="flex-1">
+        <div className="text-sm font-semibold text-zinc-100">{label}</div>
+        <div className="flex items-center gap-1 text-xs mt-0.5"><Clock className={`w-3 h-3 ${done ? 'text-emerald-400' : 'text-zinc-600'}`} />
+          <span className={done ? 'text-emerald-400' : 'text-zinc-500'}>{done ? `Pukul ${fmtAbsenTime(time)}` : 'Belum'}</span></div>
+      </div>
+      {done && <Check className="w-5 h-5 text-emerald-400" />}
+    </div>
+  );
+
+  return (
+    <div className="max-w-md mx-auto">
+      <div className="flex items-center gap-2 mb-4">
+        <CalendarDays className="w-4 h-4 text-red-400" /><span className="text-sm font-medium text-zinc-200">{dateLabel}</span>
+      </div>
+
+      <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 mb-4 space-y-3">
+        <StatusRow icon={LogIn} label="Absen Masuk" time={att?.check_in_at} photo={att?.check_in_photo} done={checkedIn} />
+        <div className="border-t border-zinc-800" />
+        <StatusRow icon={LogOut} label="Absen Pulang" time={att?.check_out_at} photo={att?.check_out_photo} done={checkedOut} />
+        {checkedIn && checkedOut && (
+          <div className="flex items-center gap-2 pt-2 border-t border-zinc-800 text-emerald-400 text-xs font-medium">
+            <Check className="w-4 h-4" /> Absen hari ini lengkap. Terima kasih! 🎉
+          </div>
+        )}
+      </div>
+
+      {!checkedIn ? (
+        mode === 'in'
+          ? <AbsenForm kind="in" currentMD={currentMD} todayStr={todayStr} onCancel={() => setMode(null)} onDone={() => { setMode(null); load(); }} />
+          : <Button variant="primary" size="lg" className="w-full" onClick={() => setMode('in')}><LogIn className="w-4 h-4" />Absen Masuk</Button>
+      ) : !checkedOut ? (
+        mode === 'out'
+          ? <AbsenForm kind="out" currentMD={currentMD} todayStr={todayStr} onCancel={() => setMode(null)} onDone={() => { setMode(null); load(); }} />
+          : <Button variant="secondary" size="lg" className="w-full" onClick={() => setMode('out')}><LogOut className="w-4 h-4" />Absen Pulang</Button>
+      ) : null}
+    </div>
+  );
+}
+
+function AbsenForm({ kind, currentMD, todayStr, onCancel, onDone }) {
+  const [selfie, setSelfie] = useState(null); // {status, preview, file}
+  const [gps, setGps] = useState({ status: 'idle', lat: null, lng: null, accuracy: null, error: null });
+  const [note, setNote] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const inputRef = useRef(null);
+
+  const fetchGPS = () => {
+    if (!navigator.geolocation) { setGps({ status: 'error', error: 'GPS tidak didukung browser' }); return; }
+    setGps(g => ({ ...g, status: 'loading', error: null }));
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setGps({ status: 'ready', lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy, error: null }),
+      (err) => setGps({ status: 'error', error: err.code === 1 ? 'Izin GPS ditolak' : 'GPS gagal' }),
+      { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 }
+    );
+  };
+  useEffect(() => { fetchGPS(); /* eslint-disable-next-line */ }, []);
+
+  const handleSelfie = async (e) => {
+    const file = e.target.files?.[0]; if (!file) return; e.target.value = '';
+    const preview = URL.createObjectURL(file);
+    setSelfie({ status: 'compressing', preview, file: null });
+    try {
+      const compressed = await imageCompression(file, { maxSizeMB: 0.3, maxWidthOrHeight: 1280, useWebWorker: true, fileType: 'image/jpeg' });
+      setSelfie({ status: 'ready', preview: URL.createObjectURL(compressed), file: compressed });
+    } catch (err) { setSelfie({ status: 'error', preview, error: err.message }); }
+  };
+
+  const ready = selfie?.status === 'ready' && gps.status === 'ready' && !submitting;
+  const title = kind === 'in' ? 'Absen Masuk' : 'Absen Pulang';
+
+  const submit = async () => {
+    if (!ready) return;
+    setSubmitting(true); setError('');
+    try {
+      const args = { mdId: currentMD.id, date: todayStr, lat: gps.lat, lng: gps.lng, photoFile: selfie.file, note: note.trim() };
+      if (kind === 'in') await api.checkIn(args); else await api.checkOut(args);
+      onDone();
+    } catch (e) { setError(e.message || 'Gagal menyimpan absen'); setSubmitting(false); }
+  };
+
+  return (
+    <Section title={title} subtitle="Selfie + lokasi wajib · catatan opsional" icon={kind === 'in' ? LogIn : LogOut}>
+      {error && <div className="mb-3 p-3 bg-rose-600/10 border border-rose-600/30 rounded-lg flex items-start gap-2"><AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" /><p className="text-xs text-rose-400">{error}</p></div>}
+
+      <Field label="Selfie" required>
+        <input ref={inputRef} type="file" accept="image/*" capture="user" onChange={handleSelfie} className="hidden" />
+        <button type="button" onClick={() => inputRef.current?.click()}
+          className={`relative w-40 h-40 rounded-xl border-2 overflow-hidden transition ${selfie ? 'border-emerald-600/40 border-solid' : 'border-zinc-800 border-dashed bg-zinc-950 hover:border-red-600/40'}`}>
+          {selfie ? <>
+            <img src={selfie.preview} alt="selfie" className="absolute inset-0 w-full h-full object-cover" />
+            {selfie.status === 'compressing' && <div className="absolute inset-0 bg-zinc-950/70 flex items-center justify-center"><Loader2 className="w-6 h-6 text-white animate-spin" /></div>}
+            {selfie.status === 'ready' && <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center"><Check className="w-3 h-3 text-zinc-900" strokeWidth={3} /></div>}
+          </> : <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-zinc-600"><Camera className="w-6 h-6" /><span className="text-[10px] font-medium">Ambil Selfie</span></div>}
+        </button>
+      </Field>
+
+      <Field label="Lokasi" required>
+        <div className="flex items-center gap-2.5 bg-zinc-950 border border-zinc-800 rounded-lg p-3">
+          <MapPin className={`w-4 h-4 shrink-0 ${gps.status === 'ready' ? 'text-emerald-400' : gps.status === 'error' ? 'text-rose-400' : 'text-zinc-500'}`} />
+          <div className="flex-1 text-xs">
+            {gps.status === 'loading' ? <span className="text-zinc-400">Mengambil lokasi…</span>
+              : gps.status === 'ready' ? <span className="text-zinc-300">{gps.lat.toFixed(5)}, {gps.lng.toFixed(5)}{gps.accuracy ? `  ±${Math.round(gps.accuracy)}m` : ''}</span>
+              : gps.status === 'error' ? <span className="text-rose-400">{gps.error}</span>
+              : <span className="text-zinc-500">GPS belum ditangkap</span>}
+          </div>
+          <button type="button" onClick={fetchGPS} className="text-zinc-500 hover:text-zinc-300"><Navigation className="w-4 h-4" /></button>
+        </div>
+      </Field>
+
+      <Field label="Catatan">
+        <Textarea rows={2} placeholder="Opsional — mis. mulai dari kota X" value={note} onChange={e => setNote(e.target.value)} />
+      </Field>
+
+      <div className="flex gap-2 mt-2">
+        <Button variant="secondary" onClick={onCancel} disabled={submitting}>Batal</Button>
+        <Button variant="primary" className="flex-1" onClick={submit} disabled={!ready}>
+          {submitting ? <><Loader2 className="w-4 h-4 animate-spin" />Menyimpan…</> : <><Check className="w-4 h-4" />Konfirmasi {title}</>}
+        </Button>
+      </div>
+    </Section>
+  );
+}
+
+// Rekap absen semua MD untuk admin (per tanggal)
+function AdminAbsenTab({ mds }) {
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [lightbox, setLightbox] = useState(null);
+
+  const load = async () => {
+    setLoading(true);
+    try { setRows(await api.fetchAttendanceRecap(date)); } catch (e) { console.error(e); setRows([]); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [date]);
+
+  const isToday = date === new Date().toISOString().slice(0, 10);
+  const addDays = (n) => { const d = new Date(date + 'T00:00:00'); d.setDate(d.getDate() + n); setDate(d.toISOString().slice(0, 10)); };
+  const dateLabel = new Date(date + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3 mb-5 bg-zinc-950 border border-zinc-800 rounded-xl p-3">
+        <button onClick={() => addDays(-1)} className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200"><ChevronLeft className="w-5 h-5" /></button>
+        <div className="text-center">
+          <div className="text-sm font-semibold text-zinc-100">{dateLabel}</div>
+          <div className="text-xs text-zinc-500 mt-0.5">{rows.length} dari {mds.length} MD sudah absen</div>
+        </div>
+        <button onClick={() => !isToday && addDays(1)} disabled={isToday} className={`p-2 rounded-lg bg-zinc-800 text-zinc-200 ${isToday ? 'opacity-30' : 'hover:bg-zinc-700'}`}><ChevronRight className="w-5 h-5" /></button>
+      </div>
+
+      {loading ? <Loading /> : rows.length === 0 ? (
+        <div className="text-center py-12 text-zinc-500 text-sm"><Users className="w-6 h-6 mx-auto mb-2 text-zinc-600" />Belum ada MD yang absen tanggal ini.</div>
+      ) : (
+        <div className="space-y-3">
+          {rows.map(a => (
+            <div key={a.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-bold text-zinc-100">{a.md_name || a.md_email || '—'}</span>
+                {a.work_hours != null && <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-600/10 px-2 py-0.5 rounded-full"><Clock className="w-3 h-3" />{a.work_hours} jam</span>}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {[{ k: 'in', icon: LogIn, label: 'Masuk', time: a.check_in_at, photo: a.check_in_photo },
+                  { k: 'out', icon: LogOut, label: 'Pulang', time: a.check_out_at, photo: a.check_out_photo }].map(b => (
+                  <div key={b.k} className="flex items-center gap-2.5">
+                    {b.photo ? <StoredImage src={b.photo} alt={b.label} className="w-10 h-10 rounded-lg object-cover cursor-pointer" onClick={() => setLightbox(b.photo)} />
+                      : <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center"><b.icon className="w-4 h-4 text-zinc-500" /></div>}
+                    <div><div className="text-[11px] text-zinc-500">{b.label}</div><div className={`text-sm font-semibold ${b.time ? 'text-emerald-400' : 'text-zinc-500'}`}>{b.time ? fmtAbsenTime(b.time) : 'Belum'}</div></div>
+                  </div>
+                ))}
+              </div>
+              {(a.check_in_note || a.check_out_note) && <p className="text-xs text-zinc-500 mt-3 pt-3 border-t border-zinc-800">{[a.check_in_note, a.check_out_note].filter(Boolean).join(' · ')}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {lightbox && (
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
+          <StoredImage src={lightbox} alt="selfie" className="max-w-full max-h-full object-contain" />
+          <button className="absolute top-4 right-4 text-white"><X className="w-6 h-6" /></button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
   const [tab, setTab] = useState('new');
   const [visits, setVisits] = useState([]);
@@ -1589,6 +1807,9 @@ function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
       )}
       <PasskeyEnrollBanner />
       <div className="flex gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-xl mb-5">
+        <button onClick={() => setTab('absen')} className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition ${tab === 'absen' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>
+          <CalendarDays className="w-4 h-4 inline mr-2" /> Absen
+        </button>
         <button onClick={() => setTab('new')} className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition ${tab === 'new' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>
           <ClipboardList className="w-4 h-4 inline mr-2" /> Visit Baru
         </button>
@@ -1600,6 +1821,7 @@ function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
         </button>
       </div>
 
+      {tab === 'absen' && <AbsenTab currentMD={currentMD} />}
       {tab === 'new' && <VisitForm currentMD={currentMD} bengkels={bengkels} regions={regions} kotas={kotas} distributors={distributors} onSubmitted={() => { reloadVisits(); setTab('history'); }} />}
       {tab === 'progress' && <MDDashboard currentMD={currentMD} visits={visits} bengkels={bengkels} kotas={kotas} />}
       {tab === 'history' && <VisitHistory visits={visits} bengkels={bengkels} kotas={kotas} distributors={distributors} />}
@@ -2115,6 +2337,7 @@ function AdminView() {
         {[
           { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
           { id: 'visits', label: 'Visits', icon: ClipboardList },
+          { id: 'absen', label: 'Absen', icon: CalendarDays },
           { id: 'coverage', label: 'Coverage Map', icon: MapIcon },
           { id: 'master', label: 'Master Data', icon: Database },
         ].map(t => (
@@ -2127,6 +2350,7 @@ function AdminView() {
 
       {tab === 'dashboard' && <DashboardTab visits={visits} mds={mds} onOpenVisit={openDetail} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} />}
       {tab === 'visits' && <VisitsTab visits={visits} mds={mds} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} onOpenVisit={openDetail} />}
+      {tab === 'absen' && <AdminAbsenTab mds={mds} />}
       {tab === 'coverage' && <CoverageTab visits={visits} mds={mds} bengkels={bengkels} kotas={kotas} regions={regions} distributors={distributors} onOpenVisit={openDetail} />}
       {tab === 'master' && <MasterTab regions={regions} kotas={kotas} distributors={distributors} bengkels={bengkels} mds={mds} onChange={loadAll} />}
 

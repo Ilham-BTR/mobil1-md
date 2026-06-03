@@ -45,6 +45,35 @@ export async function uploadVisitPhoto(file, visitId, photoKey) {
 }
 
 /**
+ * Upload selfie absen ke bucket visit-photos (path attendance/{mdId}/{date}/{kind}.jpg).
+ * @param {File|Blob} file - selfie hasil compression
+ * @param {string} mdId
+ * @param {string} date - YYYY-MM-DD
+ * @param {'in'|'out'} kind
+ * @returns {Promise<string>} public URL (atau ref IndexedDB di mock)
+ */
+export async function uploadAttendancePhoto(file, mdId, date, kind) {
+  if (MOCK_MODE) {
+    const key = `attendance/${mdId}/${date}/${kind}`;
+    try {
+      await savePhoto(key, file);
+      return `idb:${key}`;
+    } catch (e) {
+      return URL.createObjectURL(file);
+    }
+  }
+
+  const objectPath = `attendance/${mdId}/${date}/${kind}.jpg`;
+  const { error } = await supabase.storage
+    .from(PHOTO_BUCKET)
+    .upload(objectPath, file, { contentType: file.type || 'image/jpeg', upsert: true });
+  if (error) throw new Error(`Upload selfie gagal: ${error.message}`);
+
+  const { data } = supabase.storage.from(PHOTO_BUCKET).getPublicUrl(objectPath);
+  return data.publicUrl;
+}
+
+/**
  * Upload semua foto visit secara paralel.
  * @param {Object} photos - { in: {file, ...}, out: {file, ...}, ... }
  * @param {string} visitId - UUID visit

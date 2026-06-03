@@ -4,7 +4,7 @@
 // Mock fallback otomatis aktif kalau .env belum di-set.
 
 import { supabase, MOCK_MODE } from './supabase';
-import { uploadAllVisitPhotos } from './storage';
+import { uploadAllVisitPhotos, uploadAttendancePhoto } from './storage';
 import { SEED_REGIONS, SEED_DISTRIBUTORS, SEED_KOTAS, SEED_BENGKELS } from './seedData';
 import { clearPhotos, deletePhotosByVisit } from './photoStore';
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
@@ -587,4 +587,87 @@ export async function deleteVisit(visitId) {
   // 2. Hapus row visit (RLS: admin/bp boleh delete)
   const { error } = await supabase.from('visits').delete().eq('id', visitId);
   if (error) throw error;
+}
+
+// ============================================================
+// ABSEN / ATTENDANCE (Masuk & Pulang) — sama dengan APK, tabel attendances
+// ============================================================
+function mockAtt() {
+  if (!MOCK_DATA.attendances) MOCK_DATA.attendances = [];
+  return MOCK_DATA.attendances;
+}
+
+// Absen MD untuk 1 tanggal (null kalau belum absen).
+export async function fetchTodayAttendance(mdId, date) {
+  if (MOCK_MODE) return mockAtt().find(a => a.md_id === mdId && a.date === date) || null;
+  const { data, error } = await supabase
+    .from('attendances')
+    .select('*')
+    .eq('md_id', mdId)
+    .eq('date', date)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+// Rekap absen semua MD (admin) untuk 1 tanggal — view attendance_details.
+export async function fetchAttendanceRecap(date) {
+  if (MOCK_MODE) return mockAtt().filter(a => a.date === date);
+  const { data, error } = await supabase
+    .from('attendance_details')
+    .select('*')
+    .eq('date', date)
+    .order('check_in_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+// Absen masuk: upload selfie, buat baris absen hari ini (upsert by md_id+date).
+export async function checkIn({ mdId, date, lat, lng, photoFile, note }) {
+  const photoUrl = photoFile ? await uploadAttendancePhoto(photoFile, mdId, date, 'in') : null;
+  const payload = {
+    md_id: mdId, date,
+    check_in_at: new Date().toISOString(),
+    check_in_lat: lat, check_in_lng: lng,
+    check_in_photo: photoUrl, check_in_note: note || null,
+  };
+  if (MOCK_MODE) {
+    const row = { id: 'att_' + Date.now(), ...payload };
+    mockAtt().push(row);
+    persistMock();
+    return row;
+  }
+  const { data, error } = await supabase
+    .from('attendances')
+    .upsert(payload, { onConflict: 'md_id,date' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// Absen pulang: upload selfie, update baris hari ini.
+export async function checkOut({ mdId, date, lat, lng, photoFile, note }) {
+  const photoUrl = photoFile ? await uploadAttendancePhoto(photoFile, mdId, date, 'out') : null;
+  const patch = {
+    check_out_at: new Date().toISOString(),
+    check_out_lat: lat, check_out_lng: lng,
+    check_out_photo: photoUrl, check_out_note: note || null,
+  };
+  if (MOCK_MODE) {
+    const row = mockAtt().find(a => a.md_id === mdId && a.date === date);
+    if (!row) throw new Error('Belum absen masuk hari ini');
+    Object.assign(row, patch);
+    persistMock();
+    return row;
+  }
+  const { data, error } = await supabase
+    .from('attendances')
+    .update(patch)
+    .eq('md_id', mdId)
+    .eq('date', date)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
 }
