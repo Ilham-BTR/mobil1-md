@@ -6,8 +6,12 @@ Aplikasi web full-stack untuk tracking pemasangan POSM (Point of Sale Materials)
 - Frontend: React 18 + Vite 5 + Tailwind CSS
 - Database: PostgreSQL via Supabase
 - Auth: Supabase Auth (email/password)
-- Backend Logic: Supabase Edge Functions (Deno + TypeScript)
-- Photo Storage: Backblaze B2 ($6/TB) + Cloudflare CDN (free egress)
+- Photo Storage: **Supabase Storage** (bucket `visit-photos`, publik)
+- Backend Logic: Supabase Edge Functions (Deno) — `admin-create-md`, `webauthn`
+
+> **Catatan storage:** versi awal app ini sempat dirancang memakai Backblaze B2 + Cloudflare CDN.
+> Implementasi sekarang **sepenuhnya memakai Supabase Storage** (lihat `src/lib/storage.js`).
+> Folder `supabase/functions/get-upload-url` adalah peninggalan rancangan B2 dan **tidak dipakai lagi**.
 
 ---
 
@@ -20,20 +24,22 @@ npm install
 npm run dev
 ```
 
-Browser akan buka di `http://localhost:5173`. App jalan dengan **mock data** in-memory.
+Browser akan buka di `http://localhost:5173`. App jalan dengan **mock data** in-memory (foto disimpan di IndexedDB browser).
 
 **Demo credentials:**
 - MD: `budi@mobil1.id` / `mobil1`
 - MD: `andi@mobil1.id` / `mobil1`
 - Admin: `admin@mobil1.id` / `mobil1`
 
-⚠️ Data akan hilang saat browser di-refresh. Untuk persistent storage, lanjut ke setup full stack di bawah.
+⚠️ Data hanya tersimpan di browser ini. Untuk persistent storage multi-device, lanjut ke setup full stack di bawah.
 
 ---
 
 ## 🏗️ Full Stack Setup (Production)
 
-### Step 1: Setup Supabase (15 menit)
+Cukup **3 langkah**: setup Supabase (database + storage), konfigurasi frontend, deploy.
+
+### Step 1: Setup Supabase (database + storage)
 
 1. **Daftar gratis di [supabase.com](https://supabase.com)** → New Project
    - Region: **Southeast Asia (Singapore)** untuk latency terbaik
@@ -42,86 +48,25 @@ Browser akan buka di `http://localhost:5173`. App jalan dengan **mock data** in-
 
 2. **Jalankan schema database:**
    - Dashboard → SQL Editor → New Query
-   - Copy seluruh isi `supabase/migrations/0001_schema.sql`
-   - Paste → klik Run
-   - Cek di Table Editor: harus ada tabel `profiles`, `regions`, `kotas`, `distributors`, `bengkels`, `visits`
+   - Copy seluruh isi `supabase/setup_fresh.sql` → paste → Run
+   - Cek di Table Editor: harus ada tabel `profiles`, `regions`, `kotas`, `distributors`, `bengkels`, `visits`, `attendances`
+   - (Migrasi individual ada di `supabase/migrations/` bila perlu ditelusuri per perubahan.)
 
-3. **Buat user pertama:**
+3. **Setup bucket foto (Supabase Storage):**
+   - SQL Editor → New Query
+   - Copy seluruh isi `supabase/storage_setup.sql` → paste → Run
+   - Ini membuat bucket publik `visit-photos` + policy: publik boleh baca, user login boleh upload.
+   - Cek di Storage: bucket `visit-photos` muncul dan bertanda **Public**.
+
+4. **Buat user pertama (admin):**
    - Authentication → Users → Add User → Create new user
    - Email: `admin@mobil1.id`, password bebas (min 6 karakter)
-   - Setelah dibuat, buka Table Editor → `profiles` → edit row admin tadi
-   - Set `role` = `admin`
+   - Profile row dibuat otomatis oleh trigger `handle_new_user`. Buka Table Editor → `profiles` → set `role` = `admin`.
 
-4. **Ambil API credentials:**
-   - Settings → API
-   - Copy `Project URL` dan `anon public key`
+5. **Ambil API credentials:**
+   - Settings → API → copy `Project URL` dan `anon public key`
 
-### Step 2: Setup Backblaze B2 (10 menit)
-
-1. **Daftar di [backblaze.com](https://backblaze.com)** → pilih "B2 Cloud Storage" (tanpa kartu kredit, 10GB free)
-
-2. **Buat bucket:**
-   - Buckets → Create a Bucket
-   - Name: `mobil1-posm-photos` (harus unique global, tambah suffix kalau bentrok)
-   - Files: **Public**
-   - Encryption: Enable
-   - Object Lock: Disable
-   - Catat **bucket region & endpoint URL** (mis. `s3.us-west-004.backblazeb2.com`)
-
-3. **Buat Application Key:**
-   - App Keys → Add a New Application Key
-   - Name: `mobil1-uploader`
-   - Allow access to: hanya bucket tadi
-   - Type: Read and Write
-   - **⚠️ Simpan `keyID` dan `applicationKey`** — `applicationKey` hanya muncul SEKALI
-
-### Step 3: Setup Cloudflare CDN untuk Free Egress (10 menit)
-
-Tanpa step ini, egress B2 dikenakan $0.01/GB. Dengan Cloudflare, **gratis selamanya** via Bandwidth Alliance.
-
-1. **Daftar [cloudflare.com](https://cloudflare.com)** → tambahkan domain Anda (atau beli baru ~$10/tahun)
-2. DNS → Add record:
-   - Type: `CNAME`
-   - Name: `cdn` (akan jadi `cdn.domain-anda.com`)
-   - Target: `f004.backblazeb2.com` (sesuaikan dengan region B2 — angka `004` itu region code)
-   - Proxy: **ON (orange cloud ☁️)** — INI WAJIB supaya gratis egress
-3. (Opsional) Rules → Transform Rules → URL Rewrite untuk menyembunyikan path bucket:
-   - From: `/file/mobil1-posm-photos/*`
-   - To: `/*`
-4. (Opsional) Caching → Cache Rules → cache image 1 tahun
-
-Test: buka `https://cdn.domain-anda.com/visits/test.jpg` harus jalan.
-
-### Step 4: Deploy Edge Function
-
-1. **Install Supabase CLI:**
-   ```bash
-   npm install -g supabase
-   ```
-
-2. **Login & link project:**
-   ```bash
-   supabase login
-   supabase link --project-ref <PROJECT_REF>
-   ```
-   `PROJECT_REF` ada di URL dashboard: `https://supabase.com/dashboard/project/<PROJECT_REF>`
-
-3. **Set environment variables:**
-   ```bash
-   supabase secrets set B2_KEY_ID=<keyID-dari-step-2>
-   supabase secrets set B2_APPLICATION_KEY=<applicationKey-dari-step-2>
-   supabase secrets set B2_BUCKET_NAME=mobil1-posm-photos
-   supabase secrets set B2_ENDPOINT=https://s3.us-west-004.backblazeb2.com
-   supabase secrets set B2_REGION=us-west-004
-   supabase secrets set CDN_BASE_URL=https://cdn.domain-anda.com
-   ```
-
-4. **Deploy:**
-   ```bash
-   supabase functions deploy get-upload-url
-   ```
-
-### Step 5: Konfigurasi Frontend
+### Step 2: Konfigurasi Frontend
 
 1. **Copy template environment:**
    ```bash
@@ -132,7 +77,6 @@ Test: buka `https://cdn.domain-anda.com/visits/test.jpg` harus jalan.
    ```env
    VITE_SUPABASE_URL=https://<project-ref>.supabase.co
    VITE_SUPABASE_ANON_KEY=<anon-key-dari-step-1>
-   VITE_CDN_BASE_URL=https://cdn.domain-anda.com
    ```
 
 3. **Run:**
@@ -142,7 +86,9 @@ Test: buka `https://cdn.domain-anda.com/visits/test.jpg` harus jalan.
 
 Banner kuning "Mode Demo" harusnya hilang — tandanya sudah production mode.
 
-### Step 6: Deploy Frontend ke Cloudflare Pages
+### Step 3: Deploy Frontend (Cloudflare Pages / Vercel)
+
+App ini static build (Vite), bisa di-deploy ke mana saja. Contoh Cloudflare Pages:
 
 1. Push code ke GitHub
 2. Cloudflare Dashboard → Workers & Pages → Create → Pages → Connect to Git
@@ -150,8 +96,24 @@ Banner kuning "Mode Demo" harusnya hilang — tandanya sudah production mode.
    - Framework: Vite
    - Build command: `npm run build`
    - Output directory: `dist`
-4. Environment variables → tambah `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_CDN_BASE_URL`
-5. Deploy → app live di `<project>.pages.dev` (gratis, unlimited bandwidth)
+4. Environment variables → tambah `VITE_SUPABASE_URL` dan `VITE_SUPABASE_ANON_KEY`
+5. Deploy → app live (gratis, unlimited bandwidth)
+
+> (Repo juga punya `vercel.json` — deploy ke Vercel sama mudahnya: import repo, set 2 env var di atas.)
+
+#### (Opsional) Deploy Edge Function
+
+Fitur `admin-create-md` (admin bikin akun MD) dan `webauthn` (passkey, default disembunyikan) memakai Edge Function:
+
+```bash
+npm install -g supabase
+supabase login
+supabase link --project-ref <PROJECT_REF>
+supabase functions deploy admin-create-md
+supabase functions deploy webauthn
+```
+
+`PROJECT_REF` ada di URL dashboard: `https://supabase.com/dashboard/project/<PROJECT_REF>`.
 
 ---
 
@@ -170,18 +132,22 @@ mobil1-posm/
 │   ├── App.jsx                # Semua UI components
 │   ├── index.css
 │   └── lib/
-│       ├── supabase.js        # Supabase client singleton
+│       ├── supabase.js        # Supabase client singleton + MOCK_MODE
 │       ├── api.js             # Data access layer (CRUD + auth)
-│       └── storage.js         # B2 upload helper
+│       ├── storage.js         # Upload foto → Supabase Storage (mock: IndexedDB)
+│       ├── photoStore.js      # Helper IndexedDB untuk mock mode
+│       └── seedData.js        # Seed bengkel untuk mock mode
 │
 └── supabase/
     ├── config.toml
-    ├── migrations/
-    │   ├── 0000_reset.sql     # ⚠️ destructive: drop everything
-    │   └── 0001_schema.sql    # Tables, RLS, triggers, seed data
+    ├── setup_fresh.sql        # Schema lengkap (jalankan sekali di project baru)
+    ├── storage_setup.sql      # Bucket `visit-photos` + policy
+    ├── supabase_seed.sql      # Seed data opsional
+    ├── migrations/            # Riwayat perubahan schema per langkah (0001..0008)
     └── functions/
-        └── get-upload-url/
-            └── index.ts       # Edge Function: generate presigned B2 URL
+        ├── admin-create-md/   # Edge Function: admin bikin akun MD
+        ├── webauthn/          # Edge Function: passkey (default disembunyikan)
+        └── get-upload-url/    # ⚠️ LEGACY (rancangan B2) — tidak dipakai
 ```
 
 ---
@@ -191,21 +157,23 @@ mobil1-posm/
 | Tahap | Setup | Biaya/bulan |
 |-------|-------|-------------|
 | Demo / Dev | Mock mode, no backend | **Rp 0** |
-| Start | Supabase Free + B2 Free (10GB) + Cloudflare Free | **Rp 0** |
-| Growth (50-200 MD) | Supabase Pro ($25) + B2 ($6/TB) + Cloudflare | **~Rp 500k** |
-| Scale (200+ MD) | Supabase Team + B2 + Cloudflare Pro | **~Rp 2 juta** |
+| Start | Supabase Free (DB 500MB + Storage 1GB) | **Rp 0** |
+| Growth (50-200 MD) | Supabase Pro ($25, sudah termasuk 100GB storage + 250GB egress) | **~Rp 400k** |
+| Scale (200+ MD) | Supabase Pro + tambahan storage/egress sesuai pemakaian | **menyesuaikan** |
+
+> Foto ~1,4 MB/kunjungan (7 foto terkompres). 100GB ≈ ~70.000 kunjungan, jadi kuota Pro cukup untuk waktu lama.
+> Bila volume foto menembus ratusan GB–TB, baru pertimbangkan storage eksternal murah (mis. Backblaze B2 + Cloudflare CDN untuk egress gratis).
 
 ---
 
 ## 🔐 Security Notes
 
-- B2 application key **tidak pernah** kena client — hanya di Supabase Edge Function env vars
-- Row Level Security aktif di semua tabel:
-  - MD hanya bisa lihat visit miliknya sendiri
+- **Row Level Security aktif di semua tabel:**
+  - MD hanya bisa lihat visit & absen miliknya sendiri
   - Admin/BP bisa lihat & kelola semua data
-- Photo path di B2 include `userId` untuk audit trail
-- Presigned URL expire dalam 15 menit
-- Domain Cloudflare bisa diset Hotlink Protection biar URL foto tidak bisa di-leech
+- Bucket `visit-photos` publik untuk **baca** (tampil foto), tapi **upload/update/delete** hanya untuk user login (policy di `storage_setup.sql`).
+- Path foto memuat `visitId` / `mdId` untuk audit trail.
+- `anon key` aman dipakai di client — keamanan ditegakkan oleh RLS, bukan dengan menyembunyikan key.
 
 ---
 
@@ -221,8 +189,8 @@ npm run build
 # Preview production build locally
 npm run preview
 
-# Test edge function locally
-supabase functions serve get-upload-url --env-file .env.local
+# Test edge function locally (mis. admin-create-md)
+supabase functions serve admin-create-md --env-file .env.local
 ```
 
 ---
@@ -233,13 +201,13 @@ supabase functions serve get-upload-url --env-file .env.local
 → Restart dev server (`Ctrl+C` lalu `npm run dev`). Vite hanya baca env saat startup.
 
 **Login gagal: "Invalid email or password"**
-→ Pastikan user sudah dibuat di Supabase Authentication AND profile row sudah ada (dibuat otomatis oleh trigger `handle_new_user`).
+→ Pastikan user sudah dibuat di Supabase Authentication. Profile row dibuat otomatis oleh trigger `handle_new_user`.
 
-**Upload foto gagal: "Failed to get upload URL"**
-→ Cek logs Edge Function di Supabase Dashboard → Edge Functions → get-upload-url → Logs. Biasanya env var belum di-set atau B2 key salah.
+**Upload foto gagal**
+→ Pastikan `supabase/storage_setup.sql` sudah dijalankan (bucket `visit-photos` ada + policy upload). Cek juga user dalam keadaan login.
 
 **Upload OK tapi foto tidak muncul**
-→ CDN belum ter-setup. Cek: buka `https://cdn.domain-anda.com/<path>` langsung di browser. Kalau 404, masalah di Cloudflare DNS/Transform Rules.
+→ Pastikan bucket `visit-photos` bertanda **Public** (policy `visit_photos_public_read`). Coba buka public URL foto langsung di browser.
 
 **RLS error: "new row violates row-level security policy"**
 → Kemungkinan profile user belum dibuat. Cek table `profiles` apakah row untuk user tsb ada.
