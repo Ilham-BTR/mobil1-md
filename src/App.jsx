@@ -11,7 +11,7 @@ import {
   Users, Briefcase, Globe, ChevronDown, LogOut, Shield,
   Lock, Mail, Eye, EyeOff, AlertCircle, Fingerprint, Loader2,
   Navigation, Phone, FileText, Download, Search, Upload, FileSpreadsheet,
-  LogIn, Clock, CalendarDays
+  LogIn, Clock, CalendarDays, Trophy
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Polyline, Circle } from 'react-leaflet';
 import L from 'leaflet';
@@ -2094,7 +2094,9 @@ function MDDashboard({ currentMD, visits, bengkels, kotas }) {
 }
 
 function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmitted }) {
-  const [form, setForm] = useState({
+  const DRAFT_KEY = `visitDraft:${currentMD.id}`;
+  const emptyPhotos = { tampakDepan: null, in: null, out: null, spandukBefore: null, spandukAfter: null, posterBefore: null, posterAfter: null };
+  const makeDefaultForm = () => ({
     regionId: currentMD.region_id || '',
     kotaId: '',
     bengkelId: '',
@@ -2102,8 +2104,22 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
     date: new Date().toISOString().slice(0, 10),
     pic: '', phone: '',
     status: 'Pemasangan', subType: '', remarks: '',
-    photos: { tampakDepan: null, in: null, out: null, spandukBefore: null, spandukAfter: null, posterBefore: null, posterAfter: null },
+    photos: { ...emptyPhotos },
   });
+  // Pulihkan draft (field teks saja — foto tak bisa disimpan di localStorage)
+  const [form, setForm] = useState(() => {
+    const base = makeDefaultForm();
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) return { ...base, ...JSON.parse(raw), photos: { ...emptyPhotos } };
+    } catch { /* abaikan draft rusak */ }
+    return base;
+  });
+  const [draftRestored, setDraftRestored] = useState(false);
+  useEffect(() => {
+    try { if (localStorage.getItem(DRAFT_KEY)) setDraftRestored(true); } catch { /* noop */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [backfilled, setBackfilled] = useState(false);
@@ -2150,6 +2166,12 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
     }
   }, [form.bengkelId]);
 
+  // Autosave draft (field teks saja) tiap ada perubahan
+  useEffect(() => {
+    const { photos, ...rest } = form;
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(rest)); } catch { /* storage penuh / private mode */ }
+  }, [form.regionId, form.kotaId, form.bengkelId, form.distributorId, form.date, form.pic, form.phone, form.status, form.subType, form.remarks]);
+
   const setPhoto = (key, val) => setForm(f => ({ ...f, photos: { ...f.photos, [key]: val } }));
   const photoCount = Object.values(form.photos).filter(p => p?.status === 'ready').length;
   const anyCompressing = Object.values(form.photos).some(p => p?.status === 'compressing');
@@ -2186,6 +2208,8 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
         backfillBengkelCoords: bengkelLacksCoords,
       });
 
+      try { localStorage.removeItem(DRAFT_KEY); } catch { /* noop */ }
+      setDraftRestored(false);
       setSubmitted(true);
       setBackfilled(bengkelBackfilled);
       setTimeout(() => { setSubmitted(false); setBackfilled(false); onSubmitted(); }, 2000);
@@ -2223,6 +2247,16 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
         <div className="mb-4 p-3 bg-rose-600/10 border border-rose-600/30 rounded-lg flex items-start gap-2.5">
           <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
           <p className="text-xs text-rose-400">{error}</p>
+        </div>
+      )}
+
+      {draftRestored && !submitted && (
+        <div className="mb-4 p-3 bg-sky-600/10 border border-sky-600/30 rounded-lg flex items-center gap-2.5">
+          <FileText className="w-4 h-4 text-sky-400 shrink-0" />
+          <p className="text-xs text-sky-300 flex-1">Draft sebelumnya dipulihkan. <span className="text-sky-400/80">Foto perlu diambil ulang.</span></p>
+          <button type="button"
+            onClick={() => { setForm(makeDefaultForm()); setDraftRestored(false); try { localStorage.removeItem(DRAFT_KEY); } catch { /* noop */ } }}
+            className="text-[11px] text-sky-400 hover:text-sky-300 font-medium shrink-0">Mulai baru</button>
         </div>
       )}
 
@@ -2408,6 +2442,93 @@ function VisitHistory({ visits, bengkels, kotas, distributors }) {
 }
 
 // ============================================================
+// LEADERBOARD — ranking produktivitas MD (pakai data yang sudah ada)
+// ============================================================
+function LeaderboardTab({ visits, mds, regions }) {
+  const monthsList = useMemo(() => {
+    const set = new Set(visits.map(v => v.visit_date.slice(0, 7)));
+    set.add(new Date().toISOString().slice(0, 7));
+    return [...set].sort().reverse();
+  }, [visits]);
+  const [month, setMonth] = useState(monthsList[0]);
+  const [metric, setMetric] = useState('visits'); // 'visits' | 'achievement'
+
+  const regionName = (id) => regions.find(r => r.id === id)?.name || '';
+
+  const ranked = useMemo(() => {
+    const rows = mds.filter(m => m.active !== false).map(m => {
+      const mv = visits.filter(v => v.md_id === m.id && v.visit_date.startsWith(month));
+      const total = mv.length;
+      const target = m.monthly_target || 30;
+      const achievement = target > 0 ? Math.round((total / target) * 100) : 0;
+      const pemasangan = mv.filter(v => v.status === 'Pemasangan').length;
+      const revisit = mv.filter(v => v.status === 'Revisit').length;
+      const activeDays = new Set(mv.map(v => v.visit_date)).size;
+      return { md: m, total, target, achievement, pemasangan, revisit, activeDays };
+    });
+    rows.sort((a, b) => metric === 'visits'
+      ? (b.total - a.total) || (b.achievement - a.achievement)
+      : (b.achievement - a.achievement) || (b.total - a.total));
+    return rows;
+  }, [visits, mds, month, metric]);
+
+  const totalVisits = ranked.reduce((s, r) => s + r.total, 0);
+  const medal = (i) => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null;
+  const rankRing = (i) => i === 0 ? 'border-amber-500/50 bg-amber-500/10 text-amber-300'
+    : i === 1 ? 'border-zinc-400/40 bg-zinc-400/10 text-zinc-200'
+    : i === 2 ? 'border-orange-700/50 bg-orange-700/15 text-orange-300'
+    : 'border-zinc-800 bg-zinc-900 text-zinc-500';
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
+        <div>
+          <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-amber-400" />Ranking MD
+          </h2>
+          <p className="text-sm text-zinc-500 mt-1">{ranked.length} MD · {totalVisits} visit · bulan {month}</p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-lg">
+            <button onClick={() => setMetric('visits')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${metric === 'visits' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>Jumlah Visit</button>
+            <button onClick={() => setMetric('achievement')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${metric === 'achievement' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>Achievement</button>
+          </div>
+          <div className="w-36"><Select value={month} onChange={e => setMonth(e.target.value)}>{monthsList.map(m => <option key={m} value={m}>{m}</option>)}</Select></div>
+        </div>
+      </div>
+
+      {ranked.length === 0 ? (
+        <div className="text-center py-12 text-zinc-500 text-sm">Belum ada MD aktif.</div>
+      ) : (
+        <div className="space-y-1.5">
+          {ranked.map((r, i) => (
+            <div key={r.md.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-lg border flex items-center justify-center text-sm font-bold shrink-0 ${rankRing(i)}`}>
+                {medal(i) || (i + 1)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold text-zinc-100 truncate">{r.md.full_name}</div>
+                <div className="text-[11px] text-zinc-500 truncate">
+                  {regionName(r.md.region_id) && <>{regionName(r.md.region_id)} · </>}
+                  {r.activeDays} hari aktif · <span className="text-emerald-400">{r.pemasangan} pasang</span> · <span className="text-sky-400">{r.revisit} revisit</span>
+                </div>
+                <div className="mt-1.5 h-1.5 bg-zinc-800/60 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${r.achievement >= 80 ? 'bg-emerald-500' : r.achievement >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${Math.min(r.achievement, 100)}%` }} />
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="text-lg font-bold text-zinc-100 leading-none">{r.total}<span className="text-xs text-zinc-500 font-normal">/{r.target}</span></div>
+                <div className={`text-xs font-medium mt-0.5 ${r.achievement >= 80 ? 'text-emerald-400' : r.achievement >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>{r.achievement}%</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
 // ADMIN VIEW
 // ============================================================
 
@@ -2449,6 +2570,7 @@ function AdminView() {
       <div className="flex gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-xl mb-5 overflow-x-auto">
         {[
           { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+          { id: 'ranking', label: 'Ranking', icon: Trophy },
           { id: 'visits', label: 'Visits', icon: ClipboardList },
           { id: 'absen', label: 'Absen', icon: CalendarDays },
           { id: 'coverage', label: 'Coverage Map', icon: MapIcon },
@@ -2462,6 +2584,7 @@ function AdminView() {
       </div>
 
       {tab === 'dashboard' && <DashboardTab visits={visits} mds={mds} onOpenVisit={openDetail} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} />}
+      {tab === 'ranking' && <LeaderboardTab visits={visits} mds={mds} regions={regions} />}
       {tab === 'visits' && <VisitsTab visits={visits} mds={mds} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} onOpenVisit={openDetail} />}
       {tab === 'absen' && <AdminAbsenTab mds={mds} />}
       {tab === 'coverage' && <CoverageTab visits={visits} mds={mds} bengkels={bengkels} kotas={kotas} regions={regions} distributors={distributors} onOpenVisit={openDetail} />}
