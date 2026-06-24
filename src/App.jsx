@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Polyline, Circle } from 'react-leaflet';
 import L from 'leaflet';
-import * as XLSX from 'xlsx';
 
 import { MOCK_MODE } from './lib/supabase';
 import * as api from './lib/api';
@@ -1795,8 +1794,9 @@ function AdminAbsenTab({ mds }) {
     return true;
   });
 
-  const exportExcel = () => {
+  const exportExcel = async () => {
     if (filteredRows.length === 0) return;
+    const XLSX = await import('xlsx');
     const data = filteredRows.map(a => ({
       Tanggal: a.date,
       'Nama MD': a.md_name || '',
@@ -3404,6 +3404,7 @@ function BengkelImportModal({ kotas, regions, bengkels, onClose, onImported }) {
     setFilename(file.name);
     try {
       const buf = await file.arrayBuffer();
+      const XLSX = await import('xlsx');
       const wb = XLSX.read(buf, { type: 'array' });
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const data = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
@@ -3820,6 +3821,7 @@ function MasterImportModal({ section, ctx, onClose, onImported }) {
     setFilename(file.name);
     try {
       const buf = await file.arrayBuffer();
+      const XLSX = await import('xlsx');
       const wb = XLSX.read(buf, { type: 'array' });
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const data = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
