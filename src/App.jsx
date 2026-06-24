@@ -2180,6 +2180,12 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
   const hasAllRequiredPhotos = requiredPhotos.every(k => form.photos[k]?.status === 'ready');
   const canSubmit = form.bengkelId && form.distributorId && form.subType && form.pic && form.phone && hasAllRequiredPhotos && !anyCompressing && !submitting;
 
+  // Jarak GPS user ↔ bengkel (kalau dua-duanya ada) untuk peringatan on-site
+  const gpsDistance = (gps.status === 'ready' && selectedBengkel?.lat != null && selectedBengkel?.lng != null)
+    ? haversineMeters(selectedBengkel.lat, selectedBengkel.lng, gps.lat, gps.lng)
+    : null;
+  const gpsFar = gpsDistance != null && gpsDistance > 500;
+
   const handleSubmit = async () => {
     if (submitLock.current || !canSubmit) return;  // guard sinkron, gak nunggu re-render
     submitLock.current = true;
@@ -2395,6 +2401,15 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
         </Field>
       </Section>
 
+      {gpsFar && (
+        <div className="mb-3 p-3 bg-amber-600/10 border border-amber-600/30 rounded-lg flex items-start gap-2.5">
+          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-300">
+            Lokasimu <span className="font-semibold">{formatDistance(gpsDistance)}</span> dari titik bengkel. Pastikan kamu benar-benar di lokasi sebelum menyimpan — jarak ini ikut terekam & terlihat oleh admin.
+          </p>
+        </div>
+      )}
+
       <Button variant="primary" size="lg" className="w-full" onClick={handleSubmit} disabled={!canSubmit}>
         {submitting ? <><Loader2 className="w-4 h-4 animate-spin" />Menyimpan & upload foto…</> : <>Simpan Visit <ChevronRight className="w-4 h-4" /></>}
       </Button>
@@ -2609,6 +2624,15 @@ function AdminView() {
 // VISITS TAB — list dengan filter & sort, klik buka detail
 // ============================================================
 
+// Badge on-site: hitung jarak visit_lat/lng ↔ koordinat bengkel (dari data yang ada)
+function OnSiteBadge({ bengkel, visit }) {
+  if (visit.visit_lat == null || visit.visit_lng == null || bengkel?.lat == null || bengkel?.lng == null) return null;
+  const d = haversineMeters(bengkel.lat, bengkel.lng, visit.visit_lat, visit.visit_lng);
+  if (d < 100) return <span className="text-[10px] text-emerald-400 flex items-center gap-0.5" title={`${formatDistance(d)} dari bengkel`}><MapPin className="w-2.5 h-2.5" />on-site</span>;
+  if (d > 500) return <span className="text-[10px] text-rose-400 flex items-center gap-0.5" title={`${formatDistance(d)} dari bengkel`}><AlertCircle className="w-2.5 h-2.5" />{formatDistance(d)}</span>;
+  return null; // 100–500m: netral, tidak ditampilkan agar tidak ramai
+}
+
 function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpenVisit }) {
   const [filters, setFilters] = useState({
     search: '',
@@ -2722,6 +2746,7 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
                 <div className="flex flex-col items-end gap-1 shrink-0">
                   <StatusBadge status={v.status} />
                   {v.sub_type && <span className="text-[10px] text-zinc-500">{v.sub_type}</span>}
+                  <OnSiteBadge bengkel={b} visit={v} />
                 </div>
                 <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-red-300 transition shrink-0" />
               </button>
