@@ -950,7 +950,7 @@ const PhotoTile = ({ label, photo, onChange, required }) => {
 
     try {
       const compressed = await imageCompression(file, {
-        maxSizeMB: 0.3, maxWidthOrHeight: 1280, useWebWorker: true, fileType: 'image/jpeg',
+        maxSizeMB: 0.5, maxWidthOrHeight: 1600, useWebWorker: true, fileType: 'image/jpeg',
       });
       const compressedPreview = URL.createObjectURL(compressed);
       URL.revokeObjectURL(initialPreview);
@@ -1705,7 +1705,7 @@ function AbsenForm({ kind, currentMD, todayStr, onCancel, onDone }) {
     const preview = URL.createObjectURL(file);
     setSelfie({ status: 'compressing', preview, file: null });
     try {
-      const compressed = await imageCompression(file, { maxSizeMB: 0.3, maxWidthOrHeight: 1280, useWebWorker: true, fileType: 'image/jpeg' });
+      const compressed = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1600, useWebWorker: true, fileType: 'image/jpeg' });
       setSelfie({ status: 'ready', preview: URL.createObjectURL(compressed), file: compressed });
     } catch (err) { setSelfie({ status: 'error', preview, error: err.message }); }
   };
