@@ -6,7 +6,11 @@
 //   1. Client (authenticated MD) request URL ke endpoint ini
 //   2. Function validate JWT, lalu generate presigned PUT URL (15 menit valid)
 //   3. Client upload file langsung ke B2 pakai URL tsb (gak lewat server)
-//   4. Server return juga public URL yang nantinya dipakai serve foto via Cloudflare CDN
+//   4. Server return juga public URL yang dipakai serve foto (B2 langsung, atau via Cloudflare CDN kalau CDN_BASE_URL diset)
+//
+// Mendukung 2 scope:
+//   - scope='visit'      → key visits/{userId}/{visitId}/{photoKey}.{ext}
+//   - scope='attendance' → key attendance/{userId}/{date}/{kind}.{ext}   (kind: in|out)
 //
 // Setup ENV di Supabase Dashboard → Edge Functions → Secrets:
 //   B2_KEY_ID            (Backblaze application key ID)
@@ -14,7 +18,7 @@
 //   B2_BUCKET_NAME       (mis. mobil1-posm-photos)
 //   B2_ENDPOINT          (mis. https://s3.us-west-004.backblazeb2.com)
 //   B2_REGION            (mis. us-west-004)
-//   CDN_BASE_URL         (mis. https://cdn.mobil1-posm.id — domain Cloudflare di depan B2)
+//   CDN_BASE_URL         (OPSIONAL — mis. https://cdn.mobil1-posm.id. Kalau kosong, foto di-serve langsung dari B2)
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
@@ -70,33 +74,48 @@ Deno.serve(async (req) => {
 
     // --- 2. Parse + validate request body ---
     const body = await req.json();
-    const { visitId, photoKey, contentType } = body;
+    const { scope = "visit", contentType } = body;
 
-    if (!visitId || !photoKey || !contentType) {
-      return json(
-        { error: "Missing required fields: visitId, photoKey, contentType" },
-        400,
-      );
+    if (!contentType) {
+      return json({ error: "Missing required field: contentType" }, 400);
     }
-
-    if (!ALLOWED_PHOTO_KEYS.includes(photoKey)) {
-      return json({ error: `Invalid photoKey. Allowed: ${ALLOWED_PHOTO_KEYS.join(", ")}` }, 400);
-    }
-
     if (!ALLOWED_CONTENT_TYPES.includes(contentType)) {
       return json({ error: "Only image/jpeg, image/png, image/webp allowed" }, 400);
     }
 
-    // Validate visitId format (basic uuid check)
-    if (!/^[0-9a-f-]{36}$/i.test(visitId)) {
-      return json({ error: "Invalid visitId format" }, 400);
-    }
-
-    // --- 3. Build S3 key (file path inside bucket) ---
-    // Format: visits/{userId}/{visitId}/{photoKey}.jpg
-    // Use userId in path so we can audit + apply lifecycle policies per MD
     const ext = contentType.split("/")[1].replace("jpeg", "jpg");
-    const objectKey = `visits/${user.id}/${visitId}/${photoKey}.${ext}`;
+
+    // --- 3. Build S3 key (file path inside bucket) per scope ---
+    // userId selalu dari JWT → MD hanya bisa menulis di foldernya sendiri (audit + keamanan)
+    let objectKey: string;
+
+    if (scope === "visit") {
+      const { visitId, photoKey } = body;
+      if (!visitId || !photoKey) {
+        return json({ error: "Missing required fields: visitId, photoKey" }, 400);
+      }
+      if (!ALLOWED_PHOTO_KEYS.includes(photoKey)) {
+        return json({ error: `Invalid photoKey. Allowed: ${ALLOWED_PHOTO_KEYS.join(", ")}` }, 400);
+      }
+      if (!/^[0-9a-f-]{36}$/i.test(visitId)) {
+        return json({ error: "Invalid visitId format" }, 400);
+      }
+      objectKey = `visits/${user.id}/${visitId}/${photoKey}.${ext}`;
+    } else if (scope === "attendance") {
+      const { date, kind } = body;
+      if (!date || !kind) {
+        return json({ error: "Missing required fields: date, kind" }, 400);
+      }
+      if (!["in", "out"].includes(kind)) {
+        return json({ error: "Invalid kind. Allowed: in, out" }, 400);
+      }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return json({ error: "Invalid date format (YYYY-MM-DD)" }, 400);
+      }
+      objectKey = `attendance/${user.id}/${date}/${kind}.${ext}`;
+    } else {
+      return json({ error: "Invalid scope. Allowed: visit, attendance" }, 400);
+    }
 
     // --- 4. Generate presigned PUT URL ---
     const s3 = new S3Client({
@@ -117,8 +136,13 @@ Deno.serve(async (req) => {
 
     const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 900 }); // 15 min
 
-    // Public URL served via Cloudflare CDN (free egress via Bandwidth Alliance)
-    const publicUrl = `${Deno.env.get("CDN_BASE_URL")}/${objectKey}`;
+    // Public URL: pakai Cloudflare CDN kalau CDN_BASE_URL diset (egress gratis),
+    // kalau belum (mis. belum punya domain) fallback ke URL publik B2 langsung.
+    // B2 path-style: {endpoint}/{bucket}/{key} — valid untuk bucket Public.
+    const cdn = Deno.env.get("CDN_BASE_URL");
+    const publicUrl = cdn
+      ? `${cdn.replace(/\/$/, "")}/${objectKey}`
+      : `${Deno.env.get("B2_ENDPOINT")!.replace(/\/$/, "")}/${Deno.env.get("B2_BUCKET_NAME")}/${objectKey}`;
 
     return json({ uploadUrl, publicUrl, objectKey });
   } catch (err) {

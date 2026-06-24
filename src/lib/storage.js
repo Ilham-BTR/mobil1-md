@@ -1,21 +1,49 @@
 // src/lib/storage.js
-// Upload foto visit.
+// Upload foto visit & selfie absen.
 //   - MOCK_MODE  → IndexedDB (per-device, untuk demo/testing)
-//   - Production → Supabase Storage bucket `visit-photos` (cloud, multi-device)
+//   - Production → Backblaze B2 via presigned URL (edge function `get-upload-url`)
 //
-// Path foto: visits/{visitId}/{photoKey}.{ext}
+// Alur production (key B2 tidak pernah ke client):
+//   1. invoke edge function `get-upload-url` → dapat { uploadUrl, publicUrl }
+//   2. PUT file langsung ke B2 pakai uploadUrl
+//   3. simpan publicUrl ke DB (di-serve langsung dari B2, atau via Cloudflare CDN kalau CDN_BASE_URL diset)
 
 import { supabase, MOCK_MODE } from './supabase';
 import { savePhoto } from './photoStore';
 
-const PHOTO_BUCKET = 'visit-photos';
+/**
+ * Minta presigned URL ke edge function, lalu PUT file ke B2.
+ * @param {string} scope - 'visit' | 'attendance'
+ * @param {object} payload - field tambahan sesuai scope (visitId+photoKey, atau date+kind)
+ * @param {File|Blob} file
+ * @returns {Promise<string>} public URL foto
+ */
+async function presignAndPut(scope, payload, file) {
+  const contentType = file.type || 'image/jpeg';
+
+  const { data, error } = await supabase.functions.invoke('get-upload-url', {
+    body: { scope, ...payload, contentType },
+  });
+  if (error) throw new Error(`Gagal minta upload URL: ${error.message}`);
+  if (!data?.uploadUrl) throw new Error(data?.error || 'Upload URL kosong dari server');
+
+  // Content-Type WAJIB sama dengan yang ditandatangani edge function
+  const res = await fetch(data.uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': contentType },
+    body: file,
+  });
+  if (!res.ok) throw new Error(`Upload ke B2 gagal: ${res.status} ${res.statusText}`);
+
+  return data.publicUrl;
+}
 
 /**
  * Upload satu foto.
  * @param {File|Blob} file - File hasil compression dari PhotoTile
  * @param {string} visitId - UUID visit
  * @param {string} photoKey - 'foto-in' | 'foto-out' | 'spanduk-before' | dst
- * @returns {Promise<string>} - public URL (Supabase Storage) atau ref IndexedDB (mock)
+ * @returns {Promise<string>} - public URL (B2/CDN) atau ref IndexedDB (mock)
  */
 export async function uploadVisitPhoto(file, visitId, photoKey) {
   if (MOCK_MODE) {
@@ -30,22 +58,12 @@ export async function uploadVisitPhoto(file, visitId, photoKey) {
     }
   }
 
-  // Production: upload ke Supabase Storage
-  const ext = (file.type?.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
-  const objectPath = `visits/${visitId}/${photoKey}.${ext}`;
-
-  const { error } = await supabase.storage
-    .from(PHOTO_BUCKET)
-    .upload(objectPath, file, { contentType: file.type || 'image/jpeg', upsert: true });
-
-  if (error) throw new Error(`Upload foto gagal: ${error.message}`);
-
-  const { data } = supabase.storage.from(PHOTO_BUCKET).getPublicUrl(objectPath);
-  return data.publicUrl;
+  // Production: upload ke Backblaze B2 via presigned URL
+  return presignAndPut('visit', { visitId, photoKey }, file);
 }
 
 /**
- * Upload selfie absen ke bucket visit-photos (path attendance/{mdId}/{date}/{kind}.jpg).
+ * Upload selfie absen ke B2 (path attendance/{userId}/{date}/{kind}.jpg).
  * @param {File|Blob} file - selfie hasil compression
  * @param {string} mdId
  * @param {string} date - YYYY-MM-DD
@@ -63,14 +81,8 @@ export async function uploadAttendancePhoto(file, mdId, date, kind) {
     }
   }
 
-  const objectPath = `attendance/${mdId}/${date}/${kind}.jpg`;
-  const { error } = await supabase.storage
-    .from(PHOTO_BUCKET)
-    .upload(objectPath, file, { contentType: file.type || 'image/jpeg', upsert: true });
-  if (error) throw new Error(`Upload selfie gagal: ${error.message}`);
-
-  const { data } = supabase.storage.from(PHOTO_BUCKET).getPublicUrl(objectPath);
-  return data.publicUrl;
+  // Production: upload ke Backblaze B2 (mdId diabaikan; path pakai user.id dari JWT di server)
+  return presignAndPut('attendance', { date, kind }, file);
 }
 
 /**
