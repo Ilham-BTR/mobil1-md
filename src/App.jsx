@@ -1789,16 +1789,18 @@ function AbsenForm({ kind, currentMD, todayStr, onCancel, onDone }) {
 // Baris filter rentang tanggal (Dari–Sampai + Reset) — dipakai di beberapa tab admin
 function DateRangeRow({ dari, sampai, onDari, onSampai, onReset, className = '' }) {
   return (
-    <div className={`flex items-center flex-wrap gap-2 text-xs text-zinc-500 ${className}`}>
-      <span className="flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5" />Rentang tanggal:</span>
-      <input type="date" value={dari} onChange={e => onDari(e.target.value)}
-        className="bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-red-600/50 [color-scheme:dark]" />
-      <span className="text-zinc-600">–</span>
-      <input type="date" value={sampai} onChange={e => onSampai(e.target.value)}
-        className="bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-red-600/50 [color-scheme:dark]" />
-      {(dari || sampai) && (
-        <button onClick={onReset} className="text-red-400 hover:text-red-300 ml-1 font-medium">Reset</button>
-      )}
+    <div className={`flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-zinc-500 ${className}`}>
+      <span className="flex items-center gap-1.5 shrink-0"><CalendarDays className="w-3.5 h-3.5" />Rentang tanggal:</span>
+      <div className="flex items-center gap-2 flex-1 min-w-[220px]">
+        <input type="date" value={dari} onChange={e => onDari(e.target.value)}
+          className="flex-1 min-w-0 bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-red-600/50 [color-scheme:dark]" />
+        <span className="text-zinc-600 shrink-0">–</span>
+        <input type="date" value={sampai} onChange={e => onSampai(e.target.value)}
+          className="flex-1 min-w-0 bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-red-600/50 [color-scheme:dark]" />
+        {(dari || sampai) && (
+          <button onClick={onReset} className="text-red-400 hover:text-red-300 font-medium shrink-0">Reset</button>
+        )}
+      </div>
     </div>
   );
 }
@@ -1962,19 +1964,18 @@ function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
         />
       )}
       <PasskeyEnrollBanner />
-      <div className="flex gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-xl mb-5">
-        <button onClick={() => setTab('absen')} className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition ${tab === 'absen' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>
-          <CalendarDays className="w-4 h-4 inline mr-2" /> Absen
-        </button>
-        <button onClick={() => setTab('new')} className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition ${tab === 'new' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>
-          <ClipboardList className="w-4 h-4 inline mr-2" /> Visit Baru
-        </button>
-        <button onClick={() => setTab('progress')} className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition ${tab === 'progress' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>
-          <LayoutDashboard className="w-4 h-4 inline mr-2" /> Progres
-        </button>
-        <button onClick={() => setTab('history')} className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition ${tab === 'history' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>
-          <Activity className="w-4 h-4 inline mr-2" /> History ({visits.length})
-        </button>
+      <div className="grid grid-cols-4 gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-xl mb-5 sm:flex">
+        {[
+          { id: 'absen', label: 'Absen', icon: CalendarDays },
+          { id: 'new', label: 'Visit Baru', icon: ClipboardList },
+          { id: 'progress', label: 'Progres', icon: LayoutDashboard },
+          { id: 'history', label: `History (${visits.length})`, icon: Activity },
+        ].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg text-[11px] font-medium transition sm:flex-row sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm whitespace-nowrap ${tab === t.id ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>
+            <t.icon className="w-4 h-4 shrink-0" /><span>{t.label}</span>
+          </button>
+        ))}
       </div>
 
       {tab === 'absen' && <AbsenTab currentMD={currentMD} />}
@@ -2636,7 +2637,7 @@ function AdminView({ profile }) {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="flex gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-xl mb-5 overflow-x-auto">
+      <div className="grid grid-cols-3 gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-xl mb-5 sm:flex">
         {[
           { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
           { id: 'ranking', label: 'Ranking', icon: Trophy },
@@ -2646,8 +2647,8 @@ function AdminView({ profile }) {
           { id: 'master', label: 'Master Data', icon: Database },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`flex-1 min-w-fit py-2.5 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${tab === t.id ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>
-            <t.icon className="w-4 h-4 inline mr-2" />{t.label}
+            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg text-[11px] font-medium transition sm:flex-row sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm whitespace-nowrap ${tab === t.id ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>
+            <t.icon className="w-4 h-4 shrink-0" /><span>{t.label}</span>
           </button>
         ))}
       </div>
@@ -2781,18 +2782,11 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
       </div>
 
       {/* Filter rentang tanggal custom */}
-      <div className="flex items-center flex-wrap gap-2 mb-4 -mt-1 text-xs text-zinc-500">
-        <span className="flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5" />Rentang tanggal:</span>
-        <input type="date" value={filters.dari} onChange={e => setFilters({ ...filters, dari: e.target.value })}
-          className="bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-red-600/50 [color-scheme:dark]" />
-        <span className="text-zinc-600">–</span>
-        <input type="date" value={filters.sampai} onChange={e => setFilters({ ...filters, sampai: e.target.value })}
-          className="bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-red-600/50 [color-scheme:dark]" />
-        {(filters.dari || filters.sampai) && (
-          <button onClick={() => setFilters({ ...filters, dari: '', sampai: '' })}
-            className="text-red-400 hover:text-red-300 ml-1 font-medium">Reset</button>
-        )}
-      </div>
+      <DateRangeRow className="mb-4 -mt-1"
+        dari={filters.dari} sampai={filters.sampai}
+        onDari={v => setFilters({ ...filters, dari: v })}
+        onSampai={v => setFilters({ ...filters, sampai: v })}
+        onReset={() => setFilters({ ...filters, dari: '', sampai: '' })} />
 
       {/* List */}
       {filtered.length === 0 ? (
@@ -4269,19 +4263,19 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange, isSu
                   <Download className="w-3.5 h-3.5" />Template CSV
                 </Button>
               </div>
-              <div className="flex gap-2 mb-4">
+              <div className="flex flex-col gap-2 mb-4 sm:flex-row">
                 <Input placeholder={`Tambah ${current.label.toLowerCase()}…`} value={newItem}
                   onChange={e => setNewItem(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleAdd()} />
                 {needsRegion && (
-                  <div className="w-44 shrink-0">
+                  <div className="w-full shrink-0 sm:w-44">
                     <Select value={newItemRegion} onChange={e => setNewItemRegion(e.target.value)}>
                       <option value="">Pilih region…</option>
                       {regions.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                     </Select>
                   </div>
                 )}
-                <Button onClick={handleAdd} variant="primary"><Plus className="w-4 h-4" />Tambah</Button>
+                <Button onClick={handleAdd} variant="primary" className="shrink-0"><Plus className="w-4 h-4" />Tambah</Button>
               </div>
             </>
           )}
