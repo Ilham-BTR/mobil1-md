@@ -23,8 +23,9 @@ const DEFAULT_MOCK = {
   bengkels: SEED_BENGKELS,
   // Akun login default: 1 admin + 1 MD
   profiles: [
-    { id: 'u1', email: 'budi@mobil1.id',  full_name: 'Budi Santoso', role: 'md',    region_id: null, monthly_target: 40 },
-    { id: 'u4', email: 'admin@mobil1.id', full_name: 'Admin Pusat',  role: 'admin', region_id: null, monthly_target: 0 },
+    { id: 'u1', email: 'budi@mobil1.id',  full_name: 'Budi Santoso', role: 'md',          region_id: null, monthly_target: 40, login_password: 'mobil1' },
+    { id: 'u4', email: 'admin@mobil1.id', full_name: 'Admin Pusat',  role: 'admin',       region_id: null, monthly_target: 0,  login_password: 'mobil1' },
+    { id: 'u5', email: 'super@mobil1.id', full_name: 'Super Admin',  role: 'super_admin', region_id: null, monthly_target: 0,  login_password: 'mobil1' },
   ],
   visits: [],
 };
@@ -69,7 +70,7 @@ export async function signIn(email, password) {
     await new Promise(r => setTimeout(r, 600));
     const profile = MOCK_DATA.profiles.find(p => p.email === email.toLowerCase());
     // Password yang diterima: password akun ini (kalau di-set) ATAU 'mobil1' (default demo)
-    const expected = profile?.password || 'mobil1';
+    const expected = profile?.login_password || 'mobil1';
     if (!profile || (password !== expected && password !== 'mobil1')) {
       throw new Error('Email atau password salah');
     }
@@ -408,7 +409,7 @@ export async function bulkCreateMDs(rows, onProgress) {
           role: r.role || 'md',
           region_id: r.region_id || null,
           monthly_target: r.monthly_target || 30,
-          password: r.password || 'mobil1',  // mock: simpan password biar bisa login
+          login_password: r.password || 'mobil1',  // mock: simpan password biar bisa login & terlihat admin
         });
         result.inserted++;
       }
@@ -425,6 +426,27 @@ export async function bulkCreateMDs(rows, onProgress) {
   if (error) throw new Error(`Edge function gagal: ${error.message}`);
   onProgress?.(rows.length, rows.length);
   return data || result;
+}
+
+/**
+ * Reset password 1 akun MD (hanya super admin) — update auth + simpan login_password.
+ * @param {string} userId
+ * @param {string} password
+ */
+export async function resetMdPassword(userId, password) {
+  if (MOCK_MODE) {
+    const p = MOCK_DATA.profiles.find(x => x.id === userId);
+    if (!p) throw new Error('Akun tidak ditemukan');
+    p.login_password = password;
+    persistMock();
+    return { ok: true };
+  }
+  const { data, error } = await supabase.functions.invoke('admin-create-md', {
+    body: { action: 'reset', userId, password },
+  });
+  if (error) throw new Error(`Reset password gagal: ${error.message}`);
+  if (data?.error) throw new Error(data.error);
+  return data || { ok: true };
 }
 
 export async function updateMaster(table, id, patch) {
@@ -634,6 +656,19 @@ export async function fetchAttendancesByMonth(month) {
     .from('attendance_details')
     .select('*')
     .gte('date', start).lte('date', end)
+    .order('date', { ascending: false })
+    .order('check_in_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+// Rekap absen semua MD (admin) untuk RENTANG tanggal (YYYY-MM-DD .. YYYY-MM-DD).
+export async function fetchAttendancesByRange(dari, sampai) {
+  if (MOCK_MODE) return mockAtt().filter(a => (!dari || a.date >= dari) && (!sampai || a.date <= sampai));
+  let q = supabase.from('attendance_details').select('*');
+  if (dari) q = q.gte('date', dari);
+  if (sampai) q = q.lte('date', sampai);
+  const { data, error } = await q
     .order('date', { ascending: false })
     .order('check_in_at', { ascending: true });
   if (error) throw error;

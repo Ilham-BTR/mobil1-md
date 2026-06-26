@@ -47,36 +47,49 @@ Deno.serve(async (req) => {
 
     const { data: profile } = await callerClient
       .from("profiles").select("role").eq("id", user.id).single();
-    if (!profile || !["admin", "bp"].includes(profile.role)) {
-      return json({ error: "Hanya admin yang boleh create MD" }, 403);
+    if (!profile || profile.role !== "super_admin") {
+      return json({ error: "Hanya super admin yang boleh kelola akun MD" }, 403);
     }
 
     // 2. Parse body
-    const { users } = await req.json();
-    if (!Array.isArray(users) || users.length === 0) {
-      return json({ error: "Body 'users' kosong" }, 400);
-    }
+    const body = await req.json();
 
-    // 3. Admin client (service_role) untuk create user
+    // 3. Admin client (service_role)
     const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
+
+    // 2b. Aksi RESET PASSWORD untuk 1 akun
+    if (body.action === "reset") {
+      const { userId, password } = body;
+      if (!userId || !password) return json({ error: "userId & password wajib" }, 400);
+      const { error: uErr } = await admin.auth.admin.updateUserById(userId, { password });
+      if (uErr) return json({ error: uErr.message }, 400);
+      await admin.from("profiles").update({ login_password: password }).eq("id", userId);
+      return json({ ok: true });
+    }
+
+    const { users } = body;
+    if (!Array.isArray(users) || users.length === 0) {
+      return json({ error: "Body 'users' kosong" }, 400);
+    }
 
     const result = { inserted: 0, errors: [] as Array<{ row: number; message: string }> };
 
     for (let i = 0; i < users.length; i++) {
       const u = users[i];
       try {
+        const pw = u.password || (Math.random().toString(36).slice(-10) + "A1!");
         // Create auth user (email confirmed langsung biar bisa login)
         const { data: created, error: cErr } = await admin.auth.admin.createUser({
           email: String(u.email).toLowerCase().trim(),
-          password: u.password || Math.random().toString(36).slice(-10) + "A1!",
+          password: pw,
           email_confirm: true,
           user_metadata: { full_name: u.full_name, role: u.role || "md" },
         });
         if (cErr) { result.errors.push({ row: i + 1, message: cErr.message }); continue; }
 
-        // Trigger handle_new_user sudah bikin row profile. Update field tambahan.
+        // Trigger handle_new_user sudah bikin row profile. Update field tambahan + simpan password (agar bisa dilihat admin).
         const { error: pErr } = await admin
           .from("profiles")
           .update({
@@ -84,6 +97,7 @@ Deno.serve(async (req) => {
             role: u.role || "md",
             region_id: u.region_id || null,
             monthly_target: u.monthly_target ?? 30,
+            login_password: pw,
           })
           .eq("id", created.user.id);
         if (pErr) { result.errors.push({ row: i + 1, message: pErr.message }); continue; }

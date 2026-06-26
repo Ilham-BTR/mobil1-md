@@ -1786,6 +1786,23 @@ function AbsenForm({ kind, currentMD, todayStr, onCancel, onDone }) {
 }
 
 // Rekap absen semua MD untuk admin (per tanggal)
+// Baris filter rentang tanggal (Dari–Sampai + Reset) — dipakai di beberapa tab admin
+function DateRangeRow({ dari, sampai, onDari, onSampai, onReset, className = '' }) {
+  return (
+    <div className={`flex items-center flex-wrap gap-2 text-xs text-zinc-500 ${className}`}>
+      <span className="flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5" />Rentang tanggal:</span>
+      <input type="date" value={dari} onChange={e => onDari(e.target.value)}
+        className="bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-red-600/50 [color-scheme:dark]" />
+      <span className="text-zinc-600">–</span>
+      <input type="date" value={sampai} onChange={e => onSampai(e.target.value)}
+        className="bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-red-600/50 [color-scheme:dark]" />
+      {(dari || sampai) && (
+        <button onClick={onReset} className="text-red-400 hover:text-red-300 ml-1 font-medium">Reset</button>
+      )}
+    </div>
+  );
+}
+
 function AdminAbsenTab({ mds }) {
   const monthsList = useMemo(() => {
     const arr = []; const now = new Date();
@@ -1793,6 +1810,8 @@ function AdminAbsenTab({ mds }) {
     return arr;
   }, []);
   const [month, setMonth] = useState(monthsList[0]);
+  const [dari, setDari] = useState('');
+  const [sampai, setSampai] = useState('');
   const [mdId, setMdId] = useState('all');
   const [search, setSearch] = useState('');
   const [rows, setRows] = useState([]);
@@ -1801,11 +1820,12 @@ function AdminAbsenTab({ mds }) {
 
   useEffect(() => {
     let on = true; setLoading(true);
-    api.fetchAttendancesByMonth(month)
-      .then(d => { if (on) { setRows(d); setLoading(false); } })
+    // Rentang tanggal (kalau diisi) meng-override dropdown bulan
+    const p = (dari || sampai) ? api.fetchAttendancesByRange(dari, sampai) : api.fetchAttendancesByMonth(month);
+    p.then(d => { if (on) { setRows(d); setLoading(false); } })
       .catch(e => { console.error(e); if (on) { setRows([]); setLoading(false); } });
     return () => { on = false; };
-  }, [month]);
+  }, [month, dari, sampai]);
 
   const filteredRows = rows.filter(a => {
     if (mdId !== 'all' && a.md_id !== mdId) return false;
@@ -1831,7 +1851,7 @@ function AdminAbsenTab({ mds }) {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Absen');
-    XLSX.writeFile(wb, `absen_${month}.xlsx`);
+    XLSX.writeFile(wb, `absen_${(dari || sampai) ? `${dari || 'awal'}_sd_${sampai || 'akhir'}` : month}.xlsx`);
   };
   const dLabel = (d) => new Date(d + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -1840,7 +1860,7 @@ function AdminAbsenTab({ mds }) {
       <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
         <div>
           <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display">Rekap Absen</h2>
-          <p className="text-sm text-zinc-500 mt-1">{filteredRows.length} absen · bulan {monthLabel(month)}</p>
+          <p className="text-sm text-zinc-500 mt-1">{filteredRows.length} absen · {(dari || sampai) ? 'rentang tanggal' : `bulan ${monthLabel(month)}`}</p>
         </div>
         <Button variant="secondary" onClick={exportExcel} disabled={filteredRows.length === 0}><Download className="w-4 h-4" />Export Excel ({filteredRows.length})</Button>
       </div>
@@ -1859,6 +1879,10 @@ function AdminAbsenTab({ mds }) {
           {mds.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
         </Select>
       </div>
+
+      <DateRangeRow className="mb-5 -mt-2"
+        dari={dari} sampai={sampai} onDari={setDari} onSampai={setSampai}
+        onReset={() => { setDari(''); setSampai(''); }} />
 
       {loading ? <Loading /> : filteredRows.length === 0 ? (
         <div className="text-center py-12 text-zinc-500 text-sm"><Users className="w-6 h-6 mx-auto mb-2 text-zinc-600" />{search || mdId !== 'all' ? 'Tidak ada absen sesuai filter.' : 'Belum ada absen di bulan ini.'}</div>
@@ -2486,12 +2510,18 @@ function LeaderboardTab({ visits, mds, regions }) {
   }, [visits]);
   const [month, setMonth] = useState(monthsList[0]);
   const [metric, setMetric] = useState('visits'); // 'visits' | 'achievement'
+  const [dari, setDari] = useState('');
+  const [sampai, setSampai] = useState('');
 
   const regionName = (id) => regions.find(r => r.id === id)?.name || '';
 
   const ranked = useMemo(() => {
     const rows = mds.filter(m => m.active !== false).map(m => {
-      const mv = visits.filter(v => v.md_id === m.id && v.visit_date.startsWith(month));
+      const mv = visits.filter(v => {
+        if (v.md_id !== m.id) return false;
+        if (dari || sampai) return (!dari || v.visit_date >= dari) && (!sampai || v.visit_date <= sampai);
+        return v.visit_date.startsWith(month);
+      });
       const total = mv.length;
       const target = m.monthly_target || 30;
       const achievement = target > 0 ? Math.round((total / target) * 100) : 0;
@@ -2504,7 +2534,7 @@ function LeaderboardTab({ visits, mds, regions }) {
       ? (b.total - a.total) || (b.achievement - a.achievement)
       : (b.achievement - a.achievement) || (b.total - a.total));
     return rows;
-  }, [visits, mds, month, metric]);
+  }, [visits, mds, month, metric, dari, sampai]);
 
   const totalVisits = ranked.reduce((s, r) => s + r.total, 0);
   const medal = (i) => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null;
@@ -2520,7 +2550,7 @@ function LeaderboardTab({ visits, mds, regions }) {
           <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display flex items-center gap-2">
             <Trophy className="w-5 h-5 text-amber-400" />Ranking MD
           </h2>
-          <p className="text-sm text-zinc-500 mt-1">{ranked.length} MD · {totalVisits} visit · bulan {monthLabel(month)}</p>
+          <p className="text-sm text-zinc-500 mt-1">{ranked.length} MD · {totalVisits} visit · {(dari || sampai) ? 'rentang tanggal' : `bulan ${monthLabel(month)}`}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-lg">
@@ -2530,6 +2560,10 @@ function LeaderboardTab({ visits, mds, regions }) {
           <div className="w-36"><Select value={month} onChange={e => setMonth(e.target.value)}>{monthsList.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}</Select></div>
         </div>
       </div>
+
+      <DateRangeRow className="mb-4 -mt-2"
+        dari={dari} sampai={sampai} onDari={setDari} onSampai={setSampai}
+        onReset={() => { setDari(''); setSampai(''); }} />
 
       {ranked.length === 0 ? (
         <div className="text-center py-12 text-zinc-500 text-sm">Belum ada MD aktif.</div>
@@ -2566,7 +2600,8 @@ function LeaderboardTab({ visits, mds, regions }) {
 // ADMIN VIEW
 // ============================================================
 
-function AdminView() {
+function AdminView({ profile }) {
+  const isSuperAdmin = profile?.role === 'super_admin';
   const [tab, setTab] = useState('dashboard');
   const [visits, setVisits] = useState([]);
   const [mds, setMds] = useState([]);
@@ -2622,7 +2657,7 @@ function AdminView() {
       {tab === 'visits' && <VisitsTab visits={visits} mds={mds} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} onOpenVisit={openDetail} />}
       {tab === 'absen' && <AdminAbsenTab mds={mds} />}
       {tab === 'coverage' && <CoverageTab visits={visits} mds={mds} bengkels={bengkels} kotas={kotas} regions={regions} distributors={distributors} onOpenVisit={openDetail} />}
-      {tab === 'master' && <MasterTab regions={regions} kotas={kotas} distributors={distributors} bengkels={bengkels} mds={mds} onChange={loadAll} />}
+      {tab === 'master' && <MasterTab regions={regions} kotas={kotas} distributors={distributors} bengkels={bengkels} mds={mds} onChange={loadAll} isSuperAdmin={isSuperAdmin} />}
 
       {detailVisit && (
         <VisitDetailModal
@@ -2806,7 +2841,7 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
 }
 
 function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onOpenVisit }) {
-  const [filters, setFilters] = useState({ month: 'all', mdId: 'all', regionId: 'all', distributorId: 'all' });
+  const [filters, setFilters] = useState({ month: 'all', mdId: 'all', regionId: 'all', distributorId: 'all', dari: '', sampai: '' });
 
   const availableMonths = useMemo(() => {
     const set = new Set(visits.map(v => v.visit_date.slice(0, 7)));
@@ -2826,7 +2861,10 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
   const filteredVisits = useMemo(() => visits.filter(v => {
     const b = bengkels.find(x => x.id === v.bengkel_id);
     const k = b ? kotas.find(x => x.id === b.kota_id) : null;
-    if (filters.month !== 'all' && !v.visit_date.startsWith(filters.month)) return false;
+    if (filters.dari || filters.sampai) {
+      if (filters.dari && v.visit_date < filters.dari) return false;
+      if (filters.sampai && v.visit_date > filters.sampai) return false;
+    } else if (filters.month !== 'all' && !v.visit_date.startsWith(filters.month)) return false;
     if (filters.mdId !== 'all' && v.md_id !== filters.mdId) return false;
     if (filters.regionId !== 'all' && k?.region_id !== filters.regionId) return false;
     if (filters.distributorId !== 'all' && v.distributor_id !== filters.distributorId) return false;
@@ -2894,6 +2932,11 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
           {distributors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
         </Select>
       </div>
+
+      <DateRangeRow className="mb-5 -mt-1"
+        dari={filters.dari} sampai={filters.sampai}
+        onDari={v => setFilters({ ...filters, dari: v })} onSampai={v => setFilters({ ...filters, sampai: v })}
+        onReset={() => setFilters({ ...filters, dari: '', sampai: '' })} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {[
@@ -2993,7 +3036,7 @@ function FitToVisits({ points }) {
 }
 
 function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOpenVisit }) {
-  const [filters, setFilters] = useState({ mdId: 'all', regionId: 'all', distributorId: 'all', month: 'all' });
+  const [filters, setFilters] = useState({ mdId: 'all', regionId: 'all', distributorId: 'all', month: 'all', dari: '', sampai: '' });
 
   // Enrich visits with bengkel lat/lng if not stored on visit
   const enriched = useMemo(() => visits.map(v => {
@@ -3009,7 +3052,10 @@ function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOp
 
   const filtered = useMemo(() => enriched.filter(v => {
     if (!v.visit_lat || !v.visit_lng) return false;
-    if (filters.month !== 'all' && !v.visit_date.startsWith(filters.month)) return false;
+    if (filters.dari || filters.sampai) {
+      if (filters.dari && v.visit_date < filters.dari) return false;
+      if (filters.sampai && v.visit_date > filters.sampai) return false;
+    } else if (filters.month !== 'all' && !v.visit_date.startsWith(filters.month)) return false;
     if (filters.mdId !== 'all' && v.md_id !== filters.mdId) return false;
     if (filters.regionId !== 'all' && v._kota?.region_id !== filters.regionId) return false;
     if (filters.distributorId !== 'all' && v.distributor_id !== filters.distributorId) return false;
@@ -3062,6 +3108,11 @@ function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOp
           {distributors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
         </Select>
       </div>
+
+      <DateRangeRow className="mb-4 -mt-1"
+        dari={filters.dari} sampai={filters.sampai}
+        onDari={v => setFilters({ ...filters, dari: v })} onSampai={v => setFilters({ ...filters, sampai: v })}
+        onReset={() => setFilters({ ...filters, dari: '', sampai: '' })} />
 
       <div className="bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden">
         <div className="relative">
@@ -3254,7 +3305,7 @@ function BengkelForm({ kotas, regions, onSave, initial, onCancel }) {
 // Sub-form akun MD: buat baru atau edit (kalau `initial` di-pass)
 function MDForm({ regions, onSave, initial, onCancel }) {
   const isEdit = !!initial;
-  const ROLES = ['md', 'bp', 'admin'];
+  const ROLES = ['md', 'bp', 'admin', 'super_admin'];
   const [form, setForm] = useState({
     email: initial?.email || '',
     full_name: initial?.full_name || '',
@@ -3320,7 +3371,7 @@ function MDForm({ regions, onSave, initial, onCancel }) {
         </Field>
         <Field label="Role">
           <Select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
-            {ROLES.map(r => <option key={r} value={r}>{r === 'md' ? 'MD (Merchandiser)' : r === 'bp' ? 'BP (Supervisor)' : 'Admin'}</option>)}
+            {ROLES.map(r => <option key={r} value={r}>{r === 'md' ? 'MD (Merchandiser)' : r === 'bp' ? 'BP (Supervisor)' : r === 'super_admin' ? 'Super Admin' : 'Admin'}</option>)}
           </Select>
         </Field>
         <Field label="Region (wilayah kerja)">
@@ -4063,7 +4114,26 @@ function MasterImportModal({ section, ctx, onClose, onImported }) {
   );
 }
 
-function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange }) {
+// Tampilkan email + password MD (reveal). Terlihat oleh admin & super_admin.
+function MdCredential({ email, password }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="flex items-center gap-2.5 text-[11px] text-zinc-500 mt-0.5 min-w-0">
+      <span className="flex items-center gap-1 min-w-0 truncate"><Mail className="w-3 h-3 shrink-0" />{email}</span>
+      {password ? (
+        <span className="flex items-center gap-1 shrink-0">
+          <Lock className="w-3 h-3" />
+          <span className="font-mono text-zinc-400">{show ? password : '••••••••'}</span>
+          <button type="button" onClick={() => setShow(s => !s)} className="text-zinc-500 hover:text-zinc-200" title={show ? 'Sembunyikan' : 'Lihat password'}>
+            {show ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+          </button>
+        </span>
+      ) : <span className="text-zinc-600 italic shrink-0">— password tak tersimpan</span>}
+    </div>
+  );
+}
+
+function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange, isSuperAdmin }) {
   const [section, setSection] = useState('distributors');
   const [newItem, setNewItem] = useState('');
   const [newItemRegion, setNewItemRegion] = useState('');  // region untuk add kota/distributor
@@ -4119,7 +4189,9 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange }) {
   };
 
   const handleUpdateMD = async (patch) => {
-    await api.updateMaster('profiles', editingMDId, patch);
+    const { password, ...rest } = patch;
+    await api.updateMaster('profiles', editingMDId, rest);
+    if (password) await api.resetMdPassword(editingMDId, password);  // update auth + login_password
     await onChange();
     setEditingMDId(null);
   };
@@ -4214,7 +4286,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange }) {
             </>
           )}
 
-          {section === 'mds' && (
+          {section === 'mds' && isSuperAdmin && (
             <>
               {!editingMD && (
                 <div className="mb-3 flex flex-wrap gap-2 justify-end">
@@ -4244,25 +4316,34 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange }) {
                 }`}>
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <span className="text-[10px] font-mono text-zinc-600 w-6">{String(i + 1).padStart(2, '0')}</span>
-                  <span className="text-sm text-zinc-200 truncate">{current.getName(item)}</span>
-                  {section === 'bengkels' && (
-                    <span className={`ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded ${item.lat != null && item.lng != null ? 'bg-emerald-600/10 text-emerald-400' : 'bg-zinc-800/50 text-zinc-500'}`}>
-                      {item.lat != null && item.lng != null ? `${item.lat.toFixed(3)}, ${item.lng.toFixed(3)}` : 'no-gps'}
-                    </span>
-                  )}
-                  {(section === 'distributors' || section === 'kotas') && (
-                    <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded ${item.region_id ? 'bg-sky-600/10 text-sky-400' : 'bg-zinc-800/50 text-zinc-500'}`}>
-                      {item.region?.name || regionName(item.region_id) || 'no-region'}
-                    </span>
-                  )}
-                  {section === 'mds' && (
-                    <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded uppercase font-medium ${item.role === 'admin' ? 'bg-rose-600/10 text-rose-400' : item.role === 'bp' ? 'bg-amber-600/10 text-amber-400' : 'bg-sky-600/10 text-sky-400'}`}>
-                      {item.role}{item.region_id ? ` · ${regionName(item.region_id) || ''}` : ''}
-                    </span>
+                  {section === 'mds' ? (
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-sm text-zinc-200 truncate">{current.getName(item)}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-medium shrink-0 ${item.role === 'super_admin' ? 'bg-fuchsia-600/10 text-fuchsia-400' : item.role === 'admin' ? 'bg-rose-600/10 text-rose-400' : item.role === 'bp' ? 'bg-amber-600/10 text-amber-400' : 'bg-sky-600/10 text-sky-400'}`}>
+                          {item.role}{item.region_id ? ` · ${regionName(item.region_id) || ''}` : ''}
+                        </span>
+                      </div>
+                      <MdCredential email={item.email} password={item.login_password} />
+                    </div>
+                  ) : (
+                    <>
+                      <span className="text-sm text-zinc-200 truncate">{current.getName(item)}</span>
+                      {section === 'bengkels' && (
+                        <span className={`ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded ${item.lat != null && item.lng != null ? 'bg-emerald-600/10 text-emerald-400' : 'bg-zinc-800/50 text-zinc-500'}`}>
+                          {item.lat != null && item.lng != null ? `${item.lat.toFixed(3)}, ${item.lng.toFixed(3)}` : 'no-gps'}
+                        </span>
+                      )}
+                      {(section === 'distributors' || section === 'kotas') && (
+                        <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded ${item.region_id ? 'bg-sky-600/10 text-sky-400' : 'bg-zinc-800/50 text-zinc-500'}`}>
+                          {item.region?.name || regionName(item.region_id) || 'no-region'}
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
                 <div className="flex items-center gap-1">
-                  {section === 'mds' && (
+                  {section === 'mds' && isSuperAdmin && (
                     <button onClick={() => setEditingMDId(item.id)}
                       className="opacity-0 group-hover:opacity-100 transition w-7 h-7 rounded-md hover:bg-amber-600/10 hover:text-amber-400 text-zinc-500 flex items-center justify-center"
                       title="Edit akun">
@@ -4401,7 +4482,7 @@ export default function App() {
         <main className="px-4 py-6">
           {profile.role === 'md'
             ? <MDView currentMD={profile} welcome={welcome} onWelcomeClose={() => setWelcome(false)} />
-            : <AdminView />}
+            : <AdminView profile={profile} />}
         </main>
 
         <footer className="border-t border-zinc-800 py-6 mt-8">

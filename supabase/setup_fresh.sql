@@ -16,7 +16,7 @@ create extension if not exists "uuid-ossp";
 
 -- ENUM TYPES
 do $$ begin
-  create type user_role as enum ('admin', 'bp', 'md');
+  create type user_role as enum ('admin', 'bp', 'md', 'super_admin');
 exception when duplicate_object then null; end $$;
 
 do $$ begin
@@ -33,6 +33,7 @@ create table if not exists profiles (
   phone text,
   monthly_target int default 30,
   active boolean default true,
+  login_password text,                 -- password MD (agar admin bisa lihat; Supabase hash password asli)
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -156,7 +157,11 @@ returns user_role language sql security definer stable as $$
 $$;
 create or replace function is_admin()
 returns boolean language sql security definer stable as $$
-  select get_user_role() in ('admin', 'bp')
+  select get_user_role()::text in ('admin', 'bp', 'super_admin')
+$$;
+create or replace function is_super_admin()
+returns boolean language sql security definer stable as $$
+  select get_user_role()::text = 'super_admin'
 $$;
 
 -- RLS
@@ -171,8 +176,11 @@ drop policy if exists profiles_read_own on profiles;
 create policy profiles_read_own on profiles for select using (auth.uid() = id or is_admin());
 drop policy if exists profiles_update_own on profiles;
 create policy profiles_update_own on profiles for update using (auth.uid() = id);
+-- Kelola akun (insert/update/delete profil orang lain) hanya super_admin.
+-- Admin/BP tetap BACA semua profil via profiles_read_own.
 drop policy if exists profiles_admin_all on profiles;
-create policy profiles_admin_all on profiles for all using (is_admin());
+drop policy if exists profiles_super_manage on profiles;
+create policy profiles_super_manage on profiles for all using (is_super_admin());
 
 drop policy if exists regions_read on regions;
 create policy regions_read on regions for select using (auth.role() = 'authenticated');
