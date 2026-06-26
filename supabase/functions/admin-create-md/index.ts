@@ -69,6 +69,15 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    // 2c. Aksi HAPUS akun (hapus auth user → profil ikut cascade)
+    if (body.action === "delete") {
+      const { userId } = body;
+      if (!userId) return json({ error: "userId wajib" }, 400);
+      const { error: dErr } = await admin.auth.admin.deleteUser(userId);
+      if (dErr) return json({ error: dErr.message }, 400);
+      return json({ ok: true });
+    }
+
     const { users } = body;
     if (!Array.isArray(users) || users.length === 0) {
       return json({ error: "Body 'users' kosong" }, 400);

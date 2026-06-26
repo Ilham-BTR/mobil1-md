@@ -429,6 +429,26 @@ export async function bulkCreateMDs(rows, onProgress) {
 }
 
 /**
+ * Hapus 1 akun MD (hanya super admin) — hapus auth user (profil ikut cascade).
+ * Gagal kalau MD masih punya visit (FK restrict).
+ * @param {string} userId
+ */
+export async function deleteMd(userId) {
+  if (MOCK_MODE) {
+    if (MOCK_DATA.visits.some(v => v.md_id === userId)) throw new Error('MD masih punya visit — tidak bisa dihapus');
+    MOCK_DATA.profiles = MOCK_DATA.profiles.filter(p => p.id !== userId);
+    persistMock();
+    return { ok: true };
+  }
+  const { data, error } = await supabase.functions.invoke('admin-create-md', {
+    body: { action: 'delete', userId },
+  });
+  if (error) throw new Error(`Hapus akun gagal: ${error.message}`);
+  if (data?.error) throw new Error(data.error);
+  return data || { ok: true };
+}
+
+/**
  * Reset password 1 akun MD (hanya super admin) — update auth + simpan login_password.
  * @param {string} userId
  * @param {string} password

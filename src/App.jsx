@@ -4127,12 +4127,61 @@ function MdCredential({ email, password }) {
   );
 }
 
+// Modal detail akun MD (semua admin bisa lihat)
+function MdDetailModal({ md, regionName, onClose }) {
+  const [showPw, setShowPw] = useState(false);
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  if (!md) return null;
+  const rows = [
+    ['Nama Lengkap', md.full_name || '—'],
+    ['Email', md.email || '—'],
+    ['Role', md.role || '—'],
+    ['Region', regionName(md.region_id) || '—'],
+    ['Target / bulan', md.monthly_target ?? '—'],
+    ['Dibuat', md.created_at ? new Date(md.created_at).toLocaleString('id-ID') : '—'],
+  ];
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between gap-3">
+          <h2 className="font-display font-bold text-lg text-zinc-100">Detail Akun MD</h2>
+          <button onClick={onClose} className="w-9 h-9 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 flex items-center justify-center"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="p-5 space-y-2.5">
+          {rows.map(([k, v]) => (
+            <div key={k} className="flex items-start justify-between gap-3 text-sm">
+              <span className="text-zinc-500 shrink-0">{k}</span>
+              <span className="text-zinc-100 font-medium text-right break-all">{v}</span>
+            </div>
+          ))}
+          <div className="flex items-center justify-between gap-3 text-sm pt-2.5 border-t border-zinc-800">
+            <span className="text-zinc-500 shrink-0">Password</span>
+            <span className="flex items-center gap-2">
+              {md.login_password ? (
+                <>
+                  <span className="font-mono text-zinc-100">{showPw ? md.login_password : '••••••••'}</span>
+                  <button onClick={() => setShowPw(s => !s)} className="text-zinc-500 hover:text-zinc-200">{showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
+                </>
+              ) : <span className="text-zinc-600 italic">tak tersimpan</span>}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange, isSuperAdmin }) {
   const [section, setSection] = useState('distributors');
   const [newItem, setNewItem] = useState('');
   const [newItemRegion, setNewItemRegion] = useState('');  // region untuk add kota/distributor
   const [editingBengkelId, setEditingBengkelId] = useState(null);
   const [editingMDId, setEditingMDId] = useState(null);
+  const [detailMDId, setDetailMDId] = useState(null);
   const [importOpen, setImportOpen] = useState(false);          // bengkel import
   const [masterImportOpen, setMasterImportOpen] = useState(false); // regions/distributors/kotas/mds import
 
@@ -4153,7 +4202,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange, isSu
   const needsRegion = section === 'kotas' || section === 'distributors';
 
   // Reset edit mode & modal kalau pindah section
-  useEffect(() => { setEditingBengkelId(null); setEditingMDId(null); setImportOpen(false); setMasterImportOpen(false); setNewItem(''); setNewItemRegion(''); }, [section]);
+  useEffect(() => { setEditingBengkelId(null); setEditingMDId(null); setDetailMDId(null); setImportOpen(false); setMasterImportOpen(false); setNewItem(''); setNewItemRegion(''); }, [section]);
 
   const handleAdd = async () => {
     if (!newItem.trim()) return;
@@ -4203,6 +4252,16 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange, isSu
       await onChange();
     } catch (err) {
       alert('Gagal: ' + err.message);
+    }
+  };
+
+  const handleDeleteMD = async (id, name) => {
+    if (!confirm(`Hapus akun MD "${name}"? Tidak bisa dibatalkan.\n(Akan gagal jika MD masih punya visit tercatat.)`)) return;
+    try {
+      await api.deleteMd(id);
+      await onChange();
+    } catch (err) {
+      alert('Gagal hapus akun: ' + err.message);
     }
   };
 
@@ -4337,12 +4396,25 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange, isSu
                   )}
                 </div>
                 <div className="flex items-center gap-1">
-                  {section === 'mds' && isSuperAdmin && (
-                    <button onClick={() => setEditingMDId(item.id)}
-                      className="opacity-0 group-hover:opacity-100 transition w-7 h-7 rounded-md hover:bg-amber-600/10 hover:text-amber-400 text-zinc-500 flex items-center justify-center"
-                      title="Edit akun">
-                      <Activity className="w-3.5 h-3.5" />
-                    </button>
+                  {section === 'mds' && (
+                    <>
+                      <button onClick={() => setDetailMDId(item.id)} title="Detail akun"
+                        className="w-7 h-7 rounded-md hover:bg-sky-600/10 hover:text-sky-400 text-zinc-500 flex items-center justify-center">
+                        <FileText className="w-3.5 h-3.5" />
+                      </button>
+                      {isSuperAdmin && (
+                        <button onClick={() => setEditingMDId(item.id)} title="Edit akun"
+                          className="w-7 h-7 rounded-md hover:bg-amber-600/10 hover:text-amber-400 text-zinc-500 flex items-center justify-center">
+                          <Activity className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {isSuperAdmin && (
+                        <button onClick={() => handleDeleteMD(item.id, current.getName(item))} title="Hapus akun"
+                          className="w-7 h-7 rounded-md hover:bg-rose-600/10 hover:text-rose-400 text-zinc-500 flex items-center justify-center">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </>
                   )}
                   {section === 'bengkels' && (
                     <button onClick={() => setEditingBengkelId(item.id)}
@@ -4381,6 +4453,14 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange, isSu
           ctx={{ regions, kotas, distributors, mds }}
           onClose={() => setMasterImportOpen(false)}
           onImported={onChange}
+        />
+      )}
+
+      {detailMDId && (
+        <MdDetailModal
+          md={mds.find(m => m.id === detailMDId)}
+          regionName={regionName}
+          onClose={() => setDetailMDId(null)}
         />
       )}
     </div>
