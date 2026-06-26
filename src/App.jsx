@@ -1789,18 +1789,18 @@ function AbsenForm({ kind, currentMD, todayStr, onCancel, onDone }) {
 // Baris filter rentang tanggal (Dari–Sampai + Reset) — dipakai di beberapa tab admin
 function DateRangeRow({ dari, sampai, onDari, onSampai, onReset, className = '' }) {
   return (
-    <div className={`flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-zinc-500 ${className}`}>
-      <span className="flex items-center gap-1.5 shrink-0"><CalendarDays className="w-3.5 h-3.5" />Rentang tanggal:</span>
-      <div className="flex items-center gap-2 flex-1 min-w-[220px]">
-        <input type="date" value={dari} onChange={e => onDari(e.target.value)}
-          className="flex-1 min-w-0 bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-red-600/50 [color-scheme:dark]" />
-        <span className="text-zinc-600 shrink-0">–</span>
-        <input type="date" value={sampai} onChange={e => onSampai(e.target.value)}
-          className="flex-1 min-w-0 bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-red-600/50 [color-scheme:dark]" />
-        {(dari || sampai) && (
-          <button onClick={onReset} className="text-red-400 hover:text-red-300 font-medium shrink-0">Reset</button>
-        )}
-      </div>
+    <div className={`flex items-center gap-2 text-xs text-zinc-500 ${className}`}>
+      <span className="flex items-center gap-1.5 shrink-0">
+        <CalendarDays className="w-3.5 h-3.5" /><span className="hidden sm:inline">Rentang tanggal:</span>
+      </span>
+      <input type="date" value={dari} onChange={e => onDari(e.target.value)}
+        className="flex-1 min-w-0 bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-red-600/50 [color-scheme:dark]" />
+      <span className="text-zinc-600 shrink-0">–</span>
+      <input type="date" value={sampai} onChange={e => onSampai(e.target.value)}
+        className="flex-1 min-w-0 bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-red-600/50 [color-scheme:dark]" />
+      {(dari || sampai) && (
+        <button onClick={onReset} className="text-red-400 hover:text-red-300 font-medium shrink-0">Reset</button>
+      )}
     </div>
   );
 }
