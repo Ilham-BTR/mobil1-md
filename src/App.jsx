@@ -58,7 +58,18 @@ const haversineMeters = (lat1, lng1, lat2, lng2) => {
 
 const formatDistance = (m) => m < 1000 ? `${Math.round(m)} m` : `${(m/1000).toFixed(2)} km`;
 
-// CSV export helper — RFC 4180 escaped
+// Export daftar visit ke Excel (.xlsx) — XLSX di-load dinamis (lazy)
+async function exportVisitsXlsx(visits, ctx, filename) {
+  if (!visits || visits.length === 0) return;
+  const XLSX = await import('xlsx');
+  const rows = visits.map(v => visitToCSVRow(v, ctx));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Visits');
+  XLSX.writeFile(wb, filename);
+}
+
+// CSV export helper — RFC 4180 escaped (dipakai bila perlu CSV mentah)
 const exportToCSV = (rows, filename) => {
   if (!rows || rows.length === 0) return;
   const headers = Object.keys(rows[0]);
@@ -2641,6 +2652,8 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
     distributorId: 'all',
     status: 'all',
     month: 'all',
+    dari: '',
+    sampai: '',
   });
 
   const findBengkel = (id) => bengkels.find(b => b.id === id);
@@ -2660,6 +2673,8 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
       if (filters.distributorId !== 'all' && v.distributor_id !== filters.distributorId) return false;
       if (filters.status !== 'all' && v.status !== filters.status) return false;
       if (filters.month !== 'all' && !v.visit_date.startsWith(filters.month)) return false;
+      if (filters.dari && v.visit_date < filters.dari) return false;
+      if (filters.sampai && v.visit_date > filters.sampai) return false;
 
       if (filters.search.trim()) {
         const q = filters.search.toLowerCase();
@@ -2675,11 +2690,21 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
     return [...set].sort().reverse();
   }, [visits]);
 
+  const handleExport = async () => {
+    const ctx = { bengkels, kotas, regions, distributors, mds };
+    await exportVisitsXlsx(filtered, ctx, `visits_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
   return (
     <div>
-      <div className="mb-5">
-        <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display">Daftar Visit</h2>
-        <p className="text-sm text-zinc-500 mt-1">{filtered.length} dari {visits.length} visit · klik untuk lihat detail</p>
+      <div className="mb-5 flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display">Daftar Visit</h2>
+          <p className="text-sm text-zinc-500 mt-1">{filtered.length} dari {visits.length} visit · klik untuk lihat detail</p>
+        </div>
+        <Button variant="secondary" onClick={handleExport} disabled={filtered.length === 0}>
+          <Download className="w-4 h-4" />Export Excel ({filtered.length})
+        </Button>
       </div>
 
       {/* Filter bar */}
@@ -2710,6 +2735,20 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
           <option value="all">Semua Status</option>
           {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
         </Select>
+      </div>
+
+      {/* Filter rentang tanggal custom */}
+      <div className="flex items-center flex-wrap gap-2 mb-4 -mt-1 text-xs text-zinc-500">
+        <span className="flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5" />Rentang tanggal:</span>
+        <input type="date" value={filters.dari} onChange={e => setFilters({ ...filters, dari: e.target.value })}
+          className="bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-red-600/50 [color-scheme:dark]" />
+        <span className="text-zinc-600">–</span>
+        <input type="date" value={filters.sampai} onChange={e => setFilters({ ...filters, sampai: e.target.value })}
+          className="bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-red-600/50 [color-scheme:dark]" />
+        {(filters.dari || filters.sampai) && (
+          <button onClick={() => setFilters({ ...filters, dari: '', sampai: '' })}
+            className="text-red-400 hover:text-red-300 ml-1 font-medium">Reset</button>
+        )}
       </div>
 
       {/* List */}
@@ -2802,12 +2841,13 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
   const totalTarget = relevantMDs.reduce((s, m) => s + (m.monthly_target || 30), 0);
   const completionRate = totalTarget > 0 ? Math.round((totalVisits / totalTarget) * 100) : 0;
   const pemasangan = filteredVisits.filter(v => v.status === 'Pemasangan').length;
+  // MD yang benar-benar ada visit di filter ini (bukan sekadar jumlah MD terdaftar)
+  const activeMdCount = new Set(filteredVisits.map(v => v.md_id)).size;
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const ctx = { bengkels, kotas, regions, distributors, mds };
-    const rows = filteredVisits.map(v => visitToCSVRow(v, ctx));
-    const fname = `visits_${filters.month}_${new Date().toISOString().slice(0, 10)}.csv`;
-    exportToCSV(rows, fname);
+    const fname = `visits_${filters.month}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    await exportVisitsXlsx(filteredVisits, ctx, fname);
   };
 
   // Recent 5 visits dari filter
@@ -2823,7 +2863,7 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
           <p className="text-sm text-zinc-500 mt-1">Performa tracking POSM · {filteredVisits.length} visit ter-filter</p>
         </div>
         <Button variant="secondary" onClick={handleExport} disabled={filteredVisits.length === 0}>
-          <Download className="w-4 h-4" />Export CSV ({filteredVisits.length})
+          <Download className="w-4 h-4" />Export Excel ({filteredVisits.length})
         </Button>
       </div>
 
@@ -2852,7 +2892,7 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
           { label: 'Total Visit', value: totalVisits, sub: `dari ${totalTarget} target`, icon: Activity, color: 'red' },
           { label: 'Achievement', value: `${completionRate}%`, sub: 'completion rate', icon: Target, color: 'emerald' },
           { label: 'Pemasangan', value: pemasangan, sub: 'POSM aktif', icon: Check, color: 'sky' },
-          { label: 'Active MDs', value: relevantMDs.length, sub: 'merchandiser', icon: Users, color: 'amber' },
+          { label: 'MD Aktif', value: activeMdCount, sub: `dari ${relevantMDs.length} MD · ada visit`, icon: Users, color: 'amber' },
         ].map((k, i) => (
           <div key={i} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
