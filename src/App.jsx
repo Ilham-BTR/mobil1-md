@@ -58,6 +58,14 @@ const haversineMeters = (lat1, lng1, lat2, lng2) => {
 
 const formatDistance = (m) => m < 1000 ? `${Math.round(m)} m` : `${(m/1000).toFixed(2)} km`;
 
+// Format "2026-06" → "Juni 2026" untuk tampilan (nilai asli tetap YYYY-MM)
+const ID_MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const monthLabel = (ym) => {
+  if (!ym || !ym.includes('-')) return ym;
+  const [y, m] = ym.split('-');
+  return `${ID_MONTHS[Number(m) - 1] || m} ${y}`;
+};
+
 // Export daftar visit ke Excel (.xlsx) — XLSX di-load dinamis (lazy)
 async function exportVisitsXlsx(visits, ctx, filename) {
   if (!visits || visits.length === 0) return;
@@ -1832,7 +1840,7 @@ function AdminAbsenTab({ mds }) {
       <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
         <div>
           <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display">Rekap Absen</h2>
-          <p className="text-sm text-zinc-500 mt-1">{filteredRows.length} absen · bulan {month}</p>
+          <p className="text-sm text-zinc-500 mt-1">{filteredRows.length} absen · bulan {monthLabel(month)}</p>
         </div>
         <Button variant="secondary" onClick={exportExcel} disabled={filteredRows.length === 0}><Download className="w-4 h-4" />Export Excel ({filteredRows.length})</Button>
       </div>
@@ -1844,7 +1852,7 @@ function AdminAbsenTab({ mds }) {
             className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-600/50" />
         </div>
         <Select value={month} onChange={e => setMonth(e.target.value)}>
-          {monthsList.map(m => <option key={m} value={m}>{m}</option>)}
+          {monthsList.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
         </Select>
         <Select value={mdId} onChange={e => setMdId(e.target.value)}>
           <option value="all">Semua MD</option>
@@ -2012,7 +2020,7 @@ function MDDashboard({ currentMD, visits, bengkels, kotas }) {
         </div>
         <div className="w-40">
           <Select value={month} onChange={e => setMonth(e.target.value)}>
-            {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
+            {availableMonths.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
           </Select>
         </div>
       </div>
@@ -2039,7 +2047,7 @@ function MDDashboard({ currentMD, visits, bengkels, kotas }) {
       {/* Progress bar bulanan */}
       <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 mb-5">
         <div className="flex items-center justify-between text-sm mb-2">
-          <span className="text-zinc-400">Pencapaian bulan {month}</span>
+          <span className="text-zinc-400">Pencapaian bulan {monthLabel(month)}</span>
           <span className="font-semibold text-zinc-100">{totalThisMonth}<span className="text-zinc-500">/{monthlyTarget}</span></span>
         </div>
         <div className="h-2.5 bg-zinc-800/60 rounded-full overflow-hidden">
@@ -2055,7 +2063,7 @@ function MDDashboard({ currentMD, visits, bengkels, kotas }) {
       </div>
 
       {/* Chart per hari */}
-      <Section title="Visit per Hari" subtitle={`${month} · target ${dailyTarget}/hari (garis putus)`} icon={Activity}>
+      <Section title="Visit per Hari" subtitle={`${monthLabel(month)} · target ${dailyTarget}/hari (garis putus)`} icon={Activity}>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={dailyData} margin={{ top: 10, right: 10, bottom: 0, left: -24 }}>
@@ -2512,14 +2520,14 @@ function LeaderboardTab({ visits, mds, regions }) {
           <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display flex items-center gap-2">
             <Trophy className="w-5 h-5 text-amber-400" />Ranking MD
           </h2>
-          <p className="text-sm text-zinc-500 mt-1">{ranked.length} MD · {totalVisits} visit · bulan {month}</p>
+          <p className="text-sm text-zinc-500 mt-1">{ranked.length} MD · {totalVisits} visit · bulan {monthLabel(month)}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-lg">
             <button onClick={() => setMetric('visits')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${metric === 'visits' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>Jumlah Visit</button>
             <button onClick={() => setMetric('achievement')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${metric === 'achievement' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>Achievement</button>
           </div>
-          <div className="w-36"><Select value={month} onChange={e => setMonth(e.target.value)}>{monthsList.map(m => <option key={m} value={m}>{m}</option>)}</Select></div>
+          <div className="w-36"><Select value={month} onChange={e => setMonth(e.target.value)}>{monthsList.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}</Select></div>
         </div>
       </div>
 
@@ -2717,7 +2725,7 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
         </div>
         <Select value={filters.month} onChange={e => setFilters({ ...filters, month: e.target.value })}>
           <option value="all">Semua Bulan</option>
-          {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
+          {availableMonths.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
         </Select>
         <Select value={filters.mdId} onChange={e => setFilters({ ...filters, mdId: e.target.value })}>
           <option value="all">Semua MD</option>
@@ -2871,7 +2879,7 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
       <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 mb-5 grid grid-cols-2 md:grid-cols-4 gap-2">
         <Select value={filters.month} onChange={e => setFilters({ ...filters, month: e.target.value })}>
           <option value="all">Semua Bulan</option>
-          {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
+          {availableMonths.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
         </Select>
         <Select value={filters.mdId} onChange={e => setFilters({ ...filters, mdId: e.target.value })}>
           <option value="all">Semua MD</option>
@@ -2905,7 +2913,7 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
         ))}
       </div>
 
-      <Section title="Visit per MD" subtitle={`Actual vs Target — ${filters.month === 'all' ? 'semua bulan' : filters.month}`} icon={Activity}>
+      <Section title="Visit per MD" subtitle={`Actual vs Target — ${filters.month === 'all' ? 'semua bulan' : monthLabel(filters.month)}`} icon={Activity}>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
@@ -3039,7 +3047,7 @@ function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOp
       <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 mb-4 grid grid-cols-2 md:grid-cols-4 gap-2">
         <Select value={filters.month} onChange={e => setFilters({ ...filters, month: e.target.value })}>
           <option value="all">Semua Bulan</option>
-          {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
+          {availableMonths.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
         </Select>
         <Select value={filters.mdId} onChange={e => setFilters({ ...filters, mdId: e.target.value })}>
           <option value="all">Semua MD</option>
