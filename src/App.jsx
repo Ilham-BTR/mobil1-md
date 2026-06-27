@@ -2607,6 +2607,7 @@ function AdminView({ profile }) {
   const [tab, setTab] = useState('dashboard');
   const [visits, setVisits] = useState([]);
   const [mds, setMds] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [bengkels, setBengkels] = useState([]);
   const [regions, setRegions] = useState([]);
   const [kotas, setKotas] = useState([]);
@@ -2617,10 +2618,11 @@ function AdminView({ profile }) {
   const loadAll = () => {
     setLoading(true);
     Promise.all([
-      api.fetchVisits(), api.fetchMDs(), api.fetchBengkels(),
+      api.fetchVisits(), api.fetchAccounts(), api.fetchBengkels(),
       api.fetchRegions(), api.fetchKotas(), api.fetchDistributors(),
-    ]).then(([v, m, b, r, k, d]) => {
-      setVisits(v); setMds(m); setBengkels(b); setRegions(r); setKotas(k); setDistributors(d);
+    ]).then(([v, acc, b, r, k, d]) => {
+      setVisits(v); setAccounts(acc); setMds(acc.filter(a => a.role === 'md'));
+      setBengkels(b); setRegions(r); setKotas(k); setDistributors(d);
       setLoading(false);
     }).catch(err => { console.error(err); setLoading(false); });
   };
@@ -2635,6 +2637,7 @@ function AdminView({ profile }) {
   const sMds = isTL ? mds.filter(m => m.region_id === tlRegion) : mds;
   const allowedMdIds = isTL ? new Set(sMds.map(m => m.id)) : null;
   const sVisits = isTL ? visits.filter(v => allowedMdIds.has(v.md_id)) : visits;
+  const sAccounts = isTL ? accounts.filter(a => a.region_id === tlRegion) : accounts;
   const canManageMaster = !isTL;
 
   const openDetail = (id) => setDetailVisitId(id);
@@ -2667,7 +2670,7 @@ function AdminView({ profile }) {
       {tab === 'visits' && <VisitsTab visits={sVisits} mds={sMds} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} onOpenVisit={openDetail} />}
       {tab === 'absen' && <AdminAbsenTab mds={sMds} allowedMdIds={allowedMdIds} />}
       {tab === 'coverage' && <CoverageTab visits={sVisits} mds={sMds} bengkels={bengkels} kotas={kotas} regions={regions} distributors={distributors} onOpenVisit={openDetail} />}
-      {tab === 'master' && <MasterTab regions={regions} kotas={kotas} distributors={distributors} bengkels={bengkels} mds={sMds} onChange={loadAll} isSuperAdmin={isSuperAdmin} canManageMaster={canManageMaster} />}
+      {tab === 'master' && <MasterTab regions={regions} kotas={kotas} distributors={distributors} bengkels={bengkels} mds={sMds} accounts={sAccounts} onChange={loadAll} isSuperAdmin={isSuperAdmin} canManageMaster={canManageMaster} />}
 
       {detailVisit && (
         <VisitDetailModal
@@ -4187,7 +4190,7 @@ function MdDetailModal({ md, regionName, onClose }) {
   );
 }
 
-function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange, isSuperAdmin, canManageMaster = true }) {
+function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [], onChange, isSuperAdmin, canManageMaster = true }) {
   const [section, setSection] = useState('distributors');
   const [newItem, setNewItem] = useState('');
   const [newItemRegion, setNewItemRegion] = useState('');  // region untuk add kota/distributor
@@ -4206,7 +4209,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange, isSu
     { id: 'regions', label: 'Region', icon: Globe, items: regions, getName: r => r.name },
     { id: 'kotas', label: 'Kota', icon: MapPin, items: kotas, getName: k => k.name },
     { id: 'bengkels', label: 'Bengkel', icon: Building2, items: bengkels, getName: b => `${b.code} - ${b.name}` },
-    { id: 'mds', label: 'Akun MD', icon: Users, items: mds, getName: m => `${m.full_name} (${m.email})` },
+    { id: 'mds', label: 'Akun', icon: Users, items: accounts, getName: m => `${m.full_name} (${m.email})` },
   ];
 
   const current = sections.find(s => s.id === section);

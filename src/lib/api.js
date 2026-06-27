@@ -275,6 +275,18 @@ export async function fetchMDs() {
   return data;
 }
 
+// Semua akun (untuk kelola di Master Data) — RLS: admin/super lihat semua, TL region-nya, MD miliknya.
+export async function fetchAccounts() {
+  if (MOCK_MODE) return [...MOCK_DATA.profiles].sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .order('role')
+    .order('full_name');
+  if (error) throw error;
+  return data || [];
+}
+
 export async function addMaster(table, payload) {
   if (MOCK_MODE) {
     const id = 'new_' + Date.now();
