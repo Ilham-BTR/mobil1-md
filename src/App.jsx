@@ -1851,6 +1851,7 @@ function AdminAbsenTab({ mds, allowedMdIds }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState(null);
+  const [detail, setDetail] = useState(null);
 
   useEffect(() => {
     let on = true; setLoading(true);
@@ -1926,7 +1927,8 @@ function AdminAbsenTab({ mds, allowedMdIds }) {
       ) : (
         <div className="space-y-3">
           {filteredRows.map(a => (
-            <div key={a.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
+            <div key={a.id} onClick={() => setDetail(a)}
+              className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 cursor-pointer hover:border-zinc-700 transition">
               <div className="flex items-center justify-between mb-3 gap-3">
                 <div className="min-w-0">
                   <div className="text-sm font-bold text-zinc-100 truncate">{a.md_name || a.md_email || '—'}</div>
@@ -1938,7 +1940,7 @@ function AdminAbsenTab({ mds, allowedMdIds }) {
                 {[{ k: 'in', icon: LogIn, label: 'Masuk', time: a.check_in_at, photo: a.check_in_photo },
                   { k: 'out', icon: LogOut, label: 'Pulang', time: a.check_out_at, photo: a.check_out_photo }].map(b => (
                   <div key={b.k} className="flex items-center gap-2.5">
-                    {b.photo ? <StoredImage src={b.photo} alt={b.label} className="w-10 h-10 rounded-lg object-cover cursor-pointer" onClick={() => setLightbox(b.photo)} />
+                    {b.photo ? <StoredImage src={b.photo} alt={b.label} className="w-10 h-10 rounded-lg object-cover cursor-pointer" onClick={(e) => { e.stopPropagation(); setLightbox(b.photo); }} />
                       : <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center"><b.icon className="w-4 h-4 text-zinc-500" /></div>}
                     <div><div className="text-[11px] text-zinc-500">{b.label}</div><div className={`text-sm font-semibold ${b.time ? 'text-emerald-400' : 'text-zinc-500'}`}>{b.time ? fmtAbsenTime(b.time) : 'Belum'}</div></div>
                   </div>
@@ -1947,6 +1949,40 @@ function AdminAbsenTab({ mds, allowedMdIds }) {
               {(a.check_in_note || a.check_out_note) && <p className="text-xs text-zinc-500 mt-3 pt-3 border-t border-zinc-800">{[a.check_in_note, a.check_out_note].filter(Boolean).join(' · ')}</p>}
             </div>
           ))}
+        </div>
+      )}
+
+      {detail && (
+        <div className="fixed inset-0 z-40 bg-black/80 flex items-end sm:items-center justify-center sm:p-4" onClick={() => setDetail(null)}>
+          <div className="bg-zinc-950 border border-zinc-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3 p-4 border-b border-zinc-800 sticky top-0 bg-zinc-950">
+              <div className="min-w-0">
+                <div className="text-base font-bold text-zinc-100 truncate">{detail.md_name || detail.md_email || '—'}</div>
+                <div className="text-xs text-zinc-500 truncate">{dLabel(detail.date)}{detail.md_email ? ` · ${detail.md_email}` : ''}</div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {detail.work_hours != null && <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-600/10 px-2 py-0.5 rounded-full"><Clock className="w-3 h-3" />{detail.work_hours} jam</span>}
+                <button onClick={() => setDetail(null)} className="text-zinc-400 hover:text-zinc-100"><X className="w-5 h-5" /></button>
+              </div>
+            </div>
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[{ k: 'in', icon: LogIn, label: 'Absen Masuk', time: detail.check_in_at, photo: detail.check_in_photo, lat: detail.check_in_lat, lng: detail.check_in_lng, note: detail.check_in_note },
+                { k: 'out', icon: LogOut, label: 'Absen Pulang', time: detail.check_out_at, photo: detail.check_out_photo, lat: detail.check_out_lat, lng: detail.check_out_lng, note: detail.check_out_note }].map(s => (
+                <div key={s.k} className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-3">
+                  <div className="flex items-center gap-2 mb-2"><s.icon className="w-4 h-4 text-zinc-400" /><span className="text-sm font-semibold text-zinc-200">{s.label}</span></div>
+                  {s.photo ? <StoredImage src={s.photo} alt={s.label} className="w-full aspect-square rounded-lg object-cover cursor-pointer mb-3" onClick={() => setLightbox(s.photo)} />
+                    : <div className="w-full aspect-square rounded-lg bg-zinc-800 flex items-center justify-center mb-3 text-zinc-600 text-xs">Tidak ada foto</div>}
+                  <div className="text-[11px] text-zinc-500">Jam</div>
+                  <div className={`text-sm font-semibold mb-2 ${s.time ? 'text-emerald-400' : 'text-zinc-500'}`}>{s.time ? fmtAbsenTime(s.time) : 'Belum'}</div>
+                  <div className="text-[11px] text-zinc-500">Lokasi</div>
+                  {s.lat != null && s.lng != null
+                    ? <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm text-red-400 hover:text-red-300"><MapPin className="w-3.5 h-3.5" />{Number(s.lat).toFixed(5)}, {Number(s.lng).toFixed(5)}</a>
+                    : <div className="text-sm text-zinc-500">—</div>}
+                  {s.note && <><div className="text-[11px] text-zinc-500 mt-2">Catatan</div><div className="text-sm text-zinc-300">{s.note}</div></>}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
