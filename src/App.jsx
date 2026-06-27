@@ -1944,21 +1944,21 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
           {filteredRows.map(a => (
             <div key={a.id} onClick={() => setDetail(a)}
               className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 cursor-pointer hover:border-zinc-700 transition">
-              <div className="flex items-center justify-between mb-3 gap-3">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div className="min-w-0">
                   <div className="text-sm font-bold text-zinc-100 truncate">{a.md_name || a.md_email || '—'}</div>
                   <div className="text-[11px] text-zinc-500">{dLabel(a.date)}</div>
                 </div>
-                {a.work_hours != null && <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-600/10 px-2 py-0.5 rounded-full shrink-0"><Clock className="w-3 h-3" />{a.work_hours} jam</span>}
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                {[{ k: 'in', icon: LogIn, label: 'Masuk', time: a.check_in_at },
-                  { k: 'out', icon: LogOut, label: 'Pulang', time: a.check_out_at }].map(b => (
-                  <div key={b.k} className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-lg bg-zinc-800/60 flex items-center justify-center shrink-0"><b.icon className="w-4 h-4 text-zinc-400" /></div>
-                    <div><div className="text-[11px] text-zinc-500">{b.label}</div><div className={`text-sm font-semibold ${b.time ? 'text-emerald-400' : 'text-zinc-500'}`}>{b.time ? fmtAbsenTime(b.time) : 'Belum'}</div></div>
-                  </div>
-                ))}
+                <div className="flex items-center gap-5 sm:gap-8 ml-auto">
+                  {[{ k: 'in', icon: LogIn, label: 'Masuk', time: a.check_in_at },
+                    { k: 'out', icon: LogOut, label: 'Pulang', time: a.check_out_at }].map(b => (
+                    <div key={b.k} className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-lg bg-zinc-800/60 flex items-center justify-center shrink-0"><b.icon className="w-4 h-4 text-zinc-400" /></div>
+                      <div><div className="text-[11px] text-zinc-500">{b.label}</div><div className={`text-sm font-semibold ${b.time ? 'text-emerald-400' : 'text-zinc-500'}`}>{b.time ? fmtAbsenTime(b.time) : 'Belum'}</div></div>
+                    </div>
+                  ))}
+                  {a.work_hours != null && <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-600/10 px-2 py-0.5 rounded-full shrink-0"><Clock className="w-3 h-3" />{a.work_hours} jam</span>}
+                </div>
               </div>
               {(a.check_in_note || a.check_out_note) && <p className="text-xs text-zinc-500 mt-3 pt-3 border-t border-zinc-800">{[a.check_in_note, a.check_out_note].filter(Boolean).join(' · ')}</p>}
             </div>
