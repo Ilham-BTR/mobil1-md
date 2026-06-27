@@ -3028,10 +3028,18 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
     return mds.filter(m => m.region_id === filters.regionId);
   }, [mds, filters.regionId]);
 
+  // Nama depan yang tak unik (mis. 2 "Muhammad") → tambah kata berikutnya
+  // agar di chart/ranking tidak terlihat seperti duplikat.
+  const firstNameCount = relevantMDs.reduce((acc, m) => {
+    const f = (m.full_name || '').split(' ')[0];
+    acc[f] = (acc[f] || 0) + 1; return acc;
+  }, {});
   const chartData = relevantMDs.map(md => {
     const actual = filteredVisits.filter(v => v.md_id === md.id).length;
     const target = md.monthly_target || 30;
-    return { name: md.full_name.split(' ')[0], Actual: actual, Target: target, achievement: Math.round((actual / target) * 100) };
+    const parts = (md.full_name || '—').split(' ');
+    const shortName = firstNameCount[parts[0]] > 1 ? parts.slice(0, 2).join(' ') : parts[0];
+    return { id: md.id, name: shortName, fullName: md.full_name, Actual: actual, Target: target, achievement: Math.round((actual / target) * 100) };
   });
 
   const totalVisits = filteredVisits.length;
@@ -3124,10 +3132,10 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
 
         <div className="mt-5 space-y-2">
           {[...chartData].sort((a, b) => b.achievement - a.achievement).map((md, i) => (
-            <div key={md.name} className="flex items-center gap-3 p-2.5 rounded-lg bg-zinc-950 border border-zinc-800">
+            <div key={md.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-zinc-950 border border-zinc-800">
               <div className="w-6 h-6 rounded-full bg-zinc-800/50 flex items-center justify-center text-[10px] font-mono text-zinc-400">{i + 1}</div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-zinc-200">{md.name}</div>
+                <div className="text-sm font-medium text-zinc-200 truncate">{md.fullName || md.name}</div>
                 <div className="h-1 bg-zinc-800/50 rounded-full mt-1 overflow-hidden">
                   <div className={`h-full rounded-full ${md.achievement >= 80 ? 'bg-emerald-600/100' : md.achievement >= 50 ? 'bg-amber-600/100' : 'bg-rose-600/100'}`} style={{ width: `${Math.min(md.achievement, 100)}%` }} />
                 </div>
