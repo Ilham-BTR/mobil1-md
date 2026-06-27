@@ -1880,6 +1880,8 @@ function AdminAbsenTab({ mds, allowedMdIds }) {
       'Jam Kerja': a.work_hours != null ? a.work_hours : '',
       'GPS Masuk': a.check_in_lat != null ? `${a.check_in_lat}, ${a.check_in_lng}` : '',
       'GPS Pulang': a.check_out_lat != null ? `${a.check_out_lat}, ${a.check_out_lng}` : '',
+      'Foto Masuk': typeof a.check_in_photo === 'string' && a.check_in_photo.startsWith('http') ? a.check_in_photo : (a.check_in_photo ? '(foto lokal/idb)' : ''),
+      'Foto Pulang': typeof a.check_out_photo === 'string' && a.check_out_photo.startsWith('http') ? a.check_out_photo : (a.check_out_photo ? '(foto lokal/idb)' : ''),
       'Catatan Masuk': a.check_in_note || '',
       'Catatan Pulang': a.check_out_note || '',
     }));
