@@ -1837,7 +1837,7 @@ function DateRangeRow({ dari, sampai, onDari, onSampai, onReset, className = '' 
   );
 }
 
-function AdminAbsenTab({ mds, allowedMdIds }) {
+function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
   const monthsList = useMemo(() => {
     const arr = []; const now = new Date();
     for (let i = 0; i < 12; i++) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); arr.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); }
@@ -1852,6 +1852,21 @@ function AdminAbsenTab({ mds, allowedMdIds }) {
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState(null);
   const [detail, setDetail] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAbsen = async (id) => {
+    if (!confirm('Hapus record absen ini (foto + GPS)? Tidak bisa dibatalkan.')) return;
+    setDeleting(true);
+    try {
+      await api.deleteAttendance(id);
+      setRows(prev => prev.filter(r => r.id !== id));
+      setDetail(null);
+    } catch (e) {
+      alert('Gagal menghapus: ' + (e?.message || e));
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   useEffect(() => {
     let on = true; setLoading(true);
@@ -1982,6 +1997,14 @@ function AdminAbsenTab({ mds, allowedMdIds }) {
                 </div>
               ))}
             </div>
+            {isSuperAdmin && (
+              <div className="p-4 pt-0">
+                <button onClick={() => handleDeleteAbsen(detail.id)} disabled={deleting}
+                  className="w-full flex items-center justify-center gap-2 text-sm text-rose-300 bg-rose-600/10 hover:bg-rose-600/20 border border-rose-600/30 rounded-lg py-2.5 disabled:opacity-50">
+                  {deleting ? <><Loader2 className="w-4 h-4 animate-spin" />Menghapus…</> : <><Trash2 className="w-4 h-4" />Hapus Absen ini</>}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -2790,7 +2813,7 @@ function AdminView({ profile }) {
       {tab === 'dashboard' && <DashboardTab visits={sVisits} mds={sMds} onOpenVisit={openDetail} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} />}
       {tab === 'ranking' && <LeaderboardTab visits={sVisits} mds={sMds} regions={regions} />}
       {tab === 'visits' && <VisitsTab visits={sVisits} mds={sMds} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} onOpenVisit={openDetail} />}
-      {tab === 'absen' && <AdminAbsenTab mds={sMds} allowedMdIds={allowedMdIds} />}
+      {tab === 'absen' && <AdminAbsenTab mds={sMds} allowedMdIds={allowedMdIds} isSuperAdmin={isSuperAdmin} />}
       {tab === 'coverage' && <CoverageTab visits={sVisits} mds={sMds} bengkels={bengkels} kotas={kotas} regions={regions} distributors={distributors} onOpenVisit={openDetail} />}
       {tab === 'master' && <MasterTab regions={regions} kotas={kotas} distributors={distributors} bengkels={bengkels} mds={sMds} accounts={sAccounts} onChange={loadAll} isSuperAdmin={isSuperAdmin} canManageMaster={canManageMaster} />}
 
@@ -2802,7 +2825,7 @@ function AdminView({ profile }) {
           distributor={detailDistributor}
           md={detailMD}
           onClose={() => setDetailVisitId(null)}
-          onDeleted={() => { setDetailVisitId(null); loadAll(); }}
+          onDeleted={isSuperAdmin ? () => { setDetailVisitId(null); loadAll(); } : undefined}
         />
       )}
     </div>

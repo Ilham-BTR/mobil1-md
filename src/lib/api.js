@@ -708,6 +708,20 @@ export async function fetchAttendancesByRange(dari, sampai) {
   return data || [];
 }
 
+/**
+ * Hapus 1 record absen (super_admin only — di-enforce RLS attendances_admin_delete).
+ * Foto selfie di B2 dibiarkan (orphan, best-effort dibersihkan terpisah).
+ */
+export async function deleteAttendance(id) {
+  if (MOCK_MODE) {
+    MOCK_DATA.attendances = mockAtt().filter(a => a.id !== id);
+    persistMock();
+    return;
+  }
+  const { error } = await supabase.from('attendances').delete().eq('id', id);
+  if (error) throw error;
+}
+
 // Rekap absen semua MD (admin) untuk 1 tanggal — view attendance_details.
 export async function fetchAttendanceRecap(date) {
   if (MOCK_MODE) return mockAtt().filter(a => a.date === date);

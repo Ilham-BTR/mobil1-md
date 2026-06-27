@@ -230,7 +230,7 @@ create policy visits_md_insert_own on visits for insert with check (md_id = auth
 drop policy if exists visits_md_update_own on visits;
 create policy visits_md_update_own on visits for update using (md_id = auth.uid() or is_admin());
 drop policy if exists visits_admin_delete on visits;
-create policy visits_admin_delete on visits for delete using (is_admin());
+create policy visits_admin_delete on visits for delete using (is_super_admin());
 
 -- VIEWS
 create or replace view visit_details as
