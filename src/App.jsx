@@ -3047,6 +3047,10 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
     const shortName = firstNameCount[parts[0]] > 1 ? parts.slice(0, 2).join(' ') : parts[0];
     return { id: md.id, name: shortName, fullName: md.full_name, region: regionName(md.region_id), Actual: actual, Target: target, achievement: Math.round((actual / target) * 100) };
   });
+  // Urutkan berdasarkan region (lalu nama) — bukan abjad nama global. MD tanpa region di akhir.
+  chartData.sort((a, b) =>
+    (a.region || 'zzz').localeCompare(b.region || 'zzz') ||
+    (a.fullName || '').localeCompare(b.fullName || ''));
 
   const totalVisits = filteredVisits.length;
   const totalTarget = relevantMDs.reduce((s, m) => s + (m.monthly_target || 30), 0);
@@ -3137,7 +3141,7 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
         </div>
 
         <div className="mt-5 space-y-2">
-          {[...chartData].sort((a, b) => b.achievement - a.achievement).map((md, i) => (
+          {chartData.map((md, i) => (
             <div key={md.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-zinc-950 border border-zinc-800">
               <div className="w-6 h-6 rounded-full bg-zinc-800/50 flex items-center justify-center text-[10px] font-mono text-zinc-400">{i + 1}</div>
               <div className="flex-1 min-w-0">
