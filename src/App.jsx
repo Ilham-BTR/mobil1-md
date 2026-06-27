@@ -4195,6 +4195,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
   const [section, setSection] = useState('distributors');
   const [newItem, setNewItem] = useState('');
   const [newItemRegion, setNewItemRegion] = useState('');  // region untuk add kota/distributor
+  const [search, setSearch] = useState('');
   const [editingBengkelId, setEditingBengkelId] = useState(null);
   const [editingMDId, setEditingMDId] = useState(null);
   const [detailMDId, setDetailMDId] = useState(null);
@@ -4217,8 +4218,16 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
   // Section yang butuh pilih region saat tambah manual
   const needsRegion = section === 'kotas' || section === 'distributors';
 
-  // Reset edit mode & modal kalau pindah section
-  useEffect(() => { setEditingBengkelId(null); setEditingMDId(null); setDetailMDId(null); setImportOpen(false); setMasterImportOpen(false); setNewItem(''); setNewItemRegion(''); }, [section]);
+  // Daftar ter-filter oleh search (pakai nama tampilan + email/kode bila ada)
+  const filteredItems = search.trim()
+    ? current.items.filter(it => {
+        const hay = `${current.getName(it)} ${it.email || ''} ${it.code || ''} ${it.role || ''}`.toLowerCase();
+        return hay.includes(search.trim().toLowerCase());
+      })
+    : current.items;
+
+  // Reset edit mode, modal & search kalau pindah section
+  useEffect(() => { setEditingBengkelId(null); setEditingMDId(null); setDetailMDId(null); setImportOpen(false); setMasterImportOpen(false); setNewItem(''); setNewItemRegion(''); setSearch(''); }, [section]);
 
   const handleAdd = async () => {
     if (!newItem.trim()) return;
@@ -4375,10 +4384,22 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
             </>
           )}
 
+          {current.items.length > 0 && (
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <input value={search} onChange={e => setSearch(e.target.value)}
+                placeholder={`Cari ${current.label.toLowerCase()}…`}
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-9 pr-16 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-600/50" />
+              {search && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-zinc-500">{filteredItems.length}/{current.items.length}</span>}
+            </div>
+          )}
+
           <div className="space-y-1.5">
             {current.items.length === 0 ? (
               <div className="text-center py-8 text-sm text-zinc-500">Belum ada data.</div>
-            ) : current.items.map((item, i) => (
+            ) : filteredItems.length === 0 ? (
+              <div className="text-center py-8 text-sm text-zinc-500">Tidak ada hasil untuk "{search}".</div>
+            ) : filteredItems.map((item, i) => (
               <div key={item.id}
                 className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-zinc-950 border transition group ${
                   (editingBengkelId === item.id || editingMDId === item.id) ? 'border-amber-600/40 ring-1 ring-amber-600/20' : 'border-zinc-800 hover:border-zinc-700'
