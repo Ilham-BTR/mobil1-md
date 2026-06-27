@@ -84,7 +84,7 @@ export async function signIn(email, password) {
 
   const { data: profile, error: pError } = await supabase
     .from('profiles')
-    .select('*, region:regions(*)')
+    .select('*, region:regions!region_id(*)')
     .eq('id', data.user.id)
     .single();
   if (pError) throw pError;
@@ -123,7 +123,7 @@ export async function getCurrentProfile() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('*, region:regions(*)')
+    .select('*, region:regions!region_id(*)')
     .eq('id', user.id)
     .single();
   return profile;
@@ -223,7 +223,7 @@ export async function loginWithPasskey() {
 
   const { data: profile, error: pErr } = await supabase
     .from('profiles')
-    .select('*, region:regions(*)')
+    .select('*, region:regions!region_id(*)')
     .eq('id', sess.user.id)
     .single();
   if (pErr) throw pErr;
@@ -242,14 +242,14 @@ export async function fetchRegions() {
 
 export async function fetchKotas() {
   if (MOCK_MODE) return [...MOCK_DATA.kotas];
-  const { data, error } = await supabase.from('kotas').select('*, region:regions(*)').order('name');
+  const { data, error } = await supabase.from('kotas').select('*, region:regions!region_id(*)').order('name');
   if (error) throw error;
   return data;
 }
 
 export async function fetchDistributors() {
   if (MOCK_MODE) return [...MOCK_DATA.distributors];
-  const { data, error } = await supabase.from('distributors').select('*, region:regions(*)').order('name');
+  const { data, error } = await supabase.from('distributors').select('*, region:regions!region_id(*)').order('name');
   if (error) throw error;
   return data;
 }
@@ -258,7 +258,7 @@ export async function fetchBengkels() {
   if (MOCK_MODE) return [...MOCK_DATA.bengkels];
   const { data, error } = await supabase
     .from('bengkels')
-    .select('*, kota:kotas(*, region:regions(*))')
+    .select('*, kota:kotas(*, region:regions!region_id(*))')
     .order('code');
   if (error) throw error;
   return data;
