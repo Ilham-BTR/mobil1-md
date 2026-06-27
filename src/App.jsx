@@ -11,7 +11,7 @@ import {
   Users, Briefcase, Globe, ChevronDown, LogOut, Shield,
   Lock, Mail, Eye, EyeOff, AlertCircle, Fingerprint, Loader2,
   Navigation, Phone, FileText, Download, Search, Upload, FileSpreadsheet,
-  LogIn, Clock, CalendarDays, Trophy
+  LogIn, Clock, CalendarDays, Trophy, Power
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Polyline, Circle } from 'react-leaflet';
 import L from 'leaflet';
@@ -2783,9 +2783,11 @@ function AdminView({ profile }) {
     ? new Set(selfAcc?.region_ids?.length ? selfAcc.region_ids : (profile?.region_id ? [profile.region_id] : []))
     : null;
   const inTlScope = (rid) => !isTL || (rid != null && tlRegionSet.has(rid));
-  const sMds = isTL ? mds.filter(m => inTlScope(m.region_id)) : mds;
-  const allowedMdIds = isTL ? new Set(sMds.map(m => m.id)) : null;
-  const sVisits = isTL ? visits.filter(v => allowedMdIds.has(v.md_id)) : visits;
+  const sMds = isTL ? mds.filter(m => inTlScope(m.region_id)) : mds;        // semua MD (termasuk nonaktif) → utk kelola akun
+  const activeMds = sMds.filter(m => m.active !== false);                   // hanya MD aktif → data di tab
+  const visibleMdIds = new Set(activeMds.map(m => m.id));
+  const allowedMdIds = visibleMdIds;                                        // absen: tampil hanya MD aktif (+scope TL)
+  const sVisits = visits.filter(v => visibleMdIds.has(v.md_id));            // visit hanya dari MD aktif (+scope TL)
   // Daftar akun: super_admin lihat semua; admin/bp hanya MD; TL hanya MD region-nya.
   const sAccounts = isSuperAdmin ? accounts : accounts.filter(a => a.role === 'md' && inTlScope(a.region_id));
   const canManageMaster = !isTL;
@@ -2815,11 +2817,11 @@ function AdminView({ profile }) {
         ))}
       </div>
 
-      {tab === 'dashboard' && <DashboardTab visits={sVisits} mds={sMds} onOpenVisit={openDetail} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} />}
-      {tab === 'ranking' && <LeaderboardTab visits={sVisits} mds={sMds} regions={regions} />}
-      {tab === 'visits' && <VisitsTab visits={sVisits} mds={sMds} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} onOpenVisit={openDetail} />}
-      {tab === 'absen' && <AdminAbsenTab mds={sMds} allowedMdIds={allowedMdIds} isSuperAdmin={isSuperAdmin} />}
-      {tab === 'coverage' && <CoverageTab visits={sVisits} mds={sMds} bengkels={bengkels} kotas={kotas} regions={regions} distributors={distributors} onOpenVisit={openDetail} />}
+      {tab === 'dashboard' && <DashboardTab visits={sVisits} mds={activeMds} onOpenVisit={openDetail} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} />}
+      {tab === 'ranking' && <LeaderboardTab visits={sVisits} mds={activeMds} regions={regions} />}
+      {tab === 'visits' && <VisitsTab visits={sVisits} mds={activeMds} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} onOpenVisit={openDetail} />}
+      {tab === 'absen' && <AdminAbsenTab mds={activeMds} allowedMdIds={allowedMdIds} isSuperAdmin={isSuperAdmin} />}
+      {tab === 'coverage' && <CoverageTab visits={sVisits} mds={activeMds} bengkels={bengkels} kotas={kotas} regions={regions} distributors={distributors} onOpenVisit={openDetail} />}
       {tab === 'master' && <MasterTab regions={regions} kotas={kotas} distributors={distributors} bengkels={bengkels} mds={sMds} accounts={sAccounts} onChange={loadAll} isSuperAdmin={isSuperAdmin} canManageMaster={canManageMaster} />}
 
       {detailVisit && (
@@ -4481,6 +4483,20 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
     }
   };
 
+  // Aktif/nonaktif akun (MD & TL). Nonaktif → datanya tidak muncul di tab lain.
+  const handleToggleActive = async (item) => {
+    const nowActive = item.active === false; // jadi true kalau sekarang nonaktif
+    const label = item.role === 'tl' ? 'TL' : 'MD';
+    if (!confirm(`${nowActive ? 'Aktifkan' : 'Nonaktifkan'} akun ${label} "${item.full_name}"?` +
+      (nowActive ? '' : '\nData (visit/absen) akun ini akan disembunyikan dari Dashboard, Ranking, Visits, Absen & Coverage.'))) return;
+    try {
+      await api.updateMaster('profiles', item.id, { active: nowActive });
+      await onChange();
+    } catch (err) {
+      alert('Gagal ubah status: ' + err.message);
+    }
+  };
+
   return (
     <div>
       <div className="mb-5">
@@ -4600,10 +4616,11 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
                   {section === 'mds' ? (
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm text-zinc-200 truncate">{current.getName(item)}</span>
+                        <span className={`text-sm truncate ${item.active === false ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>{current.getName(item)}</span>
                         <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-medium shrink-0 ${item.role === 'super_admin' ? 'bg-fuchsia-600/10 text-fuchsia-400' : item.role === 'admin' ? 'bg-rose-600/10 text-rose-400' : item.role === 'tl' ? 'bg-teal-600/10 text-teal-400' : item.role === 'bp' ? 'bg-amber-600/10 text-amber-400' : 'bg-sky-600/10 text-sky-400'}`}>
                           {item.role}{item.region_id ? ` · ${regionName(item.region_id) || ''}` : ''}
                         </span>
+                        {item.active === false && <span className="text-[10px] px-1.5 py-0.5 rounded uppercase font-medium shrink-0 bg-zinc-700/40 text-zinc-400">Nonaktif</span>}
                       </div>
                       <MdCredential email={item.email} password={item.login_password} />
                     </div>
@@ -4630,6 +4647,12 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
                         className="w-7 h-7 rounded-md hover:bg-sky-600/10 hover:text-sky-400 text-zinc-500 flex items-center justify-center">
                         <FileText className="w-3.5 h-3.5" />
                       </button>
+                      {isSuperAdmin && (item.role === 'md' || item.role === 'tl') && (
+                        <button onClick={() => handleToggleActive(item)} title={item.active === false ? 'Aktifkan akun' : 'Nonaktifkan akun'}
+                          className={`w-7 h-7 rounded-md flex items-center justify-center ${item.active === false ? 'text-zinc-500 hover:bg-emerald-600/10 hover:text-emerald-400' : 'text-emerald-400 hover:bg-rose-600/10 hover:text-rose-400'}`}>
+                          <Power className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       {isSuperAdmin && (
                         <button onClick={() => setEditingMDId(item.id)} title="Edit akun"
                           className="w-7 h-7 rounded-md hover:bg-amber-600/10 hover:text-amber-400 text-zinc-500 flex items-center justify-center">
