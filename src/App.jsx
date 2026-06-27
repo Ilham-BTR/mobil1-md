@@ -1952,11 +1952,10 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
                 {a.work_hours != null && <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-600/10 px-2 py-0.5 rounded-full shrink-0"><Clock className="w-3 h-3" />{a.work_hours} jam</span>}
               </div>
               <div className="grid grid-cols-2 gap-4">
-                {[{ k: 'in', icon: LogIn, label: 'Masuk', time: a.check_in_at, photo: a.check_in_photo },
-                  { k: 'out', icon: LogOut, label: 'Pulang', time: a.check_out_at, photo: a.check_out_photo }].map(b => (
+                {[{ k: 'in', icon: LogIn, label: 'Masuk', time: a.check_in_at },
+                  { k: 'out', icon: LogOut, label: 'Pulang', time: a.check_out_at }].map(b => (
                   <div key={b.k} className="flex items-center gap-2.5">
-                    {b.photo ? <StoredImage src={b.photo} alt={b.label} className="w-10 h-10 rounded-lg object-cover cursor-pointer" onClick={(e) => { e.stopPropagation(); setLightbox(b.photo); }} />
-                      : <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center"><b.icon className="w-4 h-4 text-zinc-500" /></div>}
+                    <div className="w-9 h-9 rounded-lg bg-zinc-800/60 flex items-center justify-center shrink-0"><b.icon className="w-4 h-4 text-zinc-400" /></div>
                     <div><div className="text-[11px] text-zinc-500">{b.label}</div><div className={`text-sm font-semibold ${b.time ? 'text-emerald-400' : 'text-zinc-500'}`}>{b.time ? fmtAbsenTime(b.time) : 'Belum'}</div></div>
                   </div>
                 ))}
@@ -1969,7 +1968,7 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
 
       {detail && (
         <div className="fixed inset-0 z-40 bg-black/80 flex items-end sm:items-center justify-center sm:p-4" onClick={() => setDetail(null)}>
-          <div className="bg-zinc-950 border border-zinc-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-zinc-950 border border-zinc-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-3xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-start justify-between gap-3 p-4 border-b border-zinc-800 sticky top-0 bg-zinc-950">
               <div className="min-w-0">
                 <div className="text-base font-bold text-zinc-100 truncate">{detail.md_name || detail.md_email || '—'}</div>
