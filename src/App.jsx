@@ -1655,6 +1655,9 @@ function AbsenHistory({ currentMD }) {
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState(null);
   const [month, setMonth] = useState('all');
+  const [search, setSearch] = useState('');
+  const [dari, setDari] = useState('');
+  const [sampai, setSampai] = useState('');
 
   useEffect(() => {
     let on = true;
@@ -1669,14 +1672,31 @@ function AbsenHistory({ currentMD }) {
 
   const workHours = (a) => (a.check_in_at && a.check_out_at) ? ((new Date(a.check_out_at) - new Date(a.check_in_at)) / 3600000).toFixed(1) : null;
   const dLabel = (d) => new Date(d + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-  const filtered = month === 'all' ? rows : rows.filter(a => a.date.startsWith(month));
+  const filtered = rows.filter(a => {
+    if (dari || sampai) {
+      if (dari && a.date < dari) return false;
+      if (sampai && a.date > sampai) return false;
+    } else if (month !== 'all' && !a.date.startsWith(month)) return false;
+    if (search.trim() && !`${a.date} ${a.check_in_note || ''} ${a.check_out_note || ''}`.toLowerCase().includes(search.trim().toLowerCase())) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-3">
-      <Select value={month} onChange={e => setMonth(e.target.value)}>
-        <option value="all">Semua Bulan</option>
-        {availableMonths.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
-      </Select>
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="relative col-span-2 sm:col-span-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari catatan / tanggal…"
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-600/50" />
+          </div>
+          <Select value={month} onChange={e => setMonth(e.target.value)}>
+            <option value="all">Semua Bulan</option>
+            {availableMonths.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
+          </Select>
+        </div>
+        <DateRangeRow dari={dari} sampai={sampai} onDari={setDari} onSampai={setSampai} onReset={() => { setDari(''); setSampai(''); }} />
+      </div>
       {filtered.length === 0 ? (
         <div className="text-center py-10 text-zinc-500 text-sm">Tidak ada absen di bulan ini.</div>
       ) : filtered.map(a => {
@@ -2479,13 +2499,22 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
 function VisitHistory({ visits, bengkels, kotas, distributors }) {
   const [search, setSearch] = useState('');
   const [month, setMonth] = useState('all');
+  const [status, setStatus] = useState('all');
+  const [subType, setSubType] = useState('all');
+  const [dari, setDari] = useState('');
+  const [sampai, setSampai] = useState('');
   const findBengkel = (id) => bengkels.find(b => b.id === id);
   const findKota = (id) => kotas.find(k => k.id === id);
   const findDist = (id) => distributors.find(d => d.id === id);
 
   const availableMonths = useMemo(() => [...new Set(visits.map(v => v.visit_date.slice(0, 7)))].sort().reverse(), [visits]);
   const filtered = visits.filter(v => {
-    if (month !== 'all' && !v.visit_date.startsWith(month)) return false;
+    if (dari || sampai) {
+      if (dari && v.visit_date < dari) return false;
+      if (sampai && v.visit_date > sampai) return false;
+    } else if (month !== 'all' && !v.visit_date.startsWith(month)) return false;
+    if (status !== 'all' && v.status !== status) return false;
+    if (subType !== 'all' && v.sub_type !== subType) return false;
     if (search.trim()) {
       const b = findBengkel(v.bengkel_id);
       const hay = `${b?.code || ''} ${b?.name || v.bengkel_name || ''} ${v.pic_name || ''} ${v.sub_type || ''}`.toLowerCase();
@@ -2500,16 +2529,27 @@ function VisitHistory({ visits, bengkels, kotas, distributors }) {
 
   return (
     <div>
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="relative col-span-2 sm:col-span-1">
+      <div className="space-y-2 mb-3">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari bengkel / PIC…"
             className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-600/50" />
         </div>
-        <Select value={month} onChange={e => setMonth(e.target.value)}>
-          <option value="all">Semua Bulan</option>
-          {availableMonths.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
-        </Select>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <Select value={month} onChange={e => setMonth(e.target.value)}>
+            <option value="all">Semua Bulan</option>
+            {availableMonths.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
+          </Select>
+          <Select value={status} onChange={e => setStatus(e.target.value)}>
+            <option value="all">Semua Status</option>
+            {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+          </Select>
+          <Select value={subType} onChange={e => setSubType(e.target.value)}>
+            <option value="all">Semua Jenis</option>
+            {ALL_SUBTYPES.map(s => <option key={s} value={s}>{s}</option>)}
+          </Select>
+        </div>
+        <DateRangeRow dari={dari} sampai={sampai} onDari={setDari} onSampai={setSampai} onReset={() => { setDari(''); setSampai(''); }} />
       </div>
       {filtered.length === 0 ? (
         <div className="text-center py-10 text-zinc-500 text-sm">Tidak ada visit sesuai filter.</div>
