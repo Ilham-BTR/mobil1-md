@@ -310,6 +310,43 @@ returns void language sql security definer set search_path = public as $$
 $$;
 
 -- ============================================================
+-- TL multi-region (tl_regions) — TL bisa cover >1 region
+-- ============================================================
+create table if not exists tl_regions (
+  tl_id     uuid not null references profiles(id) on delete cascade,
+  region_id uuid not null references regions(id)  on delete cascade,
+  primary key (tl_id, region_id)
+);
+alter table tl_regions enable row level security;
+
+drop policy if exists tl_regions_super_manage on tl_regions;
+create policy tl_regions_super_manage on tl_regions for all
+  using (is_super_admin()) with check (is_super_admin());
+drop policy if exists tl_regions_read on tl_regions;
+create policy tl_regions_read on tl_regions for select
+  using (tl_id = auth.uid() or is_super_admin() or is_admin());
+
+create or replace function tl_covers_region(rid uuid)
+returns boolean language sql security definer stable as $$
+  select rid is not null and (
+    exists (select 1 from tl_regions t where t.tl_id = auth.uid() and t.region_id = rid)
+    or rid = (select region_id from profiles where id = auth.uid())
+  )
+$$;
+
+drop policy if exists profiles_read_own on profiles;
+create policy profiles_read_own on profiles for select using (
+  auth.uid() = id
+  or is_super_admin()
+  or (is_admin() and role::text = 'md')
+  or (is_tl() and role::text = 'md' and tl_covers_region(region_id))
+);
+
+drop policy if exists visits_md_select_own on visits;
+create policy visits_md_select_own on visits for select
+  using (md_id = auth.uid() or is_admin() or (is_tl() and tl_covers_region(md_region(md_id))));
+
+-- ============================================================
 -- SELESAI. Lanjut: supabase_seed.sql (data) + storage_setup.sql (foto)
 --   + deploy Edge Function `webauthn` (passkey)
 -- ============================================================

@@ -111,6 +111,16 @@ Deno.serve(async (req) => {
           .eq("id", created.user.id);
         if (pErr) { result.errors.push({ row: i + 1, message: pErr.message }); continue; }
 
+        // TL multi-region → simpan daftar region ke tl_regions
+        if (u.role === "tl" && Array.isArray(u.region_ids)) {
+          await admin.from("tl_regions").delete().eq("tl_id", created.user.id);
+          const ids = u.region_ids.filter(Boolean);
+          if (ids.length) {
+            await admin.from("tl_regions")
+              .insert(ids.map((rid: string) => ({ tl_id: created.user.id, region_id: rid })));
+          }
+        }
+
         result.inserted++;
       } catch (e) {
         result.errors.push({ row: i + 1, message: (e as Error).message });

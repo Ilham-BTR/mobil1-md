@@ -2777,12 +2777,18 @@ function AdminView({ profile }) {
 
   // Scoping region untuk TL (read-only). Di produksi RLS sudah menyaring; ini untuk mock + konsistensi UI.
   const isTL = profile?.role === 'tl';
-  const tlRegion = isTL ? (profile?.region_id ?? null) : null;
-  const sMds = isTL ? mds.filter(m => m.region_id === tlRegion) : mds;
+  // Region yang dicover TL (bisa >1). Ambil dari akun TL sendiri: region_ids
+  // (dari tl_regions) dgn fallback region_id lama. Non-TL → tak ada scoping.
+  const selfAcc = accounts.find(a => a.id === profile?.id);
+  const tlRegionSet = isTL
+    ? new Set(selfAcc?.region_ids?.length ? selfAcc.region_ids : (profile?.region_id ? [profile.region_id] : []))
+    : null;
+  const inTlScope = (rid) => !isTL || (rid != null && tlRegionSet.has(rid));
+  const sMds = isTL ? mds.filter(m => inTlScope(m.region_id)) : mds;
   const allowedMdIds = isTL ? new Set(sMds.map(m => m.id)) : null;
   const sVisits = isTL ? visits.filter(v => allowedMdIds.has(v.md_id)) : visits;
   // Daftar akun: super_admin lihat semua; admin/bp hanya MD; TL hanya MD region-nya.
-  const sAccounts = isSuperAdmin ? accounts : accounts.filter(a => a.role === 'md' && (!isTL || a.region_id === tlRegion));
+  const sAccounts = isSuperAdmin ? accounts : accounts.filter(a => a.role === 'md' && inTlScope(a.region_id));
   const canManageMaster = !isTL;
 
   const openDetail = (id) => setDetailVisitId(id);
@@ -3470,6 +3476,7 @@ function MDForm({ regions, onSave, initial, onCancel }) {
     full_name: initial?.full_name || '',
     role: initial?.role || 'md',
     region_id: initial?.region_id || '',
+    region_ids: initial?.region_ids || (initial?.region_id ? [initial.region_id] : []),
     monthly_target: String(initial?.monthly_target ?? 30),
     password: '',
   });
@@ -3484,10 +3491,13 @@ function MDForm({ regions, onSave, initial, onCancel }) {
     if (!canSave) return;
     setSaving(true);
     try {
+      const isTLrole = form.role === 'tl';
+      const region_ids = isTLrole ? form.region_ids.filter(Boolean) : [];
       const base = {
         full_name: form.full_name.trim(),
         role: form.role || 'md',
-        region_id: form.region_id || null,
+        region_id: isTLrole ? (region_ids[0] || null) : (form.region_id || null),
+        region_ids,
         monthly_target: form.monthly_target === '' ? 30 : Number(form.monthly_target),
       };
       if (isEdit) {
@@ -3495,7 +3505,7 @@ function MDForm({ regions, onSave, initial, onCancel }) {
         await onSave(form.password.trim() ? { ...base, password: form.password.trim() } : base);
       } else {
         await onSave({ ...base, email: form.email.trim().toLowerCase(), password: form.password.trim() || undefined });
-        setForm({ email: '', full_name: '', role: 'md', region_id: '', monthly_target: '30', password: '' });
+        setForm({ email: '', full_name: '', role: 'md', region_id: '', region_ids: [], monthly_target: '30', password: '' });
       }
     } catch (err) {
       alert('Gagal: ' + err.message);
@@ -3533,13 +3543,31 @@ function MDForm({ regions, onSave, initial, onCancel }) {
             {ROLES.map(r => <option key={r} value={r}>{r === 'md' ? 'MD (Merchandiser)' : r === 'tl' ? 'TL (Team Leader)' : r === 'bp' ? 'BP (Supervisor)' : r === 'super_admin' ? 'Super Admin' : 'Admin'}</option>)}
           </Select>
         </Field>
-        <Field label="Region (wilayah kerja)">
-          <Select value={form.region_id} onChange={e => setForm({ ...form, region_id: e.target.value })}>
-            <option value="">— Tidak di-set —</option>
-            {(regions || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-          </Select>
-          {form.role === 'tl' && !form.region_id && (
-            <p className="text-[11px] text-amber-400 mt-1.5 flex items-center gap-1.5"><AlertCircle className="w-3 h-3" />TL wajib punya region — tanpa ini, TL tak melihat data apa pun.</p>
+        <Field label={form.role === 'tl' ? 'Region yang dicover (boleh >1)' : 'Region (wilayah kerja)'}>
+          {form.role === 'tl' ? (
+            <>
+              <div className="max-h-32 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950 p-2 space-y-1">
+                {(regions || []).map(r => {
+                  const on = form.region_ids.includes(r.id);
+                  return (
+                    <label key={r.id} className="flex items-center gap-2 text-sm text-zinc-200 cursor-pointer hover:text-white">
+                      <input type="checkbox" checked={on} className="accent-red-600"
+                        onChange={() => setForm(f => ({ ...f, region_ids: on ? f.region_ids.filter(x => x !== r.id) : [...f.region_ids, r.id] }))} />
+                      {r.name}
+                    </label>
+                  );
+                })}
+                {(regions || []).length === 0 && <div className="text-xs text-zinc-500">Belum ada region.</div>}
+              </div>
+              {form.region_ids.length === 0
+                ? <p className="text-[11px] text-amber-400 mt-1.5 flex items-center gap-1.5"><AlertCircle className="w-3 h-3" />TL wajib minimal 1 region — tanpa ini, TL tak melihat data apa pun.</p>
+                : <p className="text-[11px] text-zinc-500 mt-1.5">{form.region_ids.length} region dipilih.</p>}
+            </>
+          ) : (
+            <Select value={form.region_id} onChange={e => setForm({ ...form, region_id: e.target.value })}>
+              <option value="">— Tidak di-set —</option>
+              {(regions || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </Select>
           )}
         </Field>
         <Field label="Target Visit / Bulan">
@@ -4308,7 +4336,10 @@ function MdDetailModal({ md, regionName, onClose }) {
     ['Nama Lengkap', md.full_name || '—'],
     ['Email', md.email || '—'],
     ['Role', md.role || '—'],
-    ['Region', regionName(md.region_id) || '—'],
+    [(md.role === 'tl' && md.region_ids?.length > 1) ? 'Region (cover)' : 'Region',
+      (md.role === 'tl' && md.region_ids?.length)
+        ? md.region_ids.map(regionName).filter(Boolean).join(', ')
+        : (regionName(md.region_id) || '—')],
     ['Target / bulan', md.monthly_target ?? '—'],
     ['Dibuat', md.created_at ? new Date(md.created_at).toLocaleString('id-ID') : '—'],
   ];
@@ -4409,8 +4440,10 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
   };
 
   const handleUpdateMD = async (patch) => {
-    const { password, ...rest } = patch;
+    const { password, region_ids, ...rest } = patch;
     await api.updateMaster('profiles', editingMDId, rest);
+    // Sinkronkan region TL (dikosongkan kalau role bukan TL)
+    await api.setTlRegions(editingMDId, rest.role === 'tl' ? region_ids : []);
     if (password) await api.resetMdPassword(editingMDId, password);  // update auth + login_password
     await onChange();
     setEditingMDId(null);

@@ -277,14 +277,44 @@ export async function fetchMDs() {
 
 // Semua akun (untuk kelola di Master Data) — RLS: admin/super lihat semua, TL region-nya, MD miliknya.
 export async function fetchAccounts() {
-  if (MOCK_MODE) return [...MOCK_DATA.profiles].sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+  if (MOCK_MODE) {
+    return [...MOCK_DATA.profiles]
+      .map(p => ({ ...p, region_ids: p.region_ids?.length ? p.region_ids : (p.region_id ? [p.region_id] : []) }))
+      .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+  }
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
     .order('role')
     .order('full_name');
   if (error) throw error;
-  return data || [];
+  const profs = data || [];
+  // Lampirkan daftar region untuk TL (RLS tl_regions: TL lihat sendiri, super admin semua).
+  const { data: tlr } = await supabase.from('tl_regions').select('tl_id, region_id');
+  const byTl = {};
+  (tlr || []).forEach(r => { (byTl[r.tl_id] ||= []).push(r.region_id); });
+  return profs.map(p => ({
+    ...p,
+    region_ids: byTl[p.id]?.length ? byTl[p.id] : (p.region_id ? [p.region_id] : []),
+  }));
+}
+
+/**
+ * Set daftar region yang dicover seorang TL (replace semua baris tl_regions).
+ * Dipakai super admin saat edit akun TL. Create memakai edge function.
+ */
+export async function setTlRegions(tlId, regionIds) {
+  const ids = (regionIds || []).filter(Boolean);
+  if (MOCK_MODE) {
+    const p = MOCK_DATA.profiles.find(x => x.id === tlId);
+    if (p) { p.region_ids = ids; p.region_id = ids[0] || null; persistMock(); }
+    return;
+  }
+  await supabase.from('tl_regions').delete().eq('tl_id', tlId);
+  if (ids.length) {
+    const { error } = await supabase.from('tl_regions').insert(ids.map(rid => ({ tl_id: tlId, region_id: rid })));
+    if (error) throw error;
+  }
 }
 
 export async function addMaster(table, payload) {
@@ -421,6 +451,7 @@ export async function bulkCreateMDs(rows, onProgress) {
           full_name: r.full_name,
           role: r.role || 'md',
           region_id: r.region_id || null,
+          region_ids: (r.role === 'tl' && Array.isArray(r.region_ids)) ? r.region_ids.filter(Boolean) : undefined,
           monthly_target: r.monthly_target || 30,
           login_password: r.password || 'mobil1',  // mock: simpan password biar bisa login & terlihat admin
         });
