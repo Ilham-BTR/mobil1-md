@@ -186,7 +186,13 @@ alter table bengkels enable row level security;
 alter table visits enable row level security;
 
 drop policy if exists profiles_read_own on profiles;
-create policy profiles_read_own on profiles for select using (auth.uid() = id or is_admin() or (is_tl() and region_id = get_user_region()));
+-- super_admin: semua profil. admin/bp: hanya md. tl: md di region-nya. md: sendiri.
+create policy profiles_read_own on profiles for select using (
+  auth.uid() = id
+  or is_super_admin()
+  or (is_admin() and role::text = 'md')
+  or (is_tl() and role::text = 'md' and region_id = get_user_region())
+);
 drop policy if exists profiles_update_own on profiles;
 create policy profiles_update_own on profiles for update using (auth.uid() = id);
 -- Kelola akun (insert/update/delete profil orang lain) hanya super_admin.

@@ -2637,7 +2637,8 @@ function AdminView({ profile }) {
   const sMds = isTL ? mds.filter(m => m.region_id === tlRegion) : mds;
   const allowedMdIds = isTL ? new Set(sMds.map(m => m.id)) : null;
   const sVisits = isTL ? visits.filter(v => allowedMdIds.has(v.md_id)) : visits;
-  const sAccounts = isTL ? accounts.filter(a => a.region_id === tlRegion) : accounts;
+  // Daftar akun: super_admin lihat semua; admin/bp hanya MD; TL hanya MD region-nya.
+  const sAccounts = isSuperAdmin ? accounts : accounts.filter(a => a.role === 'md' && (!isTL || a.region_id === tlRegion));
   const canManageMaster = !isTL;
 
   const openDetail = (id) => setDetailVisitId(id);
