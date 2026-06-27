@@ -1611,7 +1611,7 @@ function AbsenTab({ currentMD }) {
   );
 
   return (
-    <div className="max-w-md mx-auto">
+    <div>
       <div className="flex gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-xl mb-4">
         <button onClick={() => setView('today')} className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${view === 'today' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>Hari Ini</button>
         <button onClick={() => setView('history')} className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${view === 'history' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-100'}`}>Riwayat</button>
