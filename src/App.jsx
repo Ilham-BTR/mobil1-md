@@ -3130,7 +3130,7 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData} margin={{ top: 10, right: 10, bottom: 10, left: -20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-              <XAxis dataKey="name" stroke="#71717a" tick={{ fontSize: 10 }} interval={0} angle={-40} textAnchor="end" height={70} />
+              <XAxis dataKey="name" stroke="#71717a" tick={{ fontSize: 10, fill: '#ffffff' }} interval={0} angle={-40} textAnchor="end" height={70} />
               <YAxis stroke="#71717a" tick={{ fontSize: 11 }} />
               <Tooltip contentStyle={{ background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', fontSize: '12px' }} labelStyle={{ color: '#e4e4e7' }} itemStyle={{ color: '#e4e4e7' }} cursor={{ fill: 'rgba(239,68,68,0.05)' }} />
               <Legend wrapperStyle={{ fontSize: '12px' }} />
