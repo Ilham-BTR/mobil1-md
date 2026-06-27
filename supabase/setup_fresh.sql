@@ -110,6 +110,8 @@ create table if not exists visits (
   photo_spanduk_after text,
   photo_poster_before text,
   photo_poster_after text,
+  photo_delivery_gimmick text,
+  photo_deploy_planogram text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

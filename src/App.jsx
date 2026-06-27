@@ -470,6 +470,8 @@ const PHOTO_LABELS = {
   photo_spanduk_after:   'Spanduk After',
   photo_poster_before:   'Poster Before',
   photo_poster_after:    'Poster After',
+  photo_delivery_gimmick:'Delivery Gimmick',
+  photo_deploy_planogram:'Deploy Planogram',
 };
 const PHOTO_KEYS = Object.keys(PHOTO_LABELS);
 
@@ -638,7 +640,7 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
           {/* Photo gallery */}
           <div>
             <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2 flex items-center gap-2">
-              <Camera className="w-3 h-3" />Dokumentasi Foto ({availablePhotos.length}/7)
+              <Camera className="w-3 h-3" />Dokumentasi Foto ({availablePhotos.length}/{PHOTO_KEYS.length})
             </div>
             {availablePhotos.length === 0 ? (
               <div className="text-center text-sm text-zinc-500 py-8 bg-zinc-950 border border-zinc-800 rounded-xl">Tidak ada foto</div>
@@ -764,9 +766,9 @@ const STATUS_STYLES = {
 const STATUS_OPTIONS = ['Pemasangan', 'Revisit'];
 const STATUS_SUBTYPES = {
   'Pemasangan': ['Deploy POSM New', 'Replace POSM Old'],
-  'Revisit':    ['Maintenance', 'Delivery Gimmick'],
+  'Revisit':    ['Maintenance', 'Delivery Gimmick', 'Deploy Planogram'],
 };
-const ALL_SUBTYPES = ['Deploy POSM New', 'Replace POSM Old', 'Maintenance', 'Delivery Gimmick'];
+const ALL_SUBTYPES = ['Deploy POSM New', 'Replace POSM Old', 'Maintenance', 'Delivery Gimmick', 'Deploy Planogram'];
 
 const StatusBadge = ({ status }) => {
   const s = STATUS_STYLES[status] || STATUS_STYLES.Pemasangan;
@@ -1652,6 +1654,7 @@ function AbsenHistory({ currentMD }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState(null);
+  const [month, setMonth] = useState('all');
 
   useEffect(() => {
     let on = true;
@@ -1659,15 +1662,24 @@ function AbsenHistory({ currentMD }) {
     return () => { on = false; };
   }, [currentMD.id]);
 
+  const availableMonths = useMemo(() => [...new Set(rows.map(a => a.date.slice(0, 7)))].sort().reverse(), [rows]);
+
   if (loading) return <Loading />;
   if (rows.length === 0) return <div className="text-center py-12 text-zinc-500 text-sm">Belum ada riwayat absen.</div>;
 
   const workHours = (a) => (a.check_in_at && a.check_out_at) ? ((new Date(a.check_out_at) - new Date(a.check_in_at)) / 3600000).toFixed(1) : null;
   const dLabel = (d) => new Date(d + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  const filtered = month === 'all' ? rows : rows.filter(a => a.date.startsWith(month));
 
   return (
     <div className="space-y-3">
-      {rows.map(a => {
+      <Select value={month} onChange={e => setMonth(e.target.value)}>
+        <option value="all">Semua Bulan</option>
+        {availableMonths.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
+      </Select>
+      {filtered.length === 0 ? (
+        <div className="text-center py-10 text-zinc-500 text-sm">Tidak ada absen di bulan ini.</div>
+      ) : filtered.map(a => {
         const wh = workHours(a);
         return (
           <div key={a.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
@@ -2140,7 +2152,7 @@ function MDDashboard({ currentMD, visits, bengkels, kotas }) {
 
 function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmitted }) {
   const DRAFT_KEY = `visitDraft:${currentMD.id}`;
-  const emptyPhotos = { tampakDepan: null, in: null, out: null, spandukBefore: null, spandukAfter: null, posterBefore: null, posterAfter: null };
+  const emptyPhotos = { tampakDepan: null, in: null, out: null, spandukBefore: null, spandukAfter: null, posterBefore: null, posterAfter: null, deliveryGimmick: null, deployPlanogram: null };
   const makeDefaultForm = () => ({
     regionId: currentMD.region_id || '',
     kotaId: '',
@@ -2389,7 +2401,7 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
         </Field>
       </Section>
 
-      <Section title="Dokumentasi Foto" subtitle={`${photoCount} / 7 foto`} icon={Camera}>
+      <Section title="Dokumentasi Foto" subtitle={`${photoCount} / ${PHOTO_KEYS.length} foto`} icon={Camera}>
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Saat Tiba</div>
         <div className="grid grid-cols-3 gap-3">
           <PhotoTile label="Foto In" required photo={form.photos.in} onChange={v => setPhoto('in', v)} />
@@ -2402,6 +2414,8 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
           <PhotoTile label="Spanduk After" photo={form.photos.spandukAfter} onChange={v => setPhoto('spandukAfter', v)} />
           <PhotoTile label="Poster Before" photo={form.photos.posterBefore} onChange={v => setPhoto('posterBefore', v)} />
           <PhotoTile label="Poster After" photo={form.photos.posterAfter} onChange={v => setPhoto('posterAfter', v)} />
+          <PhotoTile label="Delivery Gimmick" photo={form.photos.deliveryGimmick} onChange={v => setPhoto('deliveryGimmick', v)} />
+          <PhotoTile label="Deploy Planogram" photo={form.photos.deployPlanogram} onChange={v => setPhoto('deployPlanogram', v)} />
         </div>
 
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Saat Pulang</div>
@@ -2463,22 +2477,49 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
 }
 
 function VisitHistory({ visits, bengkels, kotas, distributors }) {
-  if (visits.length === 0) {
-    return <div className="text-center py-12 text-zinc-500 text-sm">Belum ada visit tercatat.</div>;
-  }
-
+  const [search, setSearch] = useState('');
+  const [month, setMonth] = useState('all');
   const findBengkel = (id) => bengkels.find(b => b.id === id);
   const findKota = (id) => kotas.find(k => k.id === id);
   const findDist = (id) => distributors.find(d => d.id === id);
 
+  const availableMonths = useMemo(() => [...new Set(visits.map(v => v.visit_date.slice(0, 7)))].sort().reverse(), [visits]);
+  const filtered = visits.filter(v => {
+    if (month !== 'all' && !v.visit_date.startsWith(month)) return false;
+    if (search.trim()) {
+      const b = findBengkel(v.bengkel_id);
+      const hay = `${b?.code || ''} ${b?.name || v.bengkel_name || ''} ${v.pic_name || ''} ${v.sub_type || ''}`.toLowerCase();
+      if (!hay.includes(search.trim().toLowerCase())) return false;
+    }
+    return true;
+  });
+
+  if (visits.length === 0) {
+    return <div className="text-center py-12 text-zinc-500 text-sm">Belum ada visit tercatat.</div>;
+  }
+
   return (
-    <div className="space-y-3">
-      {visits.map(v => {
+    <div>
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="relative col-span-2 sm:col-span-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari bengkel / PIC…"
+            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-600/50" />
+        </div>
+        <Select value={month} onChange={e => setMonth(e.target.value)}>
+          <option value="all">Semua Bulan</option>
+          {availableMonths.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
+        </Select>
+      </div>
+      {filtered.length === 0 ? (
+        <div className="text-center py-10 text-zinc-500 text-sm">Tidak ada visit sesuai filter.</div>
+      ) : (
+      <div className="space-y-3">
+      {filtered.map(v => {
         const b = findBengkel(v.bengkel_id);
         const k = b ? findKota(b.kota_id) : null;
         const d = findDist(v.distributor_id);
-        const photoCount = ['photo_tampak_depan','photo_in','photo_out','photo_spanduk_before','photo_spanduk_after','photo_poster_before','photo_poster_after']
-          .filter(key => v[key]).length;
+        const photoCount = PHOTO_KEYS.filter(key => v[key]).length;
         return (
           <div key={v.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition">
             <div className="flex items-start justify-between gap-3 mb-2">
@@ -2491,12 +2532,14 @@ function VisitHistory({ visits, bengkels, kotas, distributors }) {
             </div>
             <div className="flex items-center gap-3 text-xs text-zinc-500 pt-2 border-t border-zinc-800 mt-2">
               <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{v.visit_date}</span>
-              <span className="flex items-center gap-1"><Camera className="w-3 h-3" />{photoCount}/7 foto</span>
+              <span className="flex items-center gap-1"><Camera className="w-3 h-3" />{photoCount}/{PHOTO_KEYS.length} foto</span>
               <span className="flex items-center gap-1"><User className="w-3 h-3" />{v.pic_name}</span>
             </div>
           </div>
         );
       })}
+      </div>
+      )}
     </div>
   );
 }
@@ -2829,7 +2872,7 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
                     <span className="text-zinc-700 hidden sm:inline">·</span>
                     <MapPin className="w-3 h-3 shrink-0 hidden sm:inline" /><span className="truncate hidden sm:inline">{k?.name || '—'}</span>
                     <span className="text-zinc-700">·</span>
-                    <Camera className="w-3 h-3 shrink-0" /><span className="shrink-0">{photoCount}/7</span>
+                    <Camera className="w-3 h-3 shrink-0" /><span className="shrink-0">{photoCount}/{PHOTO_KEYS.length}</span>
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
@@ -3011,7 +3054,7 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
                   <div className="min-w-0 flex-1">
                     <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono">{b?.code || '—'} · {v.visit_date}</div>
                     <div className="text-sm font-semibold text-zinc-100 truncate">{b?.name || v.bengkel_name || '—'}</div>
-                    <div className="text-xs text-zinc-500 truncate">{md?.full_name || v.md_name || '—'} · {photoCount}/7 foto</div>
+                    <div className="text-xs text-zinc-500 truncate">{md?.full_name || v.md_name || '—'} · {photoCount}/{PHOTO_KEYS.length} foto</div>
                   </div>
                   <StatusBadge status={v.status} />
                   <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-red-300 transition" />

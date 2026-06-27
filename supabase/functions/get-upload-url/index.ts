@@ -42,6 +42,8 @@ const ALLOWED_PHOTO_KEYS = [
   "spanduk-after",
   "poster-before",
   "poster-after",
+  "delivery-gimmick",
+  "deploy-planogram",
 ];
 
 const ALLOWED_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp"];

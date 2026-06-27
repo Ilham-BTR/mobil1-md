@@ -101,6 +101,8 @@ export async function uploadAllVisitPhotos(photos, visitId) {
     spandukAfter:   { col: 'photo_spanduk_after',  path: 'spanduk-after' },
     posterBefore:   { col: 'photo_poster_before',  path: 'poster-before' },
     posterAfter:    { col: 'photo_poster_after',   path: 'poster-after' },
+    deliveryGimmick:{ col: 'photo_delivery_gimmick', path: 'delivery-gimmick' },
+    deployPlanogram:{ col: 'photo_deploy_planogram', path: 'deploy-planogram' },
   };
 
   const entries = Object.entries(photos)
