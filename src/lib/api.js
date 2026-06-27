@@ -23,9 +23,10 @@ const DEFAULT_MOCK = {
   bengkels: SEED_BENGKELS,
   // Akun login default: 1 admin + 1 MD
   profiles: [
-    { id: 'u1', email: 'budi@mobil1.id',  full_name: 'Budi Santoso', role: 'md',          region_id: null, monthly_target: 40, login_password: 'mobil1' },
-    { id: 'u4', email: 'admin@mobil1.id', full_name: 'Admin Pusat',  role: 'admin',       region_id: null, monthly_target: 0,  login_password: 'mobil1' },
-    { id: 'u5', email: 'super@mobil1.id', full_name: 'Super Admin',  role: 'super_admin', region_id: null, monthly_target: 0,  login_password: 'mobil1' },
+    { id: 'u1', email: 'budi@mobil1.id',  full_name: 'Budi Santoso',  role: 'md',          region_id: 'r1', monthly_target: 40, login_password: 'mobil1' },
+    { id: 'u4', email: 'admin@mobil1.id', full_name: 'Admin Pusat',   role: 'admin',       region_id: null, monthly_target: 0,  login_password: 'mobil1' },
+    { id: 'u5', email: 'super@mobil1.id', full_name: 'Super Admin',   role: 'super_admin', region_id: null, monthly_target: 0,  login_password: 'mobil1' },
+    { id: 'u6', email: 'tl@mobil1.id',    full_name: 'TL Jawa Timur', role: 'tl',          region_id: 'r1', monthly_target: 0,  login_password: 'mobil1' },
   ],
   visits: [],
 };

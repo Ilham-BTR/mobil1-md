@@ -16,7 +16,7 @@ create extension if not exists "uuid-ossp";
 
 -- ENUM TYPES
 do $$ begin
-  create type user_role as enum ('admin', 'bp', 'md', 'super_admin');
+  create type user_role as enum ('admin', 'bp', 'md', 'super_admin', 'tl');
 exception when duplicate_object then null; end $$;
 
 do $$ begin
@@ -163,6 +163,19 @@ create or replace function is_super_admin()
 returns boolean language sql security definer stable as $$
   select get_user_role()::text = 'super_admin'
 $$;
+-- TL (Team Leader): read-only, scoped per region
+create or replace function get_user_region()
+returns uuid language sql security definer stable as $$
+  select region_id from profiles where id = auth.uid()
+$$;
+create or replace function is_tl()
+returns boolean language sql security definer stable as $$
+  select get_user_role()::text = 'tl'
+$$;
+create or replace function md_region(mid uuid)
+returns uuid language sql security definer stable as $$
+  select region_id from profiles where id = mid
+$$;
 
 -- RLS
 alter table profiles enable row level security;
@@ -173,7 +186,7 @@ alter table bengkels enable row level security;
 alter table visits enable row level security;
 
 drop policy if exists profiles_read_own on profiles;
-create policy profiles_read_own on profiles for select using (auth.uid() = id or is_admin());
+create policy profiles_read_own on profiles for select using (auth.uid() = id or is_admin() or (is_tl() and region_id = get_user_region()));
 drop policy if exists profiles_update_own on profiles;
 create policy profiles_update_own on profiles for update using (auth.uid() = id);
 -- Kelola akun (insert/update/delete profil orang lain) hanya super_admin.
@@ -203,7 +216,7 @@ drop policy if exists bengkels_write on bengkels;
 create policy bengkels_write on bengkels for all using (is_admin());
 
 drop policy if exists visits_md_select_own on visits;
-create policy visits_md_select_own on visits for select using (md_id = auth.uid() or is_admin());
+create policy visits_md_select_own on visits for select using (md_id = auth.uid() or is_admin() or (is_tl() and md_region(md_id) = get_user_region()));
 drop policy if exists visits_md_insert_own on visits;
 create policy visits_md_insert_own on visits for insert with check (md_id = auth.uid());
 drop policy if exists visits_md_update_own on visits;

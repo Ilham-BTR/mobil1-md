@@ -1805,7 +1805,7 @@ function DateRangeRow({ dari, sampai, onDari, onSampai, onReset, className = '' 
   );
 }
 
-function AdminAbsenTab({ mds }) {
+function AdminAbsenTab({ mds, allowedMdIds }) {
   const monthsList = useMemo(() => {
     const arr = []; const now = new Date();
     for (let i = 0; i < 12; i++) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); arr.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); }
@@ -1830,6 +1830,7 @@ function AdminAbsenTab({ mds }) {
   }, [month, dari, sampai]);
 
   const filteredRows = rows.filter(a => {
+    if (allowedMdIds && !allowedMdIds.has(a.md_id)) return false;  // scope TL per region
     if (mdId !== 'all' && a.md_id !== mdId) return false;
     if (search.trim() && !`${a.md_name || ''} ${a.md_email || ''}`.toLowerCase().includes(search.trim().toLowerCase())) return false;
     return true;
@@ -2628,12 +2629,20 @@ function AdminView({ profile }) {
 
   if (loading) return <Loading />;
 
+  // Scoping region untuk TL (read-only). Di produksi RLS sudah menyaring; ini untuk mock + konsistensi UI.
+  const isTL = profile?.role === 'tl';
+  const tlRegion = isTL ? (profile?.region_id ?? null) : null;
+  const sMds = isTL ? mds.filter(m => m.region_id === tlRegion) : mds;
+  const allowedMdIds = isTL ? new Set(sMds.map(m => m.id)) : null;
+  const sVisits = isTL ? visits.filter(v => allowedMdIds.has(v.md_id)) : visits;
+  const canManageMaster = !isTL;
+
   const openDetail = (id) => setDetailVisitId(id);
-  const detailVisit = detailVisitId ? visits.find(v => v.id === detailVisitId) : null;
+  const detailVisit = detailVisitId ? sVisits.find(v => v.id === detailVisitId) : null;
   const detailBengkel = detailVisit ? bengkels.find(b => b.id === detailVisit.bengkel_id) : null;
   const detailKota = detailBengkel ? kotas.find(k => k.id === detailBengkel.kota_id) : null;
   const detailDistributor = detailVisit ? distributors.find(d => d.id === detailVisit.distributor_id) : null;
-  const detailMD = detailVisit ? mds.find(m => m.id === detailVisit.md_id) : null;
+  const detailMD = detailVisit ? sMds.find(m => m.id === detailVisit.md_id) : null;
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -2653,12 +2662,12 @@ function AdminView({ profile }) {
         ))}
       </div>
 
-      {tab === 'dashboard' && <DashboardTab visits={visits} mds={mds} onOpenVisit={openDetail} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} />}
-      {tab === 'ranking' && <LeaderboardTab visits={visits} mds={mds} regions={regions} />}
-      {tab === 'visits' && <VisitsTab visits={visits} mds={mds} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} onOpenVisit={openDetail} />}
-      {tab === 'absen' && <AdminAbsenTab mds={mds} />}
-      {tab === 'coverage' && <CoverageTab visits={visits} mds={mds} bengkels={bengkels} kotas={kotas} regions={regions} distributors={distributors} onOpenVisit={openDetail} />}
-      {tab === 'master' && <MasterTab regions={regions} kotas={kotas} distributors={distributors} bengkels={bengkels} mds={mds} onChange={loadAll} isSuperAdmin={isSuperAdmin} />}
+      {tab === 'dashboard' && <DashboardTab visits={sVisits} mds={sMds} onOpenVisit={openDetail} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} />}
+      {tab === 'ranking' && <LeaderboardTab visits={sVisits} mds={sMds} regions={regions} />}
+      {tab === 'visits' && <VisitsTab visits={sVisits} mds={sMds} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} onOpenVisit={openDetail} />}
+      {tab === 'absen' && <AdminAbsenTab mds={sMds} allowedMdIds={allowedMdIds} />}
+      {tab === 'coverage' && <CoverageTab visits={sVisits} mds={sMds} bengkels={bengkels} kotas={kotas} regions={regions} distributors={distributors} onOpenVisit={openDetail} />}
+      {tab === 'master' && <MasterTab regions={regions} kotas={kotas} distributors={distributors} bengkels={bengkels} mds={sMds} onChange={loadAll} isSuperAdmin={isSuperAdmin} canManageMaster={canManageMaster} />}
 
       {detailVisit && (
         <VisitDetailModal
@@ -3299,7 +3308,7 @@ function BengkelForm({ kotas, regions, onSave, initial, onCancel }) {
 // Sub-form akun MD: buat baru atau edit (kalau `initial` di-pass)
 function MDForm({ regions, onSave, initial, onCancel }) {
   const isEdit = !!initial;
-  const ROLES = ['md', 'bp', 'admin', 'super_admin'];
+  const ROLES = ['md', 'tl', 'bp', 'admin', 'super_admin'];
   const [form, setForm] = useState({
     email: initial?.email || '',
     full_name: initial?.full_name || '',
@@ -3365,7 +3374,7 @@ function MDForm({ regions, onSave, initial, onCancel }) {
         </Field>
         <Field label="Role">
           <Select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
-            {ROLES.map(r => <option key={r} value={r}>{r === 'md' ? 'MD (Merchandiser)' : r === 'bp' ? 'BP (Supervisor)' : r === 'super_admin' ? 'Super Admin' : 'Admin'}</option>)}
+            {ROLES.map(r => <option key={r} value={r}>{r === 'md' ? 'MD (Merchandiser)' : r === 'tl' ? 'TL (Team Leader)' : r === 'bp' ? 'BP (Supervisor)' : r === 'super_admin' ? 'Super Admin' : 'Admin'}</option>)}
           </Select>
         </Field>
         <Field label="Region (wilayah kerja)">
@@ -3373,6 +3382,9 @@ function MDForm({ regions, onSave, initial, onCancel }) {
             <option value="">— Tidak di-set —</option>
             {(regions || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
           </Select>
+          {form.role === 'tl' && !form.region_id && (
+            <p className="text-[11px] text-amber-400 mt-1.5 flex items-center gap-1.5"><AlertCircle className="w-3 h-3" />TL wajib punya region — tanpa ini, TL tak melihat data apa pun.</p>
+          )}
         </Field>
         <Field label="Target Visit / Bulan">
           <Input type="number" min="0" placeholder="30" value={form.monthly_target} onChange={e => setForm({ ...form, monthly_target: e.target.value })} />
@@ -4175,7 +4187,7 @@ function MdDetailModal({ md, regionName, onClose }) {
   );
 }
 
-function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange, isSuperAdmin }) {
+function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange, isSuperAdmin, canManageMaster = true }) {
   const [section, setSection] = useState('distributors');
   const [newItem, setNewItem] = useState('');
   const [newItemRegion, setNewItemRegion] = useState('');  // region untuk add kota/distributor
@@ -4285,7 +4297,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange, isSu
 
         <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-5">
           {/* Form: 3 mode — simple input / bengkel form (add or edit) / MD info */}
-          {section === 'bengkels' && (
+          {section === 'bengkels' && canManageMaster && (
             <>
               {!editingBengkel && (
                 <div className="mb-3 flex flex-wrap gap-2 justify-end">
@@ -4312,7 +4324,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange, isSu
             </>
           )}
 
-          {section !== 'mds' && section !== 'bengkels' && (
+          {section !== 'mds' && section !== 'bengkels' && canManageMaster && (
             <>
               <div className="mb-3 flex flex-wrap gap-2 justify-end">
                 <Button variant="secondary" size="sm" onClick={() => setMasterImportOpen(true)}>
@@ -4373,7 +4385,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange, isSu
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-sm text-zinc-200 truncate">{current.getName(item)}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-medium shrink-0 ${item.role === 'super_admin' ? 'bg-fuchsia-600/10 text-fuchsia-400' : item.role === 'admin' ? 'bg-rose-600/10 text-rose-400' : item.role === 'bp' ? 'bg-amber-600/10 text-amber-400' : 'bg-sky-600/10 text-sky-400'}`}>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-medium shrink-0 ${item.role === 'super_admin' ? 'bg-fuchsia-600/10 text-fuchsia-400' : item.role === 'admin' ? 'bg-rose-600/10 text-rose-400' : item.role === 'tl' ? 'bg-teal-600/10 text-teal-400' : item.role === 'bp' ? 'bg-amber-600/10 text-amber-400' : 'bg-sky-600/10 text-sky-400'}`}>
                           {item.role}{item.region_id ? ` · ${regionName(item.region_id) || ''}` : ''}
                         </span>
                       </div>
@@ -4416,14 +4428,14 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, onChange, isSu
                       )}
                     </>
                   )}
-                  {section === 'bengkels' && (
+                  {section === 'bengkels' && canManageMaster && (
                     <button onClick={() => setEditingBengkelId(item.id)}
                       className="opacity-0 group-hover:opacity-100 transition w-7 h-7 rounded-md hover:bg-amber-600/10 hover:text-amber-400 text-zinc-500 flex items-center justify-center"
                       title="Edit bengkel">
                       <Activity className="w-3.5 h-3.5" />
                     </button>
                   )}
-                  {section !== 'mds' && (
+                  {section !== 'mds' && canManageMaster && (
                     <button onClick={() => handleDelete(item.id)}
                       className="opacity-0 group-hover:opacity-100 transition w-7 h-7 rounded-md hover:bg-rose-600/10 hover:text-rose-400 text-zinc-500 flex items-center justify-center"
                       title="Hapus">
