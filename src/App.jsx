@@ -1968,7 +1968,7 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
 
       {detail && (
         <div className="fixed inset-0 z-40 bg-black/80 flex items-end sm:items-center justify-center sm:p-4" onClick={() => setDetail(null)}>
-          <div className="bg-zinc-950 border border-zinc-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-3xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-zinc-950 border border-zinc-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-start justify-between gap-3 p-4 border-b border-zinc-800 sticky top-0 bg-zinc-950">
               <div className="min-w-0">
                 <div className="text-base font-bold text-zinc-100 truncate">{detail.md_name || detail.md_email || '—'}</div>
@@ -1984,8 +1984,8 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
                 { k: 'out', icon: LogOut, label: 'Absen Pulang', time: detail.check_out_at, photo: detail.check_out_photo, lat: detail.check_out_lat, lng: detail.check_out_lng, note: detail.check_out_note }].map(s => (
                 <div key={s.k} className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-3">
                   <div className="flex items-center gap-2 mb-2"><s.icon className="w-4 h-4 text-zinc-400" /><span className="text-sm font-semibold text-zinc-200">{s.label}</span></div>
-                  {s.photo ? <StoredImage src={s.photo} alt={s.label} className="w-full aspect-square rounded-lg object-cover cursor-pointer mb-3" onClick={() => setLightbox(s.photo)} />
-                    : <div className="w-full aspect-square rounded-lg bg-zinc-800 flex items-center justify-center mb-3 text-zinc-600 text-xs">Tidak ada foto</div>}
+                  {s.photo ? <StoredImage src={s.photo} alt={s.label} className="w-full h-56 rounded-lg object-cover cursor-pointer mb-3" onClick={() => setLightbox(s.photo)} />
+                    : <div className="w-full h-56 rounded-lg bg-zinc-800 flex items-center justify-center mb-3 text-zinc-600 text-xs">Tidak ada foto</div>}
                   <div className="text-[11px] text-zinc-500">Jam</div>
                   <div className={`text-sm font-semibold mb-2 ${s.time ? 'text-emerald-400' : 'text-zinc-500'}`}>{s.time ? fmtAbsenTime(s.time) : 'Belum'}</div>
                   <div className="text-[11px] text-zinc-500">Lokasi</div>
