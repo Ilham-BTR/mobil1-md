@@ -1996,6 +1996,29 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
                 </div>
               ))}
             </div>
+            {(() => {
+              const inP = (detail.check_in_lat != null && detail.check_in_lng != null) ? [detail.check_in_lat, detail.check_in_lng] : null;
+              const outP = (detail.check_out_lat != null && detail.check_out_lng != null) ? [detail.check_out_lat, detail.check_out_lng] : null;
+              if (!inP && !outP) return null;
+              return (
+                <div className="px-4 pb-4">
+                  <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2 flex items-center gap-2"><Navigation className="w-3 h-3" />Lokasi di Peta</div>
+                  <div className="rounded-xl overflow-hidden border border-zinc-800">
+                    <MapContainer center={inP || outP} zoom={16} scrollWheelZoom={false} style={{ height: '220px', width: '100%' }}>
+                      <TileLayer attribution='&copy; CARTO &copy; OSM' url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" subdomains="abcd" maxZoom={19} />
+                      {inP && <Marker position={inP} icon={BLUE_PIN_ICON}><Popup><div className="text-xs"><div className="font-semibold">Absen Masuk</div><div className="font-mono text-[10px] text-zinc-500">{inP[0].toFixed(5)}, {inP[1].toFixed(5)}</div><a href={`https://www.google.com/maps?q=${inP[0]},${inP[1]}`} target="_blank" rel="noreferrer" className="text-sky-600 underline">Buka di Google Maps →</a></div></Popup></Marker>}
+                      {outP && <Marker position={outP} icon={RED_PIN_ICON}><Popup><div className="text-xs"><div className="font-semibold">Absen Pulang</div><div className="font-mono text-[10px] text-zinc-500">{outP[0].toFixed(5)}, {outP[1].toFixed(5)}</div><a href={`https://www.google.com/maps?q=${outP[0]},${outP[1]}`} target="_blank" rel="noreferrer" className="text-sky-600 underline">Buka di Google Maps →</a></div></Popup></Marker>}
+                      {inP && outP && <Polyline positions={[inP, outP]} pathOptions={{ color: '#71717a', weight: 2, dashArray: '6 4' }} />}
+                      <FitBounds points={[inP, outP].filter(Boolean)} />
+                    </MapContainer>
+                    <div className="bg-zinc-950 border-t border-zinc-800 px-3 py-2 flex items-center gap-4 text-[11px] text-zinc-500">
+                      {inP && <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500" />Masuk</span>}
+                      {outP && <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500" />Pulang</span>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
             {isSuperAdmin && (
               <div className="p-4 pt-0">
                 <button onClick={() => handleDeleteAbsen(detail.id)} disabled={deleting}
