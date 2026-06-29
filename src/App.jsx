@@ -2042,7 +2042,7 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
 }
 
 function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
-  const [tab, setTab] = useState('new');
+  const [tab, setTab] = useState('absen');
   const [visits, setVisits] = useState([]);
   const [bengkels, setBengkels] = useState([]);
   const [regions, setRegions] = useState([]);
