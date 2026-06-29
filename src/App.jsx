@@ -2268,6 +2268,9 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
     status: 'Pemasangan', subType: '', remarks: '',
     photos: { ...emptyPhotos },
   });
+  // Draft dianggap "ada isinya" hanya kalau user benar-benar mengisi sesuatu
+  // (bukan sekadar region/tanggal/status default yang terisi otomatis).
+  const draftHasContent = (d) => !!(d && (d.bengkelId || d.kotaId || d.distributorId || d.pic || d.phone || d.remarks || d.subType));
   // Pulihkan draft (field teks saja — foto tak bisa disimpan di localStorage)
   const [form, setForm] = useState(() => {
     const base = makeDefaultForm();
@@ -2279,7 +2282,11 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
   });
   const [draftRestored, setDraftRestored] = useState(false);
   useEffect(() => {
-    try { if (localStorage.getItem(DRAFT_KEY)) setDraftRestored(true); } catch { /* noop */ }
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw && draftHasContent(JSON.parse(raw))) setDraftRestored(true);
+      else if (raw) localStorage.removeItem(DRAFT_KEY);  // bersihkan draft kosong lama
+    } catch { /* noop */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [submitting, setSubmitting] = useState(false);
@@ -2331,7 +2338,10 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
   // Autosave draft (field teks saja) tiap ada perubahan
   useEffect(() => {
     const { photos, ...rest } = form;
-    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(rest)); } catch { /* storage penuh / private mode */ }
+    try {
+      if (draftHasContent(rest)) localStorage.setItem(DRAFT_KEY, JSON.stringify(rest));
+      else localStorage.removeItem(DRAFT_KEY);  // jangan simpan draft kosong/default
+    } catch { /* storage penuh / private mode */ }
   }, [form.regionId, form.kotaId, form.bengkelId, form.distributorId, form.date, form.pic, form.phone, form.status, form.subType, form.remarks]);
 
   const setPhoto = (key, val) => setForm(f => ({ ...f, photos: { ...f.photos, [key]: val } }));
