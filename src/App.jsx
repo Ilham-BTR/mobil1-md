@@ -11,7 +11,7 @@ import {
   Users, Briefcase, Globe, ChevronDown, LogOut, Shield,
   Lock, Mail, Eye, EyeOff, AlertCircle, Fingerprint, Loader2,
   Navigation, Phone, FileText, Download, Search, Upload, FileSpreadsheet,
-  LogIn, Clock, CalendarDays, Trophy, Power
+  LogIn, Clock, CalendarDays, Trophy, Power, MessageCircle
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Polyline, Circle } from 'react-leaflet';
 import L from 'leaflet';
@@ -2068,6 +2068,38 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
   );
 }
 
+// Tombol mengambang Chat CS → WhatsApp (untuk MD)
+function WhatsAppCS({ name }) {
+  const [open, setOpen] = useState(false);
+  const phone = '6282213502467'; // 0822-1350-2467 (Indonesia)
+  const msg = encodeURIComponent(`Halo CS Mobil1 POSM, saya ${name || 'MD'}. Saya mau tanya / ada kendala:`);
+  const waUrl = `https://wa.me/${phone}?text=${msg}`;
+  return (
+    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
+      {open && (
+        <div className="w-64 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-2">
+          <div className="bg-[#25D366] px-4 py-3 flex items-center gap-2">
+            <MessageCircle className="w-5 h-5 text-white" />
+            <div className="text-white text-sm font-semibold">CS Mobil1 POSM</div>
+          </div>
+          <div className="p-4">
+            <p className="text-sm text-zinc-300 mb-3">Ada kendala atau pertanyaan? Chat CS kami langsung via WhatsApp.</p>
+            <a href={waUrl} target="_blank" rel="noreferrer"
+              className="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white text-sm font-semibold rounded-xl py-2.5 transition">
+              <MessageCircle className="w-4 h-4" />Chat Sekarang
+            </a>
+            <p className="text-[11px] text-zinc-500 text-center mt-2">0822-1350-2467</p>
+          </div>
+        </div>
+      )}
+      <button onClick={() => setOpen(o => !o)} title="Chat CS WhatsApp"
+        className="w-14 h-14 rounded-full bg-[#25D366] hover:bg-[#1ebe5d] shadow-lg shadow-emerald-900/40 flex items-center justify-center transition active:scale-95">
+        {open ? <X className="w-6 h-6 text-white" /> : <MessageCircle className="w-7 h-7 text-white" />}
+      </button>
+    </div>
+  );
+}
+
 function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
   const [tab, setTab] = useState('absen');
   const [visits, setVisits] = useState([]);
@@ -2125,6 +2157,7 @@ function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
       {tab === 'new' && <VisitForm currentMD={currentMD} bengkels={bengkels} regions={regions} kotas={kotas} distributors={distributors} onSubmitted={() => { reloadVisits(); setTab('history'); }} onNeedAbsen={() => setTab('absen')} />}
       {tab === 'progress' && <MDDashboard currentMD={currentMD} visits={visits} bengkels={bengkels} kotas={kotas} />}
       {tab === 'history' && <VisitHistory visits={visits} bengkels={bengkels} kotas={kotas} distributors={distributors} />}
+      <WhatsAppCS name={currentMD.full_name} />
     </div>
   );
 }
