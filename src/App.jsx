@@ -1011,7 +1011,12 @@ const PhotoTile = ({ label, photo, onChange, required }) => {
                 <span className="text-[9px] text-white mt-1.5 font-medium uppercase tracking-wider">Compressing…</span>
               </div>
             )}
-            {photo.status === 'ready' && (
+            {photo.status === 'uploading' && (
+              <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-sky-500 flex items-center justify-center shadow-lg" title="Mengupload…">
+                <Loader2 className="w-3 h-3 text-zinc-900 animate-spin" />
+              </div>
+            )}
+            {(photo.status === 'ready' || photo.status === 'uploaded') && (
               <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg">
                 <Check className="w-3 h-3 text-zinc-900" strokeWidth={3} />
               </div>
@@ -1757,18 +1762,25 @@ function AbsenForm({ kind, currentMD, todayStr, onCancel, onDone }) {
     setSelfie({ status: 'compressing', preview, file: null });
     try {
       const compressed = await imageCompression(file, { maxSizeMB: 0.3, maxWidthOrHeight: 1280, useWebWorker: true, fileType: 'image/jpeg' });
-      setSelfie({ status: 'ready', preview: URL.createObjectURL(compressed), file: compressed });
+      const cPreview = URL.createObjectURL(compressed);
+      setSelfie({ status: 'uploading', preview: cPreview, file: compressed });
+      // Upload-saat-diambil: selfie langsung naik ke storage (path attendance/{userId}/{date}/{kind})
+      api.uploadAttendancePhoto(compressed, currentMD.id, todayStr, kind)
+        .then(url => setSelfie(s => (s?.file === compressed ? { ...s, status: 'uploaded', url } : s)))
+        .catch(err => setSelfie(s => (s?.file === compressed ? { ...s, status: 'error', error: err.message } : s)));
     } catch (err) { setSelfie({ status: 'error', preview, error: err.message }); }
   };
 
-  const ready = selfie?.status === 'ready' && gps.status === 'ready' && !submitting;
+  const selfieReady = ['ready', 'uploading', 'uploaded'].includes(selfie?.status);
+  const ready = selfieReady && gps.status === 'ready' && !submitting;
   const title = kind === 'in' ? 'Absen Masuk' : 'Absen Pulang';
 
   const submit = async () => {
     if (!ready) return;
     setSubmitting(true); setError('');
     try {
-      const args = { mdId: currentMD.id, date: todayStr, lat: gps.lat, lng: gps.lng, photoFile: selfie.file, note: note.trim() };
+      const args = { mdId: currentMD.id, date: todayStr, lat: gps.lat, lng: gps.lng,
+        photoUrl: selfie.url, photoFile: selfie.file, note: note.trim() };
       if (kind === 'in') await api.checkIn(args); else await api.checkOut(args);
       onDone();
     } catch (e) { setError(e.message || 'Gagal menyimpan absen'); setSubmitting(false); }
@@ -1785,7 +1797,9 @@ function AbsenForm({ kind, currentMD, todayStr, onCancel, onDone }) {
           {selfie ? <>
             <img src={selfie.preview} alt="selfie" className="absolute inset-0 w-full h-full object-cover" />
             {selfie.status === 'compressing' && <div className="absolute inset-0 bg-zinc-950/70 flex items-center justify-center"><Loader2 className="w-6 h-6 text-white animate-spin" /></div>}
-            {selfie.status === 'ready' && <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center"><Check className="w-3 h-3 text-zinc-900" strokeWidth={3} /></div>}
+            {selfie.status === 'uploading' && <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-sky-500 flex items-center justify-center" title="Mengupload…"><Loader2 className="w-3 h-3 text-zinc-900 animate-spin" /></div>}
+            {(selfie.status === 'ready' || selfie.status === 'uploaded') && <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center"><Check className="w-3 h-3 text-zinc-900" strokeWidth={3} /></div>}
+            {selfie.status === 'error' && <div className="absolute inset-0 bg-rose-600/30 flex items-center justify-center"><span className="text-[10px] text-rose-100 font-semibold">Gagal upload — ketuk ulangi</span></div>}
           </> : <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-zinc-600"><Camera className="w-6 h-6" /><span className="text-[10px] font-medium">Ambil Selfie</span></div>}
         </button>
       </Field>
@@ -2306,6 +2320,8 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
   const [error, setError] = useState('');
   // Lock sinkron — cegah dobel submit dari double-tap cepat (sebelum state submitting ke-render)
   const submitLock = useRef(false);
+  // ID visit dibuat di awal supaya tiap foto bisa di-upload duluan (eager) ke path-nya.
+  const [visitId] = useState(() => crypto.randomUUID());
 
   // GPS user state — di-capture saat bengkel dipilih
   const [gps, setGps] = useState({ status: 'idle', lat: null, lng: null, accuracy: null, error: null });
@@ -2355,12 +2371,33 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
     } catch { /* storage penuh / private mode */ }
   }, [form.regionId, form.kotaId, form.bengkelId, form.distributorId, form.date, form.pic, form.phone, form.status, form.subType, form.remarks]);
 
-  const setPhoto = (key, val) => setForm(f => ({ ...f, photos: { ...f.photos, [key]: val } }));
-  const photoCount = Object.values(form.photos).filter(p => p?.status === 'ready').length;
+  // Upload-saat-foto-diambil: begitu foto selesai dikompres → langsung upload
+  // ke storage (latar belakang). Saat submit tinggal pakai URL-nya → instan.
+  const setPhoto = (key, val) => {
+    if (val?.status === 'ready' && val.file && !val.url) {
+      setForm(f => ({ ...f, photos: { ...f.photos, [key]: { ...val, status: 'uploading' } } }));
+      api.uploadOneVisitPhoto(val.file, visitId, key)
+        .then(({ url }) => setForm(f => {
+          const cur = f.photos[key];
+          if (!cur || cur.file !== val.file) return f;   // sudah diganti/dihapus
+          return { ...f, photos: { ...f.photos, [key]: { ...cur, status: 'uploaded', url } } };
+        }))
+        .catch(err => setForm(f => {
+          const cur = f.photos[key];
+          if (!cur || cur.file !== val.file) return f;
+          return { ...f, photos: { ...f.photos, [key]: { ...cur, status: 'error', error: err.message } } };
+        }));
+    } else {
+      setForm(f => ({ ...f, photos: { ...f.photos, [key]: val } }));
+    }
+  };
+  const PRESENT = ['ready', 'uploading', 'uploaded'];
+  const photoCount = Object.values(form.photos).filter(p => PRESENT.includes(p?.status)).length;
   const anyCompressing = Object.values(form.photos).some(p => p?.status === 'compressing');
+  const anyUploading = Object.values(form.photos).some(p => p?.status === 'uploading');
 
   const requiredPhotos = ['in', 'tampakDepan', 'out'];
-  const hasAllRequiredPhotos = requiredPhotos.every(k => form.photos[k]?.status === 'ready');
+  const hasAllRequiredPhotos = requiredPhotos.every(k => PRESENT.includes(form.photos[k]?.status));
   const canSubmit = form.bengkelId && form.distributorId && form.subType && form.pic && form.phone && hasAllRequiredPhotos && !anyCompressing && !submitting;
 
   // Jarak GPS user ↔ bengkel (kalau dua-duanya ada) untuk peringatan on-site
@@ -2383,6 +2420,7 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
       const bengkelLacksCoords = selectedBengkel?.lat == null || selectedBengkel?.lng == null;
 
       const { bengkelBackfilled } = await api.createVisit({
+        visitId,
         mdId: currentMD.id,
         bengkelId: form.bengkelId,
         distributorId: form.distributorId,

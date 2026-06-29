@@ -5,6 +5,8 @@
 
 import { supabase, MOCK_MODE } from './supabase';
 import { uploadAllVisitPhotos, uploadAttendancePhoto } from './storage';
+// Re-export untuk upload-saat-foto-diambil (eager upload) dari UI
+export { uploadOneVisitPhoto, uploadAttendancePhoto } from './storage';
 import { SEED_REGIONS, SEED_DISTRIBUTORS, SEED_KOTAS, SEED_BENGKELS } from './seedData';
 import { clearPhotos, deletePhotosByVisit } from './photoStore';
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
@@ -576,8 +578,9 @@ export async function fetchVisits({ mdId, month } = {}) {
  * @returns {Promise<{ visit: Object, bengkelBackfilled: boolean }>}
  */
 export async function createVisit(args) {
-  // Generate UUID locally so we can use it for photo paths before insert
-  const visitId = crypto.randomUUID();
+  // Pakai visitId dari form (kalau foto sudah di-upload duluan pakai id itu),
+  // kalau tidak ada generate baru.
+  const visitId = args.visitId || crypto.randomUUID();
 
   // 1. Upload all photos in parallel
   const photoUrls = await uploadAllVisitPhotos(args.photos, visitId);
@@ -766,8 +769,8 @@ export async function fetchAttendanceRecap(date) {
 }
 
 // Absen masuk: upload selfie, buat baris absen hari ini (upsert by md_id+date).
-export async function checkIn({ mdId, date, lat, lng, photoFile, note }) {
-  const photoUrl = photoFile ? await uploadAttendancePhoto(photoFile, mdId, date, 'in') : null;
+export async function checkIn({ mdId, date, lat, lng, photoFile, photoUrl: preUrl, note }) {
+  const photoUrl = preUrl || (photoFile ? await uploadAttendancePhoto(photoFile, mdId, date, 'in') : null);
   const payload = {
     md_id: mdId, date,
     check_in_at: new Date().toISOString(),
@@ -790,8 +793,8 @@ export async function checkIn({ mdId, date, lat, lng, photoFile, note }) {
 }
 
 // Absen pulang: upload selfie, update baris hari ini.
-export async function checkOut({ mdId, date, lat, lng, photoFile, note }) {
-  const photoUrl = photoFile ? await uploadAttendancePhoto(photoFile, mdId, date, 'out') : null;
+export async function checkOut({ mdId, date, lat, lng, photoFile, photoUrl: preUrl, note }) {
+  const photoUrl = preUrl || (photoFile ? await uploadAttendancePhoto(photoFile, mdId, date, 'out') : null);
   const patch = {
     check_out_at: new Date().toISOString(),
     check_out_lat: lat, check_out_lng: lng,

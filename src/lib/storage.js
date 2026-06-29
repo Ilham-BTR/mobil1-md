@@ -91,27 +91,39 @@ export async function uploadAttendancePhoto(file, mdId, date, kind) {
  * @param {string} visitId - UUID visit
  * @returns {Promise<Object>} - { photo_in, photo_out, photo_spanduk_before, ... } siap di-insert ke `visits`
  */
-export async function uploadAllVisitPhotos(photos, visitId) {
-  // Map UI key → DB column name + storage path
-  const keyMap = {
-    tampakDepan:    { col: 'photo_tampak_depan',   path: 'tampak-depan' },
-    in:             { col: 'photo_in',             path: 'foto-in' },
-    out:            { col: 'photo_out',            path: 'foto-out' },
-    spandukBefore:  { col: 'photo_spanduk_before', path: 'spanduk-before' },
-    spandukAfter:   { col: 'photo_spanduk_after',  path: 'spanduk-after' },
-    posterBefore:   { col: 'photo_poster_before',  path: 'poster-before' },
-    posterAfter:    { col: 'photo_poster_after',   path: 'poster-after' },
-    deliveryGimmick:{ col: 'photo_delivery_gimmick', path: 'delivery-gimmick' },
-    deployPlanogram:{ col: 'photo_deploy_planogram', path: 'deploy-planogram' },
-  };
+// Map UI key → DB column name + storage path
+export const VISIT_PHOTO_MAP = {
+  tampakDepan:    { col: 'photo_tampak_depan',     path: 'tampak-depan' },
+  in:             { col: 'photo_in',               path: 'foto-in' },
+  out:            { col: 'photo_out',              path: 'foto-out' },
+  spandukBefore:  { col: 'photo_spanduk_before',   path: 'spanduk-before' },
+  spandukAfter:   { col: 'photo_spanduk_after',    path: 'spanduk-after' },
+  posterBefore:   { col: 'photo_poster_before',    path: 'poster-before' },
+  posterAfter:    { col: 'photo_poster_after',     path: 'poster-after' },
+  deliveryGimmick:{ col: 'photo_delivery_gimmick', path: 'delivery-gimmick' },
+  deployPlanogram:{ col: 'photo_deploy_planogram', path: 'deploy-planogram' },
+};
 
+/**
+ * Upload 1 foto visit (dipakai untuk upload-saat-foto-diambil / eager upload).
+ * @returns {Promise<{col: string, url: string}>}
+ */
+export async function uploadOneVisitPhoto(file, visitId, uiKey) {
+  const m = VISIT_PHOTO_MAP[uiKey];
+  if (!m) throw new Error('Foto key tak dikenal: ' + uiKey);
+  const url = await uploadVisitPhoto(file, visitId, m.path);
+  return { col: m.col, url };
+}
+
+export async function uploadAllVisitPhotos(photos, visitId) {
+  // Foto yang sudah ter-upload duluan (punya .url) tak di-upload ulang.
   const entries = Object.entries(photos)
-    .filter(([, p]) => p?.status === 'ready')
-    .map(([uiKey, p]) => ({ uiKey, ...keyMap[uiKey], file: p.file }));
+    .filter(([uiKey, p]) => VISIT_PHOTO_MAP[uiKey] && (p?.url || (p?.file && (p.status === 'ready' || p.status === 'uploading' || p.status === 'uploaded'))))
+    .map(([uiKey, p]) => ({ ...VISIT_PHOTO_MAP[uiKey], file: p.file, url: p.url }));
 
   const results = await Promise.all(
     entries.map(async (e) => {
-      const url = await uploadVisitPhoto(e.file, visitId, e.path);
+      const url = e.url || await uploadVisitPhoto(e.file, visitId, e.path);
       return [e.col, url];
     })
   );
