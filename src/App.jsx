@@ -1801,6 +1801,17 @@ function AbsenForm({ kind, currentMD, todayStr, onCancel, onDone }) {
           </div>
           <button type="button" onClick={fetchGPS} className="text-zinc-500 hover:text-zinc-300"><Navigation className="w-4 h-4" /></button>
         </div>
+        {gps.status === 'ready' && (
+          <div className="mt-2 rounded-lg overflow-hidden border border-zinc-800">
+            <MapContainer center={[gps.lat, gps.lng]} zoom={16} scrollWheelZoom={false} style={{ height: '170px', width: '100%' }}>
+              <TileLayer attribution='&copy; CARTO &copy; OSM' url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" subdomains="abcd" maxZoom={19} />
+              <Marker position={[gps.lat, gps.lng]} icon={BLUE_PIN_ICON} />
+              <RecenterMap lat={gps.lat} lng={gps.lng} />
+            </MapContainer>
+            <a href={`https://www.google.com/maps?q=${gps.lat},${gps.lng}`} target="_blank" rel="noreferrer"
+              className="block bg-zinc-950 border-t border-zinc-800 px-3 py-1.5 text-[11px] text-sky-400 hover:text-sky-300">Buka di Google Maps →</a>
+          </div>
+        )}
       </Field>
 
       <Field label="Catatan">
