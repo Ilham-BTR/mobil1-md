@@ -2122,7 +2122,7 @@ function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
       </div>
 
       {tab === 'absen' && <AbsenTab currentMD={currentMD} />}
-      {tab === 'new' && <VisitForm currentMD={currentMD} bengkels={bengkels} regions={regions} kotas={kotas} distributors={distributors} onSubmitted={() => { reloadVisits(); setTab('history'); }} />}
+      {tab === 'new' && <VisitForm currentMD={currentMD} bengkels={bengkels} regions={regions} kotas={kotas} distributors={distributors} onSubmitted={() => { reloadVisits(); setTab('history'); }} onNeedAbsen={() => setTab('absen')} />}
       {tab === 'progress' && <MDDashboard currentMD={currentMD} visits={visits} bengkels={bengkels} kotas={kotas} />}
       {tab === 'history' && <VisitHistory visits={visits} bengkels={bengkels} kotas={kotas} distributors={distributors} />}
     </div>
@@ -2280,7 +2280,7 @@ function MDDashboard({ currentMD, visits, bengkels, kotas }) {
   );
 }
 
-function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmitted }) {
+function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmitted, onNeedAbsen }) {
   const DRAFT_KEY = `visitDraft:${currentMD.id}`;
   const emptyPhotos = { tampakDepan: null, in: null, out: null, spandukBefore: null, spandukAfter: null, posterBefore: null, posterAfter: null, deliveryGimmick: null, deployPlanogram: null };
   const makeDefaultForm = () => ({
@@ -2322,6 +2322,14 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
   const submitLock = useRef(false);
   // ID visit dibuat di awal supaya tiap foto bisa di-upload duluan (eager) ke path-nya.
   const [visitId] = useState(() => crypto.randomUUID());
+  // Cek absen masuk hari ini — MD wajib absen dulu sebelum boleh buat visit.
+  const [checkedInToday, setCheckedInToday] = useState(null); // null=loading, true/false
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    api.fetchTodayAttendance(currentMD.id, today)
+      .then(a => setCheckedInToday(!!a?.check_in_at))
+      .catch(() => setCheckedInToday(true)); // gagal cek → jangan blokir (fail-open)
+  }, [currentMD.id]);
 
   // GPS user state — di-capture saat bengkel dipilih
   const [gps, setGps] = useState({ status: 'idle', lat: null, lng: null, accuracy: null, error: null });
@@ -2398,7 +2406,7 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
 
   const requiredPhotos = ['in', 'tampakDepan', 'out'];
   const hasAllRequiredPhotos = requiredPhotos.every(k => PRESENT.includes(form.photos[k]?.status));
-  const canSubmit = form.bengkelId && form.distributorId && form.subType && form.pic && form.phone && hasAllRequiredPhotos && !anyCompressing && !submitting;
+  const canSubmit = checkedInToday !== false && form.bengkelId && form.distributorId && form.subType && form.pic && form.phone && hasAllRequiredPhotos && !anyCompressing && !submitting;
 
   // Jarak GPS user ↔ bengkel (kalau dua-duanya ada) untuk peringatan on-site
   const gpsDistance = (gps.status === 'ready' && selectedBengkel?.lat != null && selectedBengkel?.lng != null)
@@ -2447,6 +2455,18 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
       submitLock.current = false;  // error → boleh coba lagi
     }
   };
+
+  // Gate: wajib absen masuk dulu sebelum boleh buat visit hari ini.
+  if (checkedInToday === false) {
+    return (
+      <div className="max-w-md mx-auto text-center py-12">
+        <div className="w-14 h-14 rounded-2xl bg-red-600/10 flex items-center justify-center mx-auto mb-4"><CalendarDays className="w-7 h-7 text-red-500" /></div>
+        <h3 className="text-lg font-bold text-zinc-100 mb-1">Absen Masuk dulu</h3>
+        <p className="text-sm text-zinc-500 mb-5 max-w-xs mx-auto">Kamu belum absen masuk hari ini. Lakukan <span className="text-zinc-300">Absen Masuk</span> dulu sebelum membuat visit.</p>
+        <Button onClick={onNeedAbsen}><LogIn className="w-4 h-4" />Absen Masuk Sekarang</Button>
+      </div>
+    );
+  }
 
   return (
     <>
