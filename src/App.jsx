@@ -596,12 +596,12 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
                   />
                   {hasBengkelCoord && (
                     <Marker position={[bengkel.lat, bengkel.lng]} icon={RED_PIN_ICON}>
-                      <Popup><div className="text-xs"><div className="font-semibold">{bengkel.name}</div><div className="font-mono text-[10px] text-zinc-500">{bengkel.lat.toFixed(5)}, {bengkel.lng.toFixed(5)}</div></div></Popup>
+                      <Popup><div className="text-xs"><div className="font-semibold">{bengkel.name}</div><div className="font-mono text-[10px] text-zinc-500">{bengkel.lat.toFixed(5)}, {bengkel.lng.toFixed(5)}</div><a href={`https://www.google.com/maps?q=${bengkel.lat},${bengkel.lng}`} target="_blank" rel="noreferrer" className="text-sky-600 underline">Buka di Google Maps →</a></div></Popup>
                     </Marker>
                   )}
                   {hasVisitCoord && (
                     <Marker position={[visit.visit_lat, visit.visit_lng]} icon={BLUE_PIN_ICON}>
-                      <Popup><div className="text-xs"><div className="font-semibold">Lokasi MD saat visit</div><div className="font-mono text-[10px] text-zinc-500">{visit.visit_lat.toFixed(5)}, {visit.visit_lng.toFixed(5)}</div></div></Popup>
+                      <Popup><div className="text-xs"><div className="font-semibold">Lokasi MD saat visit</div><div className="font-mono text-[10px] text-zinc-500">{visit.visit_lat.toFixed(5)}, {visit.visit_lng.toFixed(5)}</div><a href={`https://www.google.com/maps?q=${visit.visit_lat},${visit.visit_lng}`} target="_blank" rel="noreferrer" className="text-sky-600 underline">Buka di Google Maps →</a></div></Popup>
                     </Marker>
                   )}
                   {hasBengkelCoord && hasVisitCoord && (
@@ -617,13 +617,13 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
                   {hasBengkelCoord && (
                     <div className="px-3 py-2 flex justify-between">
                       <span className="text-zinc-400 flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500" />Bengkel</span>
-                      <span className="font-mono text-zinc-300">{bengkel.lat.toFixed(5)}, {bengkel.lng.toFixed(5)}</span>
+                      <a href={`https://www.google.com/maps?q=${bengkel.lat},${bengkel.lng}`} target="_blank" rel="noreferrer" className="font-mono text-sky-400 hover:text-sky-300 inline-flex items-center gap-1" title="Buka di Google Maps">{bengkel.lat.toFixed(5)}, {bengkel.lng.toFixed(5)}<MapPin className="w-3 h-3" /></a>
                     </div>
                   )}
                   {hasVisitCoord && (
                     <div className="px-3 py-2 flex justify-between">
                       <span className="text-zinc-400 flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500" />MD saat visit</span>
-                      <span className="font-mono text-zinc-300">{visit.visit_lat.toFixed(5)}, {visit.visit_lng.toFixed(5)}</span>
+                      <a href={`https://www.google.com/maps?q=${visit.visit_lat},${visit.visit_lng}`} target="_blank" rel="noreferrer" className="font-mono text-sky-400 hover:text-sky-300 inline-flex items-center gap-1" title="Buka di Google Maps">{visit.visit_lat.toFixed(5)}, {visit.visit_lng.toFixed(5)}<MapPin className="w-3 h-3" /></a>
                     </div>
                   )}
                   {distance != null && (
