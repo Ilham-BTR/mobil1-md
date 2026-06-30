@@ -4774,10 +4774,10 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
             <>
               {!editingBengkel && (
                 <div className="mb-3 flex flex-wrap gap-2 justify-end">
+                  {!addOpen && <Button variant="primary" size="sm" onClick={() => setAddOpen(true)}><Plus className="w-3.5 h-3.5" />Tambah Bengkel</Button>}
                   <Button variant="secondary" size="sm" onClick={handleExportXlsx} disabled={filteredItems.length === 0}>
                     <Download className="w-3.5 h-3.5" />Export Excel ({filteredItems.length})
                   </Button>
-                  {!addOpen && <Button variant="primary" size="sm" onClick={() => setAddOpen(true)}><Plus className="w-3.5 h-3.5" />Tambah Bengkel</Button>}
                   <Button variant="secondary" size="sm" onClick={() => setImportOpen(true)}>
                     <FileSpreadsheet className="w-3.5 h-3.5" />Import Excel
                   </Button>
@@ -4836,10 +4836,10 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
             <>
               {!editingMD && (
                 <div className="mb-3 flex flex-wrap gap-2 justify-end">
+                  {!addOpen && <Button variant="primary" size="sm" onClick={() => setAddOpen(true)}><Plus className="w-3.5 h-3.5" />Tambah Akun</Button>}
                   <Button variant="secondary" size="sm" onClick={handleExportXlsx} disabled={filteredItems.length === 0}>
                     <Download className="w-3.5 h-3.5" />Export Excel ({filteredItems.length})
                   </Button>
-                  {!addOpen && <Button variant="primary" size="sm" onClick={() => setAddOpen(true)}><Plus className="w-3.5 h-3.5" />Tambah Akun</Button>}
                   <Button variant="secondary" size="sm" onClick={() => setMasterImportOpen(true)}>
                     <FileSpreadsheet className="w-3.5 h-3.5" />Import Excel
                   </Button>
