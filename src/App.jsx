@@ -4577,10 +4577,13 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
   const needsRegion = section === 'kotas' || section === 'distributors';
 
   // Daftar ter-filter oleh search (pakai nama tampilan + email/kode bila ada)
-  const filteredItems = search.trim()
+  // Bisa cari beberapa data sekaligus — pisahkan dengan koma / titik koma / baris baru.
+  // Item cocok kalau mengandung SALAH SATU kata kunci (OR).
+  const searchTerms = search.trim().toLowerCase().split(/[,;\n]+/).map(t => t.trim()).filter(Boolean);
+  const filteredItems = searchTerms.length
     ? current.items.filter(it => {
         const hay = `${current.getName(it)} ${it.email || ''} ${it.code || ''} ${it.role || ''}`.toLowerCase();
-        return hay.includes(search.trim().toLowerCase());
+        return searchTerms.some(t => hay.includes(t));
       })
     : current.items;
 
@@ -4784,7 +4787,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
             <div className="relative mb-3">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
               <input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder={`Cari ${current.label.toLowerCase()}…`}
+                placeholder={`Cari ${current.label.toLowerCase()}… (banyak: pisahkan dengan koma)`}
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-9 pr-16 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-600/50" />
               {search && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-zinc-500">{filteredItems.length}/{current.items.length}</span>}
             </div>
