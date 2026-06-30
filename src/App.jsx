@@ -3601,7 +3601,7 @@ function BengkelForm({ kotas, regions, bengkels = [], onSave, initial, onCancel 
           </>}
         </span>
         {onCancel && (
-          <button onClick={onCancel} className="text-zinc-500 hover:text-zinc-100 text-[11px] flex items-center gap-1">
+          <button onClick={onCancel} className="text-xs font-medium flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-rose-600 text-zinc-100 border border-zinc-700 hover:border-rose-600 transition shrink-0">
             <X className="w-3 h-3" />Batal
           </button>
         )}
@@ -3713,7 +3713,7 @@ function MDForm({ regions, onSave, initial, onCancel }) {
             : <><Plus className="w-3.5 h-3.5" />Buat Akun MD Baru</>}
         </span>
         {onCancel && (
-          <button onClick={onCancel} className="text-zinc-500 hover:text-zinc-100 text-[11px] flex items-center gap-1">
+          <button onClick={onCancel} className="text-xs font-medium flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-rose-600 text-zinc-100 border border-zinc-700 hover:border-rose-600 transition shrink-0">
             <X className="w-3 h-3" />Batal
           </button>
         )}
@@ -4534,8 +4534,8 @@ function MdDetailModal({ md, regionName, onClose }) {
     ['Dibuat', md.created_at ? new Date(md.created_at).toLocaleString('id-ID') : '—'],
   ];
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm p-4 animate-fade-in" onClick={onClose}>
+      <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-pop-in" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between gap-3">
           <h2 className="font-display font-bold text-lg text-zinc-100">Detail Akun MD</h2>
           <button onClick={onClose} className="w-9 h-9 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 flex items-center justify-center"><X className="w-4 h-4" /></button>
@@ -4577,6 +4577,11 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
   const [selectedIds, setSelectedIds] = useState(() => new Set()); // bulk-select (kota & bengkel)
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [addOpen, setAddOpen] = useState(false); // form tambah (bengkel/akun) tertutup default
+  const [formClosing, setFormClosing] = useState(false); // utk animasi tutup modal form
+  const closeForm = () => {
+    setFormClosing(true);
+    setTimeout(() => { setEditingBengkelId(null); setEditingMDId(null); setAddOpen(false); setFormClosing(false); }, 180);
+  };
   const [pageSize, setPageSize] = useState(25);  // 10/25/50/100 atau 'all'
   const [page, setPage] = useState(1);
   const [filterRegion, setFilterRegion] = useState(''); // filter list bengkel
@@ -4796,14 +4801,14 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
                 </div>
               )}
               {(editingBengkel || addOpen) && (
-                <div className="fixed inset-0 z-[1500] bg-black/70 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto"
-                  onClick={() => { setEditingBengkelId(null); setAddOpen(false); }}>
-                  <div className="w-full max-w-2xl my-auto" onClick={e => e.stopPropagation()}>
+                <div className={`fixed inset-0 z-[1500] bg-black/70 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto ${formClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
+                  onClick={closeForm}>
+                  <div className={`w-full max-w-2xl my-auto ${formClosing ? 'animate-pop-out' : 'animate-pop-in'}`} onClick={e => e.stopPropagation()}>
                     {editingBengkel ? (
                       <BengkelForm key={editingBengkel.id} kotas={kotas} regions={regions} bengkels={bengkels}
-                        initial={editingBengkel} onSave={handleUpdateBengkel} onCancel={() => setEditingBengkelId(null)} />
+                        initial={editingBengkel} onSave={handleUpdateBengkel} onCancel={closeForm} />
                     ) : (
-                      <BengkelForm kotas={kotas} regions={regions} bengkels={bengkels} onSave={handleAddBengkel} onCancel={() => setAddOpen(false)} />
+                      <BengkelForm kotas={kotas} regions={regions} bengkels={bengkels} onSave={handleAddBengkel} onCancel={closeForm} />
                     )}
                   </div>
                 </div>
@@ -4858,13 +4863,13 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
                 </div>
               )}
               {(editingMD || addOpen) && (
-                <div className="fixed inset-0 z-[1500] bg-black/70 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto"
-                  onClick={() => { setEditingMDId(null); setAddOpen(false); }}>
-                  <div className="w-full max-w-2xl my-auto" onClick={e => e.stopPropagation()}>
+                <div className={`fixed inset-0 z-[1500] bg-black/70 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto ${formClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
+                  onClick={closeForm}>
+                  <div className={`w-full max-w-2xl my-auto ${formClosing ? 'animate-pop-out' : 'animate-pop-in'}`} onClick={e => e.stopPropagation()}>
                     {editingMD ? (
-                      <MDForm key={editingMD.id} regions={regions} initial={editingMD} onSave={handleUpdateMD} onCancel={() => setEditingMDId(null)} />
+                      <MDForm key={editingMD.id} regions={regions} initial={editingMD} onSave={handleUpdateMD} onCancel={closeForm} />
                     ) : (
-                      <MDForm regions={regions} onSave={handleAddMD} onCancel={() => setAddOpen(false)} />
+                      <MDForm regions={regions} onSave={handleAddMD} onCancel={closeForm} />
                     )}
                   </div>
                 </div>
