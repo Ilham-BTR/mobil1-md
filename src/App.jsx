@@ -507,6 +507,13 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
     return () => { document.body.style.overflow = prev; };
   }, []);
 
+  // Kunci scroll background selama modal/preview terbuka
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   // Esc handler
   useEffect(() => {
     const onKey = (e) => {
@@ -716,7 +723,7 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
 
       {/* Lightbox */}
       {lightboxIdx != null && availablePhotos[lightboxIdx] && (
-        <div className="fixed inset-0 z-[2000] bg-black flex items-center justify-center p-4"
+        <div className="fixed inset-0 z-[2000] bg-black flex items-center justify-center"
              onClick={() => setLightboxIdx(null)}>
           <button onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx - 1 + availablePhotos.length) % availablePhotos.length); }}
             className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-100 flex items-center justify-center">
@@ -730,7 +737,7 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
             className="absolute right-4 top-4 w-10 h-10 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-100 flex items-center justify-center">
             <X className="w-5 h-5" />
           </button>
-          <div className="max-w-5xl max-h-full flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full h-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
             {isMockPhoto(availablePhotos[lightboxIdx].url) ? (
               <div className="w-96 h-96 bg-zinc-950 border border-zinc-800 rounded-xl flex flex-col items-center justify-center text-zinc-500">
                 <Camera className="w-16 h-16 mb-2" />
@@ -738,13 +745,13 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
               </div>
             ) : (
               <StoredImage src={availablePhotos[lightboxIdx].url} alt={availablePhotos[lightboxIdx].label}
-                   className="max-w-full max-h-[85vh] object-contain rounded-lg" />
+                   className="max-w-full max-h-full w-auto h-auto object-contain" />
             )}
-            <div className="bg-zinc-950/95 backdrop-blur px-4 py-2 rounded-full text-sm text-zinc-200 flex items-center gap-3">
-              <span className="font-semibold">{availablePhotos[lightboxIdx].label}</span>
-              <span className="text-zinc-500">·</span>
-              <span className="text-zinc-400 font-mono">{lightboxIdx + 1} / {availablePhotos.length}</span>
-            </div>
+          </div>
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-zinc-950/90 backdrop-blur px-4 py-2 rounded-full text-sm text-zinc-200 flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+            <span className="font-semibold">{availablePhotos[lightboxIdx].label}</span>
+            <span className="text-zinc-500">·</span>
+            <span className="text-zinc-400 font-mono">{lightboxIdx + 1} / {availablePhotos.length}</span>
           </div>
         </div>
       )}
