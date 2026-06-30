@@ -2706,7 +2706,7 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
         <div className="mb-3 p-3 bg-rose-600/10 border border-rose-600/30 rounded-lg flex items-start gap-2.5">
           <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
           <p className="text-xs text-rose-300">
-            Lokasimu <span className="font-semibold">{formatDistance(gpsDistance)}</span> dari titik bengkel (maks {GEOFENCE_RADIUS} m). Visit <span className="font-semibold">tidak bisa disimpan</span> sampai kamu berada di lokasi bengkel. Pastikan GPS aktif & akurat.
+            <span className="font-semibold">Bengkel yang Anda pilih salah — mohon periksa kembali, atau hubungi admin.</span> Lokasimu <span className="font-semibold">{formatDistance(gpsDistance)}</span> dari titik bengkel (maks {GEOFENCE_RADIUS} m), jadi visit <span className="font-semibold">tidak bisa disimpan</span>.
           </p>
         </div>
       )}
