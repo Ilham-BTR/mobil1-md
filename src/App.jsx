@@ -3538,10 +3538,11 @@ function BengkelForm({ kotas, regions, bengkels = [], onSave, initial, onCancel 
   const [saving, setSaving] = useState(false);
 
   const filteredKotas = kotas.filter(k => k.region_id === form.region_id);
-  // Cek kode dobel (bengkel lain, bukan diri sendiri saat edit)
+  // Cek kode yang sudah dipakai bengkel lain — INFO saja (boleh sama, mis. beberapa cabang)
   const codeNorm = form.code.trim().toUpperCase();
-  const dupCode = !!codeNorm && bengkels.some(b => (b.code || '').toUpperCase() === codeNorm && b.id !== initial?.id);
-  const canSave = form.code.trim() && form.name.trim() && form.kota_id && form.lat != null && form.lng != null && !dupCode && !saving;
+  const dupNames = codeNorm ? bengkels.filter(b => (b.code || '').toUpperCase() === codeNorm && b.id !== initial?.id).map(b => b.name) : [];
+  const dupCode = dupNames.length > 0;
+  const canSave = form.code.trim() && form.name.trim() && form.kota_id && form.lat != null && form.lng != null && !saving;
 
   const handlePick = (lat, lng) => setForm(f => ({ ...f, lat, lng }));
 
@@ -3587,8 +3588,8 @@ function BengkelForm({ kotas, regions, bengkels = [], onSave, initial, onCancel 
       <div className="grid grid-cols-2 gap-3 mb-3">
         <Field label="Kode" required>
           <Input placeholder="BK006" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })}
-            className={dupCode ? 'border-rose-600/60' : ''} />
-          {dupCode && <p className="text-[11px] text-rose-400 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Kode "{codeNorm}" sudah dipakai bengkel lain.</p>}
+            className={dupCode ? 'border-amber-600/50' : ''} />
+          {dupCode && <p className="text-[11px] text-amber-400 mt-1 flex items-start gap-1"><AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />Kode "{codeNorm}" juga dipakai: {dupNames.join(', ')}. Abaikan kalau ini cabang berbeda; ganti kalau salah ketik.</p>}
         </Field>
         <Field label="Nama Bengkel" required>
           <Input placeholder="Bengkel ..." value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
