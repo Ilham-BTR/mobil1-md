@@ -180,9 +180,9 @@ create trigger visits_set_updated_at
 -- TRIGGER: auto-create profile when a user signs up
 -- ============================================================
 create or replace function handle_new_user()
-returns trigger language plpgsql security definer as $$
+returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into profiles (id, email, full_name, role)
+  insert into public.profiles (id, email, full_name, role)
   values (
     new.id,
     new.email,
