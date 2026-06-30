@@ -1415,7 +1415,7 @@ function PasskeyManagerModal({ onClose }) {
 
 // Popup ringkasan target — muncul sekali tiap MD login
 function MDWelcomeModal({ currentMD, visits, onClose, onGoProgress }) {
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = localDateStr();
   const month = todayStr.slice(0, 7);
   const [yy, mm] = month.split('-').map(Number);
   const lastDay = new Date(yy, mm, 0).getDate();
@@ -2172,7 +2172,7 @@ function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
 
 // Dashboard MD — progres target bulanan + tracking per hari
 function MDDashboard({ currentMD, visits, bengkels, kotas }) {
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = localDateStr();
 
   const availableMonths = useMemo(() => {
     const set = new Set(visits.map(v => v.visit_date.slice(0, 7)));
@@ -2329,7 +2329,7 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
     kotaId: '',
     bengkelId: '',
     distributorId: '',
-    date: new Date().toISOString().slice(0, 10),
+    date: localDateStr(),
     pic: '', phone: '',
     status: 'Pemasangan', subType: '', remarks: '',
     photos: { ...emptyPhotos },
@@ -2366,7 +2366,7 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
   // Cek absen masuk hari ini — MD wajib absen dulu sebelum boleh buat visit.
   const [checkedInToday, setCheckedInToday] = useState(null); // null=loading, true/false
   useEffect(() => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateStr();  // tanggal LOKAL — samakan dengan absen (hindari geser UTC)
     api.fetchTodayAttendance(currentMD.id, today)
       .then(a => setCheckedInToday(!!a?.check_in_at))
       .catch(() => setCheckedInToday(true)); // gagal cek → jangan blokir (fail-open)
