@@ -1,75 +1,80 @@
-# Backup Otomatis Database Supabase
+# Backup Otomatis Database Supabase (Node — tanpa install)
 
-Backup mingguan schema `public` (semua data app: profiles, regions, kotas, bengkels,
-visits, attendances, tl_regions, distributors) ke file `.dump` di komputermu —
-**gratis**, menutup kelemahan utama Supabase Free (tidak ada backup otomatis).
+Backup berkala seluruh **data** app ke file JSON di komputermu — **gratis**, menutup
+kelemahan utama Supabase Free (tidak ada backup otomatis).
 
-`pg_dump` dijalankan lewat **Docker** (image `postgres:17`), jadi **tidak perlu install
-PostgreSQL** di Windows dan versinya dijamin cocok dengan Supabase (PG17).
+Dijalankan pakai **Node** (`node ops/backup/backup.mjs`) + library `@supabase/supabase-js`
+yang **sudah jadi dependency app** — jadi **tanpa Docker, tanpa install PostgreSQL,
+tanpa install apa pun**.
 
-> **Cakupan:** schema `public` = seluruh data bisnis. Akun login (`auth.users`) tidak
-> ikut (schema bawaan Supabase, restore-nya berisiko), tapi tetap bisa dibuat ulang
-> dari tabel `profiles` (menyimpan email + login_password). Untuk pemulihan data
-> lapangan, dump `public` ini sudah cukup.
+> **Schema tersimpan di Git** (`supabase/migrations/` + `supabase/setup_fresh.sql`),
+> **data tersimpan di backup JSON ini**. Dua-duanya digabung = pemulihan lengkap.
 
-## Syarat
-- **Docker Desktop** terinstall & **JALAN** saat backup dieksekusi.
-  (Setel Docker Desktop: Settings → General → ✅ *Start Docker Desktop when you log in*.)
-- Koneksi internet.
+## Apa yang di-backup
+Semua tabel data: `regions, distributors, kotas, bengkels, profiles, visits,
+attendances, tl_regions` — **plus daftar akun auth** (email + metadata) lewat
+service_role key. Password login MD tetap ikut karena tersimpan di `profiles.login_password`.
 
 ## Setup (sekali)
 
 1. **Isi konfigurasi:**
    ```powershell
    cd ops\backup
-   Copy-Item supabase-backup.config.example.ps1 supabase-backup.config.ps1
+   Copy-Item backup.config.example.json backup.config.json
    ```
-   Buka `supabase-backup.config.ps1`, isi `$DbUrl` dengan **Session pooler** string dari
-   Supabase Dashboard → Project Settings → Database → Connection string → tab **Session pooler**
-   (port **5432**), ganti `<PASSWORD>` dengan Database Password project.
-   File ini **sudah di-gitignore** — aman, tidak akan ke-commit.
+   Buka `backup.config.json`, isi:
+   - `supabaseUrl` & `serviceRoleKey` → dari **Supabase Dashboard → Project Settings → API**.
+     **Pakai `service_role` key** (yang rahasia, bukan `anon`) supaya bisa baca semua data + akun.
+   - `keepLast` → berapa file backup terakhir disimpan (default 12).
+   - `backupDir` (opsional) → folder Google Drive/OneDrive tersinkron untuk salinan **off-site**.
 
-   > (Opsional) Set `$BackupDir` ke folder yang disinkron Google Drive/OneDrive
-   > supaya backup otomatis punya salinan **off-site**.
+   File `backup.config.json` **sudah di-gitignore** — aman, tak akan ke-commit.
 
-2. **Tes manual** (pastikan Docker Desktop jalan):
+2. **Tes manual:**
    ```powershell
-   powershell -ExecutionPolicy Bypass -File .\supabase-backup.ps1
+   node backup.mjs
    ```
-   Pertama kali akan menarik image `postgres:17` (~sekali, lalu ke-cache).
-   Berhasil → muncul file di `ops\backup\dumps\supabase_public_<tanggal>.dump`
-   dan baris `OK: ...` di layar + `backup.log`.
+   Berhasil → muncul file `dumps\supabase_backup_<tanggal>.json` + baris `OK: ... MB`
+   di layar & `backup.log`, beserta jumlah baris tiap tabel.
 
 3. **Aktifkan jadwal mingguan** (Senin 02:00):
    ```powershell
    powershell -ExecutionPolicy Bypass -File .\register-task.ps1
    ```
-   Ubah hari/jam? Edit baris `New-ScheduledTaskTrigger` di `register-task.ps1`,
-   lalu jalankan lagi (pakai `-Force`, jadi menimpa task lama).
+   Ubah hari/jam → edit baris `New-ScheduledTaskTrigger`, jalankan lagi (pakai `-Force`).
 
-## Memulihkan (restore) dari backup
+## Memulihkan data (restore)
 
-Restore ke project Supabase (atau Postgres mana pun), via Docker juga:
-
+**Kasus umum — ada data kepencet hapus / keubah, project masih ada:**
 ```powershell
-# Ganti <DbUrl> dengan connection string tujuan, dan <file.dump> nama backupnya.
-docker run --rm -v "${PWD}\dumps:/backup" postgres:17 `
-  pg_restore --clean --if-exists --no-owner --no-privileges `
-  -d "<DbUrl>" "/backup/<file.dump>"
+cd ops\backup
+node restore.mjs dumps\supabase_backup_<tanggal>.json            # restore semua tabel
+node restore.mjs dumps\supabase_backup_<tanggal>.json --only=visits,attendances   # sebagian
+node restore.mjs dumps\supabase_backup_<tanggal>.json --dry-run  # lihat dulu, tak menulis
 ```
+Restore = **upsert by primary key** dalam urutan FK-aman (parent dulu). Baris yang
+hilang dibuat lagi, baris yang ada ditimpa dengan isi backup. Aman diulang.
 
-> `--clean --if-exists` = hapus objek lama sebelum buat ulang (restore ke DB yang
-> sudah ada isinya). Untuk DB kosong, flag itu boleh dibuang.
+**Pemulihan total — project hilang/terhapus (rebuild dari nol):**
+1. Buat project Supabase baru → jalankan schema: `supabase/setup_fresh.sql`
+   (atau migrasi `0001`–`0014`) di SQL Editor.
+2. **Buat ulang akun** dari backup: untuk tiap akun di `tables.profiles`, buat user
+   via fungsi `admin-create-md` / Auth Admin API memakai `email` + `login_password`.
+   > Catatan: user baru dapat **UUID baru**. Karena `profiles.id` = id auth, langkah 3
+   > perlu memetakan ulang id (match by email) sebelum restore `visits/attendances`.
+   > Untuk skala kecil ini paling mudah dibantu manual/skrip sekali pakai — minta bantuan
+   > kalau skenario ini benar-benar terjadi.
+3. Isi `backup.config.json` dengan URL+key project baru → `node restore.mjs <file>`.
 
 ## Cek & perawatan
-- **Log:** `ops\backup\backup.log` (tiap run dicatat: OK / GAGAL + ukuran).
-- **Hasil:** `ops\backup\dumps\` — otomatis menyimpan `$KeepLast` file terbaru (default 12).
-- **Lihat status task:** `Get-ScheduledTask -TaskName "Supabase Backup Mobil1"`
+- **Log:** `ops\backup\backup.log` (tiap run: OK/GAGAL + ukuran + jumlah baris).
+- **Hasil:** `ops\backup\dumps\` — otomatis simpan `keepLast` file terbaru.
+- **Status task:** `Get-ScheduledTask -TaskName "Supabase Backup Mobil1"`
 - **Jalankan task sekarang:** `Start-ScheduledTask -TaskName "Supabase Backup Mobil1"`
 - **Hapus jadwal:** `Unregister-ScheduledTask -TaskName "Supabase Backup Mobil1" -Confirm:$false`
 
 ## Catatan
-- File `supabase-backup.config.ps1` (berisi password) dan folder `dumps/` + `backup.log`
+- `backup.config.json` (berisi service_role key) + folder `dumps/` + `backup.log`
   **tidak** ikut ke Git (lihat `.gitignore`). Yang di-repo cuma script + contoh config.
-- Kalau lupa Database Password: Supabase Dashboard → Settings → Database →
-  **Reset database password** (lalu update `$DbUrl`).
+- **service_role key itu sangat rahasia** (bypass semua RLS). Simpan hanya di file config
+  lokal ini; jangan kirim ke siapa pun / jangan commit.

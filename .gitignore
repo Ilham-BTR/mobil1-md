@@ -24,7 +24,7 @@ dist-ssr
 *.docx
 /scripts/
 
-# Backup tooling — config berisi password & hasil dump (JANGAN ke repo)
-ops/backup/supabase-backup.config.ps1
+# Backup tooling — config berisi service_role key & hasil dump (JANGAN ke repo)
+ops/backup/backup.config.json
 ops/backup/dumps/
 ops/backup/backup.log
