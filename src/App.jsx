@@ -3521,7 +3521,7 @@ function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOp
 
 // Sub-form Bengkel: add atau edit (kalau `initial` di-pass)
 // Distributor TIDAK di sini — dicatat per-visit (1 bengkel bisa dicover banyak distributor)
-function BengkelForm({ kotas, regions, onSave, initial, onCancel }) {
+function BengkelForm({ kotas, regions, bengkels = [], onSave, initial, onCancel }) {
   const isEdit = !!initial;
   // Region cuma untuk memfilter dropdown Kota (TIDAK disimpan ke bengkel — diturunkan dari kota)
   const initialRegionId = initial?.kota_id
@@ -3538,7 +3538,10 @@ function BengkelForm({ kotas, regions, onSave, initial, onCancel }) {
   const [saving, setSaving] = useState(false);
 
   const filteredKotas = kotas.filter(k => k.region_id === form.region_id);
-  const canSave = form.code.trim() && form.name.trim() && form.kota_id && form.lat != null && form.lng != null && !saving;
+  // Cek kode dobel (bengkel lain, bukan diri sendiri saat edit)
+  const codeNorm = form.code.trim().toUpperCase();
+  const dupCode = !!codeNorm && bengkels.some(b => (b.code || '').toUpperCase() === codeNorm && b.id !== initial?.id);
+  const canSave = form.code.trim() && form.name.trim() && form.kota_id && form.lat != null && form.lng != null && !dupCode && !saving;
 
   const handlePick = (lat, lng) => setForm(f => ({ ...f, lat, lng }));
 
@@ -3583,7 +3586,9 @@ function BengkelForm({ kotas, regions, onSave, initial, onCancel }) {
       </div>
       <div className="grid grid-cols-2 gap-3 mb-3">
         <Field label="Kode" required>
-          <Input placeholder="BK006" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} />
+          <Input placeholder="BK006" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })}
+            className={dupCode ? 'border-rose-600/60' : ''} />
+          {dupCode && <p className="text-[11px] text-rose-400 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Kode "{codeNorm}" sudah dipakai bengkel lain.</p>}
         </Field>
         <Field label="Nama Bengkel" required>
           <Input placeholder="Bengkel ..." value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
@@ -4679,12 +4684,13 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
                   key={editingBengkel.id}
                   kotas={kotas}
                   regions={regions}
+                  bengkels={bengkels}
                   initial={editingBengkel}
                   onSave={handleUpdateBengkel}
                   onCancel={() => setEditingBengkelId(null)}
                 />
               ) : (
-                <BengkelForm kotas={kotas} regions={regions} onSave={handleAddBengkel} />
+                <BengkelForm kotas={kotas} regions={regions} bengkels={bengkels} onSave={handleAddBengkel} />
               )}
             </>
           )}
