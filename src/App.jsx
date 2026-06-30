@@ -44,6 +44,14 @@ const makePinIcon = (color = '#dc2626', pulse = true) => L.divIcon({
 const RED_PIN_ICON  = makePinIcon('#dc2626', true);
 const BLUE_PIN_ICON = makePinIcon('#3b82f6', true);
 
+// Tile peta. Kalau VITE_MAPBOX_TOKEN diisi → Mapbox "streets" (terang & detail);
+// kalau belum → fallback ke CARTO versi TERANG (gratis, tanpa key).
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
+const TILE_URL = MAPBOX_TOKEN
+  ? `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`
+  : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+const TILE_ATTR = MAPBOX_TOKEN ? '&copy; Mapbox &copy; OpenStreetMap' : '&copy; CARTO &copy; OSM';
+
 // Haversine distance (meter) between 2 lat/lng
 const haversineMeters = (lat1, lng1, lat2, lng2) => {
   const R = 6371000;
@@ -215,8 +223,8 @@ const BengkelMap = ({
         style={{ height: '220px', width: '100%' }}
       >
         <TileLayer
-          attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          attribution={TILE_ATTR}
+          url={TILE_URL}
           subdomains="abcd"
           maxZoom={19}
         />
@@ -386,8 +394,8 @@ const BengkelPickerMap = ({ lat, lng, onChange }) => {
         style={{ height: '260px', width: '100%', cursor: 'crosshair' }}
       >
         <TileLayer
-          attribution='&copy; CARTO &copy; OSM'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          attribution={TILE_ATTR}
+          url={TILE_URL}
           subdomains="abcd"
           maxZoom={19}
         />
@@ -589,8 +597,8 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
                   style={{ height: '240px', width: '100%' }}
                 >
                   <TileLayer
-                    attribution='&copy; CARTO &copy; OSM'
-                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                    attribution={TILE_ATTR}
+                    url={TILE_URL}
                     subdomains="abcd"
                     maxZoom={19}
                   />
@@ -1818,7 +1826,7 @@ function AbsenForm({ kind, currentMD, todayStr, onCancel, onDone }) {
         {gps.status === 'ready' && (
           <div className="mt-2 rounded-lg overflow-hidden border border-zinc-800">
             <MapContainer center={[gps.lat, gps.lng]} zoom={16} scrollWheelZoom={false} style={{ height: '170px', width: '100%' }}>
-              <TileLayer attribution='&copy; CARTO &copy; OSM' url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" subdomains="abcd" maxZoom={19} />
+              <TileLayer attribution={TILE_ATTR} url={TILE_URL} subdomains="abcd" maxZoom={19} />
               <Marker position={[gps.lat, gps.lng]} icon={BLUE_PIN_ICON} />
               <RecenterMap lat={gps.lat} lng={gps.lng} />
             </MapContainer>
@@ -2032,7 +2040,7 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
                   <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2 flex items-center gap-2"><Navigation className="w-3 h-3" />Lokasi di Peta</div>
                   <div className="rounded-xl overflow-hidden border border-zinc-800">
                     <MapContainer center={inP || outP} zoom={16} scrollWheelZoom={false} style={{ height: '220px', width: '100%' }}>
-                      <TileLayer attribution='&copy; CARTO &copy; OSM' url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" subdomains="abcd" maxZoom={19} />
+                      <TileLayer attribution={TILE_ATTR} url={TILE_URL} subdomains="abcd" maxZoom={19} />
                       {inP && <Marker position={inP} icon={BLUE_PIN_ICON}><Popup><div className="text-xs"><div className="font-semibold">Absen Masuk</div><div className="font-mono text-[10px] text-zinc-500">{inP[0].toFixed(5)}, {inP[1].toFixed(5)}</div><a href={`https://www.google.com/maps?q=${inP[0]},${inP[1]}`} target="_blank" rel="noreferrer" className="text-sky-600 underline">Buka di Google Maps →</a></div></Popup></Marker>}
                       {outP && <Marker position={outP} icon={RED_PIN_ICON}><Popup><div className="text-xs"><div className="font-semibold">Absen Pulang</div><div className="font-mono text-[10px] text-zinc-500">{outP[0].toFixed(5)}, {outP[1].toFixed(5)}</div><a href={`https://www.google.com/maps?q=${outP[0]},${outP[1]}`} target="_blank" rel="noreferrer" className="text-sky-600 underline">Buka di Google Maps →</a></div></Popup></Marker>}
                       {inP && outP && <Polyline positions={[inP, outP]} pathOptions={{ color: '#71717a', weight: 2, dashArray: '6 4' }} />}
@@ -3439,8 +3447,8 @@ function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOp
               style={{ height: '480px', width: '100%' }}
             >
               <TileLayer
-                attribution='&copy; CARTO &copy; OSM'
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                attribution={TILE_ATTR}
+                url={TILE_URL}
                 subdomains="abcd"
                 maxZoom={19}
               />
