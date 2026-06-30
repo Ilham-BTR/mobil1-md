@@ -4555,6 +4555,8 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
   const [detailMDId, setDetailMDId] = useState(null);
   const [importOpen, setImportOpen] = useState(false);          // bengkel import
   const [masterImportOpen, setMasterImportOpen] = useState(false); // regions/distributors/kotas/mds import
+  const [selectedIds, setSelectedIds] = useState(() => new Set()); // bulk-select (kota & bengkel)
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const editingBengkel = editingBengkelId ? bengkels.find(b => b.id === editingBengkelId) : null;
   const editingMD = editingMDId ? mds.find(m => m.id === editingMDId) : null;
@@ -4581,7 +4583,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
     : current.items;
 
   // Reset edit mode, modal & search kalau pindah section
-  useEffect(() => { setEditingBengkelId(null); setEditingMDId(null); setDetailMDId(null); setImportOpen(false); setMasterImportOpen(false); setNewItem(''); setNewItemRegion(''); setSearch(''); }, [section]);
+  useEffect(() => { setEditingBengkelId(null); setEditingMDId(null); setDetailMDId(null); setImportOpen(false); setMasterImportOpen(false); setNewItem(''); setNewItemRegion(''); setSearch(''); setSelectedIds(new Set()); }, [section]);
 
   const handleAdd = async () => {
     if (!newItem.trim()) return;
@@ -4634,6 +4636,27 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
     } catch (err) {
       alert('Gagal: ' + err.message);
     }
+  };
+
+  // Bulk-select aktif untuk Kota & Bengkel
+  const bulkEnabled = canManageMaster && (section === 'kotas' || section === 'bengkels');
+  const toggleSelect = (id) => setSelectedIds(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const allFilteredSelected = filteredItems.length > 0 && filteredItems.every(it => selectedIds.has(it.id));
+  const toggleSelectAll = () => setSelectedIds(allFilteredSelected ? new Set() : new Set(filteredItems.map(it => it.id)));
+  const handleBulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    if (!confirm(`Hapus ${ids.length} ${current.label.toLowerCase()} terpilih? Tidak bisa dibatalkan.`)) return;
+    setBulkDeleting(true);
+    const errors = [];
+    for (const id of ids) {
+      try { await api.deleteMaster(section, id); }
+      catch (e) { errors.push(e.message || String(e)); }
+    }
+    setBulkDeleting(false);
+    setSelectedIds(new Set());
+    await onChange();
+    if (errors.length) alert(`${ids.length - errors.length} terhapus, ${errors.length} gagal.\nContoh: ${errors[0]}`);
   };
 
   const handleDeleteMD = async (id, name) => {
@@ -4765,6 +4788,22 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
             </div>
           )}
 
+          {bulkEnabled && filteredItems.length > 0 && (
+            <div className="flex items-center justify-between gap-2 mb-2 px-1">
+              <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
+                <input type="checkbox" checked={allFilteredSelected} onChange={toggleSelectAll} className="accent-red-600" />
+                Pilih semua ({filteredItems.length})
+              </label>
+              {selectedIds.size > 0 && (
+                <button onClick={handleBulkDelete} disabled={bulkDeleting}
+                  className="flex items-center gap-1.5 text-xs text-rose-300 bg-rose-600/10 hover:bg-rose-600/20 border border-rose-600/30 rounded-lg px-3 py-1.5 disabled:opacity-50">
+                  {bulkDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  Hapus terpilih ({selectedIds.size})
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="space-y-1.5">
             {current.items.length === 0 ? (
               <div className="text-center py-8 text-sm text-zinc-500">Belum ada data.</div>
@@ -4776,6 +4815,10 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
                   (editingBengkelId === item.id || editingMDId === item.id) ? 'border-amber-600/40 ring-1 ring-amber-600/20' : 'border-zinc-800 hover:border-zinc-700'
                 }`}>
                 <div className="flex items-center gap-3 min-w-0 flex-1">
+                  {bulkEnabled && (
+                    <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
+                      className="accent-red-600 shrink-0" />
+                  )}
                   <span className="text-[10px] font-mono text-zinc-600 w-6">{String(i + 1).padStart(2, '0')}</span>
                   {section === 'mds' ? (
                     <div className="min-w-0 flex-1">
