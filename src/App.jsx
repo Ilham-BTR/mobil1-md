@@ -2463,7 +2463,7 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
   const gpsDistance = (gps.status === 'ready' && selectedBengkel?.lat != null && selectedBengkel?.lng != null)
     ? haversineMeters(selectedBengkel.lat, selectedBengkel.lng, gps.lat, gps.lng)
     : null;
-  const GEOFENCE_RADIUS = 500; // meter — MD wajib dalam radius ini dari titik bengkel
+  const GEOFENCE_RADIUS = 200; // meter — MD wajib dalam radius ini dari titik bengkel
   const gpsFar = gpsDistance != null && gpsDistance > GEOFENCE_RADIUS; // terlalu jauh → blokir
 
   const canSubmit = checkedInToday !== false && form.bengkelId && form.distributorId && form.subType && form.pic && form.phone && hasAllRequiredPhotos && !anyCompressing && !gpsFar && !submitting;
