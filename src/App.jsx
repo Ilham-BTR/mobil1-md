@@ -3532,6 +3532,7 @@ function BengkelForm({ kotas, regions, bengkels = [], onSave, initial, onCancel 
     code: initial?.code || '',
     name: initial?.name || '',
     kota_id: initial?.kota_id || '',
+    address: initial?.address || '',
     lat: initial?.lat ?? null,
     lng: initial?.lng ?? null,
   });
@@ -3542,7 +3543,7 @@ function BengkelForm({ kotas, regions, bengkels = [], onSave, initial, onCancel 
   const codeNorm = form.code.trim().toUpperCase();
   const dupNames = codeNorm ? bengkels.filter(b => (b.code || '').toUpperCase() === codeNorm && b.id !== initial?.id).map(b => b.name) : [];
   const dupCode = dupNames.length > 0;
-  const canSave = form.code.trim() && form.name.trim() && form.kota_id && form.lat != null && form.lng != null && !saving;
+  const canSave = form.code.trim() && form.name.trim() && form.kota_id && !saving;  // lat/lng opsional
 
   const handlePick = (lat, lng) => setForm(f => ({ ...f, lat, lng }));
 
@@ -3554,12 +3555,13 @@ function BengkelForm({ kotas, regions, bengkels = [], onSave, initial, onCancel 
         code: form.code.trim().toUpperCase(),
         name: form.name.trim(),
         kota_id: form.kota_id,
+        address: form.address.trim() || null,
         lat: form.lat,
         lng: form.lng,
       });
       if (!isEdit) {
         // reset form (pertahankan region biar gampang input banyak bengkel di region sama)
-        setForm(f => ({ region_id: f.region_id, code: '', name: '', kota_id: '', lat: null, lng: null }));
+        setForm(f => ({ region_id: f.region_id, code: '', name: '', kota_id: '', address: '', lat: null, lng: null }));
       }
     } catch (err) {
       alert('Gagal simpan: ' + err.message);
@@ -3610,7 +3612,11 @@ function BengkelForm({ kotas, regions, bengkels = [], onSave, initial, onCancel 
         </Field>
       </div>
 
-      <Field label="Lokasi (klik / drag pin)" required>
+      <Field label="Alamat (opsional)">
+        <Textarea rows={2} placeholder="Jl. ... No. ... (opsional)" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
+      </Field>
+
+      <Field label="Lokasi (opsional — klik / drag pin)">
         <BengkelPickerMap lat={form.lat} lng={form.lng} onChange={handlePick} />
       </Field>
 
