@@ -355,6 +355,7 @@ const BengkelPickerMap = ({ lat, lng, onChange }) => {
 
   // Commit nilai input ke parent kalau valid. Mendukung paste "lat, lng" sekaligus.
   const commitLat = (raw) => {
+    if (raw.trim() === '') return;  // kosong → jangan jadikan 0 (pakai tombol Hapus koordinat utk reset)
     // Deteksi paste "−6.25, 107.26" → split
     if (raw.includes(',')) {
       const [a, b] = raw.split(',').map(s => s.trim());
@@ -368,6 +369,7 @@ const BengkelPickerMap = ({ lat, lng, onChange }) => {
     }
   };
   const commitLng = (raw) => {
+    if (raw.trim() === '') return;  // kosong → jangan jadikan 0
     const ln = Number(raw);
     if (!Number.isNaN(ln) && ln >= -180 && ln <= 180 && latText.trim() !== '') {
       const la = Number(latText);
@@ -3633,6 +3635,12 @@ function BengkelForm({ kotas, regions, bengkels = [], onSave, initial, onCancel 
 
       <Field label="Lokasi (opsional — klik / drag pin)">
         <BengkelPickerMap lat={form.lat} lng={form.lng} onChange={handlePick} />
+        {(form.lat != null || form.lng != null) && (
+          <button type="button" onClick={() => setForm(f => ({ ...f, lat: null, lng: null }))}
+            className="mt-2 text-[11px] text-rose-400 hover:text-rose-300 flex items-center gap-1">
+            <X className="w-3 h-3" />Hapus koordinat (reset — agar terisi lagi otomatis dari GPS visit MD berikutnya)
+          </button>
+        )}
       </Field>
 
       <div className="flex gap-2 mt-3">
