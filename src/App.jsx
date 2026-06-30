@@ -2909,8 +2909,10 @@ function AdminView({ profile }) {
   const [loading, setLoading] = useState(true);
   const [detailVisitId, setDetailVisitId] = useState(null);
 
-  const loadAll = () => {
-    setLoading(true);
+  // silent=true → refresh data tanpa memunculkan layar Loading (cegah remount &
+  // pindah section di Master Data setiap habis update).
+  const loadAll = (silent = false) => {
+    if (!silent) setLoading(true);
     Promise.all([
       api.fetchVisits(), api.fetchAccounts(), api.fetchBengkels(),
       api.fetchRegions(), api.fetchKotas(), api.fetchDistributors(),
@@ -2921,7 +2923,7 @@ function AdminView({ profile }) {
     }).catch(err => { console.error(err); setLoading(false); });
   };
 
-  useEffect(loadAll, []);
+  useEffect(() => { loadAll(); }, []);
 
   if (loading) return <Loading />;
 
@@ -2973,7 +2975,7 @@ function AdminView({ profile }) {
       {tab === 'visits' && <VisitsTab visits={sVisits} mds={activeMds} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} onOpenVisit={openDetail} />}
       {tab === 'absen' && <AdminAbsenTab mds={activeMds} allowedMdIds={allowedMdIds} isSuperAdmin={isSuperAdmin} />}
       {tab === 'coverage' && <CoverageTab visits={sVisits} mds={activeMds} bengkels={bengkels} kotas={kotas} regions={regions} distributors={distributors} onOpenVisit={openDetail} />}
-      {tab === 'master' && <MasterTab regions={regions} kotas={kotas} distributors={distributors} bengkels={bengkels} mds={sMds} accounts={sAccounts} onChange={loadAll} isSuperAdmin={isSuperAdmin} canManageMaster={canManageMaster} />}
+      {tab === 'master' && <MasterTab regions={regions} kotas={kotas} distributors={distributors} bengkels={bengkels} mds={sMds} accounts={sAccounts} onChange={() => loadAll(true)} isSuperAdmin={isSuperAdmin} canManageMaster={canManageMaster} />}
 
       {detailVisit && (
         <VisitDetailModal
