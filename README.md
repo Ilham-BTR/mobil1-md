@@ -6,11 +6,14 @@ Aplikasi web full-stack untuk tracking pemasangan POSM (Point of Sale Materials)
 - Frontend: React 18 + Vite 5 + Tailwind CSS
 - Database: PostgreSQL via Supabase
 - Auth: Supabase Auth (email/password)
-- Photo Storage: **Backblaze B2** (presigned upload via Edge Function) — siap di-CDN-kan via Cloudflare untuk egress gratis
+- Photo Storage: **Object storage S3-compatible** (presigned upload via Edge Function). Produksi pakai **Cloudflare R2** (cepat dari Indonesia, egress gratis lewat domain sendiri); **Backblaze B2 / AWS S3 / MinIO** juga jalan tanpa ubah kode.
+- Maps: **Leaflet** + tile CARTO light (gratis, tanpa token) — opsional upgrade ke **Mapbox** via `VITE_MAPBOX_TOKEN`
 - Backend Logic: Supabase Edge Functions (Deno) — `get-upload-url`, `admin-create-md`, `webauthn`
 
-> **Alur foto:** client → Edge Function `get-upload-url` (validasi JWT, generate presigned PUT URL) → client PUT file langsung ke B2 → URL publik foto disimpan di DB.
-> Kunci B2 **tidak pernah** sampai ke browser. Foto di-serve langsung dari B2; saat domain + Cloudflare siap, cukup set secret `CDN_BASE_URL` (lihat Step 2.4) — tanpa ubah kode.
+> **Alur foto:** client → Edge Function `get-upload-url` (validasi JWT, generate presigned PUT URL) → client PUT file langsung ke storage → URL publik foto disimpan di DB.
+> Kunci storage **tidak pernah** sampai ke browser. Saat domain + CDN siap, cukup set secret `CDN_BASE_URL` (lihat Step 2.4) — tanpa ubah kode.
+
+> ♻️ **Pakai sebagai template:** repo ini dirancang generik. Untuk app serupa, fork repo → ganti branding/label di `src/App.jsx` → buat project Supabase baru & jalankan `supabase/setup_fresh.sql` → buat bucket storage baru → isi `.env.local` → deploy. Semua langkah ada di **Full Stack Setup** di bawah. Tidak ada credential yang ter-commit (semua di `.env.local` + Supabase secrets, sudah di-gitignore).
 
 ---
 
@@ -60,7 +63,24 @@ Empat langkah: (1) Supabase database, (2) Backblaze B2 + Edge Function, (3) konf
 
 > Foto **tidak** lagi disimpan di Supabase Storage — jadi `supabase/storage_setup.sql` tidak perlu dijalankan. Lihat Step 2.
 
-### Step 2: Setup Backblaze B2 + Edge Function (storage foto)
+### Step 2: Setup Object Storage + Edge Function (storage foto)
+
+Storage-nya **S3-compatible**, jadi bisa pilih: **Cloudflare R2** (rekomendasi — upload cepat dari Indonesia, egress gratis lewat custom domain), **Backblaze B2**, **AWS S3**, atau **MinIO**. Edge Function `get-upload-url` pakai S3 API + secret bernama `B2_*` apa pun providernya — **kode tidak berubah**.
+
+<details>
+<summary><b>Opsi A — Cloudflare R2 (rekomendasi)</b></summary>
+
+1. Cloudflare Dashboard → R2 → Create bucket (mis. `mobil1-posm-photos`, location **APAC**).
+2. R2 → Manage R2 API Tokens → Create → **Object Read & Write**, scope ke bucket itu → simpan **Access Key ID** & **Secret**.
+3. Set CORS bucket (allowedOrigins = `http://localhost:5173` + domain produksi; methods PUT/GET/HEAD). Bisa via `wrangler r2 bucket cors put` atau dashboard.
+4. (Opsional) Custom domain untuk serving publik → set `CDN_BASE_URL` (Step 2.4). r2.dev publik bisa dimatikan.
+5. Lanjut ke "Deploy Edge Function + secrets" di bawah dengan nilai R2:
+   - `B2_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com`, `B2_REGION=auto`
+   - `B2_KEY_ID`=Access Key ID, `B2_APPLICATION_KEY`=Secret, `B2_BUCKET_NAME`=nama bucket
+</details>
+
+<details>
+<summary><b>Opsi B — Backblaze B2</b></summary>
 
 1. **Buat bucket B2:**
    - Daftar [backblaze.com](https://www.backblaze.com) → B2 Cloud Storage (10GB free, tanpa kartu kredit)
@@ -82,27 +102,30 @@ Empat langkah: (1) Supabase database, (2) Backblaze B2 + Edge Function, (3) konf
    ]' mobil1-posm-photos allPublic
    ```
    Ganti `https://your-app-domain.com` dengan domain produksi app (boleh tambah lebih dari satu origin).
+</details>
 
-3. **Deploy Edge Function + set secrets:**
-   ```bash
-   npm install -g supabase
-   supabase login
-   supabase link --project-ref <PROJECT_REF>        # PROJECT_REF ada di URL dashboard
+**2.3 — Deploy Edge Function + set secrets** (sama untuk R2 maupun B2):
+```bash
+npm install -g supabase
+supabase login
+supabase link --project-ref <PROJECT_REF>        # PROJECT_REF ada di URL dashboard
 
-   supabase functions deploy get-upload-url
-   supabase secrets set \
-     B2_KEY_ID=<keyID> \
-     B2_APPLICATION_KEY=<applicationKey> \
-     B2_BUCKET_NAME=mobil1-posm-photos \
-     B2_ENDPOINT=https://s3.us-west-004.backblazeb2.com \
-     B2_REGION=us-west-004
-   ```
-   > `CDN_BASE_URL` **sengaja belum diset** → foto di-serve langsung dari B2 (egress $0,01/GB). Lihat Step 2.4 untuk mengaktifkan CDN nanti.
+supabase functions deploy get-upload-url
+# Nilai di bawah contoh Backblaze B2; untuk R2 pakai nilai dari Opsi A
+supabase secrets set \
+  B2_KEY_ID=<keyID / R2 Access Key ID> \
+  B2_APPLICATION_KEY=<applicationKey / R2 Secret> \
+  B2_BUCKET_NAME=mobil1-posm-photos \
+  B2_ENDPOINT=https://s3.us-west-004.backblazeb2.com \
+  B2_REGION=us-west-004
+```
+> `CDN_BASE_URL` **sengaja belum diset** → foto di-serve langsung dari storage. Lihat 2.4 untuk mengaktifkan CDN/custom domain nanti.
 
-4. **(OPSIONAL — nanti, saat sudah punya domain) Cloudflare CDN = egress gratis:**
-   - Tambahkan domain ke Cloudflare → DNS → CNAME `cdn` → target host B2 (mis. `f004.backblazeb2.com`), **Proxy ON (orange cloud)**
-   - `supabase secrets set CDN_BASE_URL=https://cdn.domain-anda.com`
-   - Foto **baru** otomatis pakai URL CDN — **tidak perlu ubah kode atau re-deploy frontend**.
+**2.4 — (OPSIONAL — nanti, saat sudah punya domain) CDN / custom domain = egress gratis:**
+- **R2:** R2 bucket → Settings → Custom Domain → arahkan ke subdomain (mis. `img.domain-anda.com`).
+- **B2:** tambahkan domain ke Cloudflare → DNS → CNAME `cdn` → target host B2 (mis. `f004.backblazeb2.com`), **Proxy ON**.
+- Lalu: `supabase secrets set CDN_BASE_URL=https://img.domain-anda.com`
+- Foto **baru** otomatis pakai URL CDN — **tidak perlu ubah kode atau re-deploy frontend**.
 
 ### Step 3: Konfigurasi Frontend
 
@@ -166,9 +189,9 @@ mobil1-posm/
     ├── setup_fresh.sql        # Schema lengkap (jalankan sekali di project baru)
     ├── storage_setup.sql      # (Tidak dipakai lagi — peninggalan jalur Supabase Storage)
     ├── supabase_seed.sql      # Seed data opsional
-    ├── migrations/            # Riwayat perubahan schema per langkah (0001..0008)
+    ├── migrations/            # Riwayat perubahan schema per langkah (0001..0014)
     └── functions/
-        ├── get-upload-url/    # Edge Function: presigned PUT URL ke B2 (foto visit & absen)
+        ├── get-upload-url/    # Edge Function: presigned PUT URL ke storage S3 (foto visit & absen)
         ├── admin-create-md/   # Edge Function: admin bikin akun MD
         └── webauthn/          # Edge Function: passkey (default disembunyikan)
 ```

@@ -15,3 +15,11 @@ dist-ssr
 # Data mentah / file lokal (gak perlu di repo)
 *.xlsx
 /npm
+
+# Cloudflare Wrangler cache (R2/Pages CLI)
+.wrangler/
+
+# Artefak non-app (presentasi budget, dsb) — bukan bagian template
+*.pptx
+*.docx
+/scripts/
