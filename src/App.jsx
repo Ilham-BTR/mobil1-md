@@ -4504,7 +4504,7 @@ function MdCredential({ email, password }) {
         <span className="flex items-center gap-1 shrink-0">
           <Lock className="w-3 h-3" />
           <span className="font-mono text-zinc-400">{show ? password : '••••••••'}</span>
-          <button type="button" onClick={() => setShow(s => !s)} className="text-zinc-500 hover:text-zinc-200" title={show ? 'Sembunyikan' : 'Lihat password'}>
+          <button type="button" onClick={(e) => { e.stopPropagation(); setShow(s => !s); }} className="text-zinc-500 hover:text-zinc-200" title={show ? 'Sembunyikan' : 'Lihat password'}>
             {show ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
           </button>
         </span>
@@ -4925,7 +4925,8 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
               <div className="text-center py-8 text-sm text-zinc-500">Tidak ada hasil untuk "{search}".</div>
             ) : pagedItems.map((item, i) => (
               <div key={item.id}
-                className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-zinc-950 border transition group ${
+                onClick={section === 'mds' ? () => setDetailMDId(item.id) : undefined}
+                className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-zinc-950 border transition group ${section === 'mds' ? 'cursor-pointer' : ''} ${
                   (editingBengkelId === item.id || editingMDId === item.id) ? 'border-amber-600/40 ring-1 ring-amber-600/20' : 'border-zinc-800 hover:border-zinc-700'
                 }`}>
                 <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -4961,7 +4962,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
                     </>
                   )}
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                   {section === 'mds' && (
                     <>
                       <button onClick={() => setDetailMDId(item.id)} title="Detail akun"
