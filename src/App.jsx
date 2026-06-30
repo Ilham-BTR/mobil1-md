@@ -4560,6 +4560,8 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
   const [selectedIds, setSelectedIds] = useState(() => new Set()); // bulk-select (kota & bengkel)
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [addOpen, setAddOpen] = useState(false); // form tambah (bengkel/akun) tertutup default
+  const [pageSize, setPageSize] = useState(25);  // 10/25/50/100 atau 'all'
+  const [page, setPage] = useState(1);
 
   const editingBengkel = editingBengkelId ? bengkels.find(b => b.id === editingBengkelId) : null;
   const editingMD = editingMDId ? mds.find(m => m.id === editingMDId) : null;
@@ -4588,8 +4590,14 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
       })
     : current.items;
 
+  // Paginasi: tampilkan 10/25/50/100 atau semua
+  const totalPages = pageSize === 'all' ? 1 : Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const startIndex = pageSize === 'all' ? 0 : (safePage - 1) * pageSize;
+  const pagedItems = pageSize === 'all' ? filteredItems : filteredItems.slice(startIndex, startIndex + pageSize);
+
   // Reset edit mode, modal & search kalau pindah section
-  useEffect(() => { setEditingBengkelId(null); setEditingMDId(null); setDetailMDId(null); setImportOpen(false); setMasterImportOpen(false); setNewItem(''); setNewItemRegion(''); setSearch(''); setSelectedIds(new Set()); setAddOpen(false); }, [section]);
+  useEffect(() => { setEditingBengkelId(null); setEditingMDId(null); setDetailMDId(null); setImportOpen(false); setMasterImportOpen(false); setNewItem(''); setNewItemRegion(''); setSearch(''); setSelectedIds(new Set()); setAddOpen(false); setPage(1); }, [section]);
 
   const handleAdd = async () => {
     if (!newItem.trim()) return;
@@ -4789,7 +4797,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
           {current.items.length > 0 && (
             <div className="relative mb-3">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-              <input value={search} onChange={e => setSearch(e.target.value)}
+              <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
                 placeholder={`Cari ${current.label.toLowerCase()}… (banyak: pisahkan dengan koma)`}
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-9 pr-16 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-600/50" />
               {search && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-zinc-500">{filteredItems.length}/{current.items.length}</span>}
@@ -4812,12 +4820,35 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
             </div>
           )}
 
+          {filteredItems.length > 0 && (
+            <div className="flex items-center justify-between gap-2 mb-2 text-xs text-zinc-500">
+              <div className="flex items-center gap-2">
+                <span>Tampilkan</span>
+                <select value={pageSize} onChange={e => { setPageSize(e.target.value === 'all' ? 'all' : Number(e.target.value)); setPage(1); }}
+                  className="bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1 text-zinc-200 focus:outline-none focus:border-red-600/50">
+                  {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
+                  <option value="all">Semua</option>
+                </select>
+                <span>dari {filteredItems.length}</span>
+              </div>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage <= 1}
+                    className="px-2 py-1 rounded-md border border-zinc-800 hover:border-zinc-600 disabled:opacity-40">‹</button>
+                  <span className="px-1">Hal {safePage}/{totalPages}</span>
+                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages}
+                    className="px-2 py-1 rounded-md border border-zinc-800 hover:border-zinc-600 disabled:opacity-40">›</button>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="space-y-1.5">
             {current.items.length === 0 ? (
               <div className="text-center py-8 text-sm text-zinc-500">Belum ada data.</div>
             ) : filteredItems.length === 0 ? (
               <div className="text-center py-8 text-sm text-zinc-500">Tidak ada hasil untuk "{search}".</div>
-            ) : filteredItems.map((item, i) => (
+            ) : pagedItems.map((item, i) => (
               <div key={item.id}
                 className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-zinc-950 border transition group ${
                   (editingBengkelId === item.id || editingMDId === item.id) ? 'border-amber-600/40 ring-1 ring-amber-600/20' : 'border-zinc-800 hover:border-zinc-700'
@@ -4827,7 +4858,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
                     <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
                       className="accent-red-600 shrink-0" />
                   )}
-                  <span className="text-[10px] font-mono text-zinc-600 w-6">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="text-[10px] font-mono text-zinc-600 w-7">{String(startIndex + i + 1).padStart(2, '0')}</span>
                   {section === 'mds' ? (
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 min-w-0">
