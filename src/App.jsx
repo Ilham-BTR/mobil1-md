@@ -4697,6 +4697,33 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
     if (errors.length) alert(`${ids.length - errors.length} terhapus, ${errors.length} gagal.\nContoh: ${errors[0]}`);
   };
 
+  // Export section aktif (sesuai filter) ke Excel
+  const handleExportXlsx = async () => {
+    if (filteredItems.length === 0) return;
+    const XLSX = await import('xlsx');
+    let rows;
+    if (section === 'bengkels') {
+      rows = filteredItems.map(b => {
+        const k = kotas.find(x => x.id === b.kota_id);
+        return { Kode: b.code, 'Nama Bengkel': b.name, Kota: k?.name || '', Region: regionName(k?.region_id) || '', Alamat: b.address || '', Lat: b.lat ?? '', Lng: b.lng ?? '' };
+      });
+    } else if (section === 'kotas') {
+      rows = filteredItems.map(k => ({ Kota: k.name, Region: regionName(k.region_id) || '' }));
+    } else if (section === 'distributors') {
+      rows = filteredItems.map(d => ({ Distributor: d.name, Region: regionName(d.region_id) || '' }));
+    } else if (section === 'regions') {
+      rows = filteredItems.map(r => ({ Region: r.name }));
+    } else if (section === 'mds') {
+      rows = filteredItems.map(m => ({ Nama: m.full_name, Email: m.email, Role: m.role, Region: regionName(m.region_id) || '', 'Target/Bulan': m.monthly_target ?? '', Aktif: m.active === false ? 'Tidak' : 'Ya' }));
+    } else {
+      rows = filteredItems.map(it => ({ Nama: current.getName(it) }));
+    }
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, current.label);
+    XLSX.writeFile(wb, `${section}_${localDateStr()}.xlsx`);
+  };
+
   const handleDeleteMD = async (id, name) => {
     if (!confirm(`Hapus akun MD "${name}"? Tidak bisa dibatalkan.\n(Akan gagal jika MD masih punya visit tercatat.)`)) return;
     try {
@@ -4745,6 +4772,9 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
             <>
               {!editingBengkel && (
                 <div className="mb-3 flex flex-wrap gap-2 justify-end">
+                  <Button variant="secondary" size="sm" onClick={handleExportXlsx} disabled={filteredItems.length === 0}>
+                    <Download className="w-3.5 h-3.5" />Export Excel ({filteredItems.length})
+                  </Button>
                   {!addOpen && <Button variant="primary" size="sm" onClick={() => setAddOpen(true)}><Plus className="w-3.5 h-3.5" />Tambah Bengkel</Button>}
                   <Button variant="secondary" size="sm" onClick={() => setImportOpen(true)}>
                     <FileSpreadsheet className="w-3.5 h-3.5" />Import Excel
@@ -4773,6 +4803,9 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
           {section !== 'mds' && section !== 'bengkels' && canManageMaster && (
             <>
               <div className="mb-3 flex flex-wrap gap-2 justify-end">
+                  <Button variant="secondary" size="sm" onClick={handleExportXlsx} disabled={filteredItems.length === 0}>
+                    <Download className="w-3.5 h-3.5" />Export Excel ({filteredItems.length})
+                  </Button>
                 <Button variant="secondary" size="sm" onClick={() => setMasterImportOpen(true)}>
                   <FileSpreadsheet className="w-3.5 h-3.5" />Import Excel
                 </Button>
@@ -4801,6 +4834,9 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
             <>
               {!editingMD && (
                 <div className="mb-3 flex flex-wrap gap-2 justify-end">
+                  <Button variant="secondary" size="sm" onClick={handleExportXlsx} disabled={filteredItems.length === 0}>
+                    <Download className="w-3.5 h-3.5" />Export Excel ({filteredItems.length})
+                  </Button>
                   {!addOpen && <Button variant="primary" size="sm" onClick={() => setAddOpen(true)}><Plus className="w-3.5 h-3.5" />Tambah Akun</Button>}
                   <Button variant="secondary" size="sm" onClick={() => setMasterImportOpen(true)}>
                     <FileSpreadsheet className="w-3.5 h-3.5" />Import Excel
