@@ -2378,6 +2378,8 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
   const filteredKotas = kotas.filter(k => k.region_id === form.regionId);
   const filteredBengkels = bengkels.filter(b => !form.kotaId || b.kota_id === form.kotaId);
   const filteredDistributors = distributors.filter(d => d.region_id === form.regionId);
+  // Region dikunci ke region MD (kalau sudah diset admin) — MD hanya boleh visit di regionnya.
+  const regionLocked = !!currentMD.region_id;
   const selectedBengkel = bengkels.find(b => b.id === form.bengkelId);
 
   // Fetch GPS user
@@ -2555,7 +2557,11 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
             onChange={(val) => setForm({ ...form, regionId: val, kotaId: '', bengkelId: '', distributorId: '' })}
             options={regions.map(r => ({ value: r.id, label: r.name }))}
             placeholder="Pilih region…"
+            disabled={regionLocked}
           />
+          {regionLocked
+            ? <p className="text-[11px] text-zinc-500 mt-1 flex items-center gap-1"><Lock className="w-3 h-3" />Terkunci ke region kamu — hubungi admin kalau perlu diubah.</p>
+            : <p className="text-[11px] text-amber-400 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Region kamu belum diset admin. Pilih manual dulu.</p>}
         </Field>
         <Field label="Kota" required>
           <SearchableSelect
