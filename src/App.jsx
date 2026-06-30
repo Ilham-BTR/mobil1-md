@@ -4562,6 +4562,8 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
   const [addOpen, setAddOpen] = useState(false); // form tambah (bengkel/akun) tertutup default
   const [pageSize, setPageSize] = useState(25);  // 10/25/50/100 atau 'all'
   const [page, setPage] = useState(1);
+  const [filterRegion, setFilterRegion] = useState(''); // filter list bengkel
+  const [filterKota, setFilterKota] = useState('');
 
   const editingBengkel = editingBengkelId ? bengkels.find(b => b.id === editingBengkelId) : null;
   const editingMD = editingMDId ? mds.find(m => m.id === editingMDId) : null;
@@ -4583,12 +4585,19 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
   // Bisa cari beberapa data sekaligus — pisahkan dengan koma / titik koma / baris baru.
   // Item cocok kalau mengandung SALAH SATU kata kunci (OR).
   const searchTerms = search.trim().toLowerCase().split(/[,;\n]+/).map(t => t.trim()).filter(Boolean);
-  const filteredItems = searchTerms.length
-    ? current.items.filter(it => {
-        const hay = `${current.getName(it)} ${it.email || ''} ${it.code || ''} ${it.role || ''}`.toLowerCase();
-        return searchTerms.some(t => hay.includes(t));
-      })
-    : current.items;
+  const kotaRegionOf = (kotaId) => kotas.find(k => k.id === kotaId)?.region_id;
+  const filteredItems = current.items.filter(it => {
+    // Filter region/kota (khusus list bengkel)
+    if (section === 'bengkels') {
+      if (filterRegion && kotaRegionOf(it.kota_id) !== filterRegion) return false;
+      if (filterKota && it.kota_id !== filterKota) return false;
+    }
+    if (searchTerms.length) {
+      const hay = `${current.getName(it)} ${it.email || ''} ${it.code || ''} ${it.role || ''}`.toLowerCase();
+      if (!searchTerms.some(t => hay.includes(t))) return false;
+    }
+    return true;
+  });
 
   // Paginasi: tampilkan 10/25/50/100 atau semua
   const totalPages = pageSize === 'all' ? 1 : Math.max(1, Math.ceil(filteredItems.length / pageSize));
@@ -4597,7 +4606,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
   const pagedItems = pageSize === 'all' ? filteredItems : filteredItems.slice(startIndex, startIndex + pageSize);
 
   // Reset edit mode, modal & search kalau pindah section
-  useEffect(() => { setEditingBengkelId(null); setEditingMDId(null); setDetailMDId(null); setImportOpen(false); setMasterImportOpen(false); setNewItem(''); setNewItemRegion(''); setSearch(''); setSelectedIds(new Set()); setAddOpen(false); setPage(1); }, [section]);
+  useEffect(() => { setEditingBengkelId(null); setEditingMDId(null); setDetailMDId(null); setImportOpen(false); setMasterImportOpen(false); setNewItem(''); setNewItemRegion(''); setSearch(''); setSelectedIds(new Set()); setAddOpen(false); setPage(1); setFilterRegion(''); setFilterKota(''); }, [section]);
 
   const handleAdd = async () => {
     if (!newItem.trim()) return;
@@ -4792,6 +4801,19 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
                 <MDForm regions={regions} onSave={handleAddMD} onCancel={() => setAddOpen(false)} />
               ) : null}
             </>
+          )}
+
+          {section === 'bengkels' && current.items.length > 0 && (
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <Select value={filterRegion} onChange={e => { setFilterRegion(e.target.value); setFilterKota(''); setPage(1); }}>
+                <option value="">Semua Region</option>
+                {regions.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </Select>
+              <Select value={filterKota} onChange={e => { setFilterKota(e.target.value); setPage(1); }}>
+                <option value="">Semua Kota</option>
+                {kotas.filter(k => !filterRegion || k.region_id === filterRegion).map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
+              </Select>
+            </div>
           )}
 
           {current.items.length > 0 && (
