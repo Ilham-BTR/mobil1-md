@@ -256,14 +256,25 @@ export async function fetchDistributors() {
   return data;
 }
 
+// Ambil SEMUA baris — PostgREST membatasi ~1000 baris/request, jadi paginasi
+// pakai .range() sampai habis. buildQuery() harus mengembalikan query BARU tiap
+// dipanggil (karena .range diterapkan ulang).
+async function fetchAllPaged(buildQuery, batch = 1000) {
+  const all = [];
+  for (let from = 0; ; from += batch) {
+    const { data, error } = await buildQuery().range(from, from + batch - 1);
+    if (error) throw error;
+    all.push(...(data || []));
+    if (!data || data.length < batch) break;
+  }
+  return all;
+}
+
 export async function fetchBengkels() {
   if (MOCK_MODE) return [...MOCK_DATA.bengkels];
-  const { data, error } = await supabase
-    .from('bengkels')
-    .select('*, kota:kotas(*, region:regions!region_id(*))')
-    .order('code');
-  if (error) throw error;
-  return data;
+  return fetchAllPaged(() =>
+    supabase.from('bengkels').select('*, kota:kotas(*, region:regions!region_id(*))').order('code')
+  );
 }
 
 export async function fetchMDs() {
@@ -549,23 +560,22 @@ export async function fetchVisits({ mdId, month } = {}) {
     return v.sort((a, b) => b.visit_date.localeCompare(a.visit_date));
   }
 
-  let query = supabase
-    .from('visit_details')
-    .select('*')
-    .order('visit_date', { ascending: false });
-
-  if (mdId) query = query.eq('md_id', mdId);
-  if (month) {
-    const start = month + '-01';
-    const [y, m] = month.split('-');
-    const lastDay = new Date(Number(y), Number(m), 0).getDate();
-    const end = `${month}-${String(lastDay).padStart(2, '0')}`;
-    query = query.gte('visit_date', start).lte('visit_date', end);
-  }
-
-  const { data, error } = await query;
-  if (error) throw error;
-  return data;
+  const buildQuery = () => {
+    let query = supabase
+      .from('visit_details')
+      .select('*')
+      .order('visit_date', { ascending: false });
+    if (mdId) query = query.eq('md_id', mdId);
+    if (month) {
+      const start = month + '-01';
+      const [y, m] = month.split('-');
+      const lastDay = new Date(Number(y), Number(m), 0).getDate();
+      const end = `${month}-${String(lastDay).padStart(2, '0')}`;
+      query = query.gte('visit_date', start).lte('visit_date', end);
+    }
+    return query;
+  };
+  return fetchAllPaged(buildQuery);
 }
 
 /**
