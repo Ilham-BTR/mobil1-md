@@ -4625,6 +4625,15 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
   // Reset edit mode, modal & search kalau pindah section
   useEffect(() => { setEditingBengkelId(null); setEditingMDId(null); setDetailMDId(null); setImportOpen(false); setMasterImportOpen(false); setNewItem(''); setNewItemRegion(''); setSearch(''); setSelectedIds(new Set()); setAddOpen(false); setPage(1); setFilterRegion(''); setFilterKota(''); }, [section]);
 
+  // Kunci scroll background saat modal form/detail terbuka
+  useEffect(() => {
+    const open = addOpen || !!editingBengkelId || !!editingMDId || !!detailMDId;
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [addOpen, editingBengkelId, editingMDId, detailMDId]);
+
   const handleAdd = async () => {
     if (!newItem.trim()) return;
     if (needsRegion && !newItemRegion) { alert('Pilih region dulu'); return; }
@@ -4786,19 +4795,19 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
                   </Button>
                 </div>
               )}
-              {editingBengkel ? (
-                <BengkelForm
-                  key={editingBengkel.id}
-                  kotas={kotas}
-                  regions={regions}
-                  bengkels={bengkels}
-                  initial={editingBengkel}
-                  onSave={handleUpdateBengkel}
-                  onCancel={() => setEditingBengkelId(null)}
-                />
-              ) : addOpen ? (
-                <BengkelForm kotas={kotas} regions={regions} bengkels={bengkels} onSave={handleAddBengkel} onCancel={() => setAddOpen(false)} />
-              ) : null}
+              {(editingBengkel || addOpen) && (
+                <div className="fixed inset-0 z-[1500] bg-black/70 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto"
+                  onClick={() => { setEditingBengkelId(null); setAddOpen(false); }}>
+                  <div className="w-full max-w-2xl my-auto" onClick={e => e.stopPropagation()}>
+                    {editingBengkel ? (
+                      <BengkelForm key={editingBengkel.id} kotas={kotas} regions={regions} bengkels={bengkels}
+                        initial={editingBengkel} onSave={handleUpdateBengkel} onCancel={() => setEditingBengkelId(null)} />
+                    ) : (
+                      <BengkelForm kotas={kotas} regions={regions} bengkels={bengkels} onSave={handleAddBengkel} onCancel={() => setAddOpen(false)} />
+                    )}
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -4848,11 +4857,18 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
                   </Button>
                 </div>
               )}
-              {editingMD ? (
-                <MDForm key={editingMD.id} regions={regions} initial={editingMD} onSave={handleUpdateMD} onCancel={() => setEditingMDId(null)} />
-              ) : addOpen ? (
-                <MDForm regions={regions} onSave={handleAddMD} onCancel={() => setAddOpen(false)} />
-              ) : null}
+              {(editingMD || addOpen) && (
+                <div className="fixed inset-0 z-[1500] bg-black/70 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto"
+                  onClick={() => { setEditingMDId(null); setAddOpen(false); }}>
+                  <div className="w-full max-w-2xl my-auto" onClick={e => e.stopPropagation()}>
+                    {editingMD ? (
+                      <MDForm key={editingMD.id} regions={regions} initial={editingMD} onSave={handleUpdateMD} onCancel={() => setEditingMDId(null)} />
+                    ) : (
+                      <MDForm regions={regions} onSave={handleAddMD} onCancel={() => setAddOpen(false)} />
+                    )}
+                  </div>
+                </div>
+              )}
             </>
           )}
 
