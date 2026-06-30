@@ -3589,7 +3589,7 @@ function BengkelForm({ kotas, regions, bengkels = [], onSave, initial, onCancel 
             <Plus className="w-3.5 h-3.5" />Tambah Bengkel Baru
           </>}
         </span>
-        {isEdit && onCancel && (
+        {onCancel && (
           <button onClick={onCancel} className="text-zinc-500 hover:text-zinc-100 text-[11px] flex items-center gap-1">
             <X className="w-3 h-3" />Batal
           </button>
@@ -3632,7 +3632,7 @@ function BengkelForm({ kotas, regions, bengkels = [], onSave, initial, onCancel 
         <Button variant="primary" onClick={handleSave} disabled={!canSave} className="flex-1">
           {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Menyimpan…</> : <><Check className="w-4 h-4" />{isEdit ? 'Update Bengkel' : 'Simpan Bengkel'}</>}
         </Button>
-        {isEdit && onCancel && (
+        {onCancel && (
           <Button variant="secondary" onClick={onCancel}>Batal</Button>
         )}
       </div>
@@ -3695,7 +3695,7 @@ function MDForm({ regions, onSave, initial, onCancel }) {
             ? <><Activity className="w-3.5 h-3.5 text-amber-400" /><span className="text-amber-300">Edit Akun · {initial.full_name}</span></>
             : <><Plus className="w-3.5 h-3.5" />Buat Akun MD Baru</>}
         </span>
-        {isEdit && onCancel && (
+        {onCancel && (
           <button onClick={onCancel} className="text-zinc-500 hover:text-zinc-100 text-[11px] flex items-center gap-1">
             <X className="w-3 h-3" />Batal
           </button>
@@ -3763,7 +3763,7 @@ function MDForm({ regions, onSave, initial, onCancel }) {
         <Button variant="primary" onClick={handleSave} disabled={!canSave} className="flex-1">
           {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Menyimpan…</> : <><Check className="w-4 h-4" />{isEdit ? 'Update Akun' : 'Buat Akun MD'}</>}
         </Button>
-        {isEdit && onCancel && <Button variant="secondary" onClick={onCancel}>Batal</Button>}
+        {onCancel && <Button variant="secondary" onClick={onCancel}>Batal</Button>}
       </div>
     </div>
   );
@@ -4559,6 +4559,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
   const [masterImportOpen, setMasterImportOpen] = useState(false); // regions/distributors/kotas/mds import
   const [selectedIds, setSelectedIds] = useState(() => new Set()); // bulk-select (kota & bengkel)
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [addOpen, setAddOpen] = useState(false); // form tambah (bengkel/akun) tertutup default
 
   const editingBengkel = editingBengkelId ? bengkels.find(b => b.id === editingBengkelId) : null;
   const editingMD = editingMDId ? mds.find(m => m.id === editingMDId) : null;
@@ -4588,7 +4589,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
     : current.items;
 
   // Reset edit mode, modal & search kalau pindah section
-  useEffect(() => { setEditingBengkelId(null); setEditingMDId(null); setDetailMDId(null); setImportOpen(false); setMasterImportOpen(false); setNewItem(''); setNewItemRegion(''); setSearch(''); setSelectedIds(new Set()); }, [section]);
+  useEffect(() => { setEditingBengkelId(null); setEditingMDId(null); setDetailMDId(null); setImportOpen(false); setMasterImportOpen(false); setNewItem(''); setNewItemRegion(''); setSearch(''); setSelectedIds(new Set()); setAddOpen(false); }, [section]);
 
   const handleAdd = async () => {
     if (!newItem.trim()) return;
@@ -4712,6 +4713,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
             <>
               {!editingBengkel && (
                 <div className="mb-3 flex flex-wrap gap-2 justify-end">
+                  {!addOpen && <Button variant="primary" size="sm" onClick={() => setAddOpen(true)}><Plus className="w-3.5 h-3.5" />Tambah Bengkel</Button>}
                   <Button variant="secondary" size="sm" onClick={() => setImportOpen(true)}>
                     <FileSpreadsheet className="w-3.5 h-3.5" />Import Excel
                   </Button>
@@ -4730,9 +4732,9 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
                   onSave={handleUpdateBengkel}
                   onCancel={() => setEditingBengkelId(null)}
                 />
-              ) : (
-                <BengkelForm kotas={kotas} regions={regions} bengkels={bengkels} onSave={handleAddBengkel} />
-              )}
+              ) : addOpen ? (
+                <BengkelForm kotas={kotas} regions={regions} bengkels={bengkels} onSave={handleAddBengkel} onCancel={() => setAddOpen(false)} />
+              ) : null}
             </>
           )}
 
@@ -4767,6 +4769,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
             <>
               {!editingMD && (
                 <div className="mb-3 flex flex-wrap gap-2 justify-end">
+                  {!addOpen && <Button variant="primary" size="sm" onClick={() => setAddOpen(true)}><Plus className="w-3.5 h-3.5" />Tambah Akun</Button>}
                   <Button variant="secondary" size="sm" onClick={() => setMasterImportOpen(true)}>
                     <FileSpreadsheet className="w-3.5 h-3.5" />Import Excel
                   </Button>
@@ -4777,9 +4780,9 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
               )}
               {editingMD ? (
                 <MDForm key={editingMD.id} regions={regions} initial={editingMD} onSave={handleUpdateMD} onCancel={() => setEditingMDId(null)} />
-              ) : (
-                <MDForm regions={regions} onSave={handleAddMD} />
-              )}
+              ) : addOpen ? (
+                <MDForm regions={regions} onSave={handleAddMD} onCancel={() => setAddOpen(false)} />
+              ) : null}
             </>
           )}
 
