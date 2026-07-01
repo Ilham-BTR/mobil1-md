@@ -3143,7 +3143,7 @@ function AdminView({ profile }) {
           md={detailMD}
           onClose={() => setDetailVisitId(null)}
           onDeleted={isSuperAdmin ? () => { setDetailVisitId(null); loadAll(); } : undefined}
-          canEdit={canManageMaster}
+          canEdit={isSuperAdmin}
           onUpdated={() => loadAll()}
         />
       )}
