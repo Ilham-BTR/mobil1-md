@@ -2122,7 +2122,7 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
 // Tombol mengambang Chat CS → WhatsApp (untuk MD)
 function WhatsAppCS({ name }) {
   const [open, setOpen] = useState(false);
-  const phone = '6282213502467'; // 0822-1350-2467 (Indonesia)
+  const phone = '6281553006168'; // 0815-5300-6168 (Indonesia)
   const msg = encodeURIComponent(`Halo CS Mobil1 POSM, saya ${name || 'MD'}. Saya mau tanya / ada kendala:`);
   const waUrl = `https://wa.me/${phone}?text=${msg}`;
   return (
@@ -2139,7 +2139,7 @@ function WhatsAppCS({ name }) {
               className="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white text-sm font-semibold rounded-xl py-2.5 transition">
               <MessageCircle className="w-4 h-4" />Chat Sekarang
             </a>
-            <p className="text-[11px] text-zinc-500 text-center mt-2">0822-1350-2467</p>
+            <p className="text-[11px] text-zinc-500 text-center mt-2">0815-5300-6168</p>
           </div>
         </div>
       )}
