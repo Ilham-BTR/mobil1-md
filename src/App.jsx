@@ -133,6 +133,7 @@ const visitToCSVRow = (v, ctx) => {
   return {
     visit_id: v.id,
     tanggal: v.visit_date,
+    waktu_submit: v.created_at ? new Date(v.created_at).toLocaleString('id-ID') : '',
     md_name: md?.full_name || v.md_name || '',
     md_email: md?.email || v.md_email || '',
     bengkel_code: b?.code || '',
@@ -569,7 +570,7 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
         <div className="p-5 space-y-5">
           {/* Quick info grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <InfoCell icon={Calendar} label="Tanggal Visit" value={visit.visit_date} />
+            <InfoCell icon={Calendar} label="Tanggal Visit" value={`${visit.visit_date}${visit.created_at ? ` · ${fmtAbsenTime(visit.created_at)}` : ''}`} />
             <InfoCell icon={User} label="MD Petugas" value={md?.full_name || visit.md_name || '—'} />
             <InfoCell icon={MapPin} label="Kota" value={kota?.name || visit.kota_name || '—'} />
             <InfoCell icon={Briefcase} label="Distributor" value={distributor?.name || visit.distributor_name || '—'} />
@@ -2816,7 +2817,7 @@ function VisitHistory({ visits, bengkels, kotas, distributors }) {
               <StatusBadge status={v.status} />
             </div>
             <div className="flex items-center gap-3 text-xs text-zinc-500 pt-2 border-t border-zinc-800 mt-2">
-              <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{v.visit_date}</span>
+              <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{v.visit_date}{v.created_at ? ` · ${fmtAbsenTime(v.created_at)}` : ''}</span>
               <span className="flex items-center gap-1"><Camera className="w-3 h-3" />{photoCount}/{PHOTO_KEYS.length} foto</span>
               <span className="flex items-center gap-1"><User className="w-3 h-3" />{v.pic_name}</span>
             </div>
@@ -3176,7 +3177,7 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
                     <span className="text-sm font-semibold text-zinc-100 truncate">{b?.name || v.bengkel_name || '—'}</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 mt-0.5 truncate">
-                    <Calendar className="w-3 h-3 shrink-0" /><span>{v.visit_date}</span>
+                    <Calendar className="w-3 h-3 shrink-0" /><span>{v.visit_date}{v.created_at ? ` · ${fmtAbsenTime(v.created_at)}` : ''}</span>
                     <span className="text-zinc-700">·</span>
                     <User className="w-3 h-3 shrink-0" /><span className="truncate">{md?.full_name || v.md_name || '—'}</span>
                     <span className="text-zinc-700 hidden sm:inline">·</span>
