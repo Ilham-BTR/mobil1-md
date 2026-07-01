@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import imageCompression from 'browser-image-compression';
+import { VISIT_PHOTO_MAP } from './lib/storage';
 import {
   BarChart, Bar, ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, Cell, ReferenceLine
@@ -502,11 +503,42 @@ const PHOTO_LABELS = {
   photo_deploy_planogram:'Deploy Planogram',
 };
 const PHOTO_KEYS = Object.keys(PHOTO_LABELS);
+// Kolom DB foto -> UI key (uploadOneVisitPhoto butuh UI key, mis. 'tampakDepan')
+const PHOTO_COL_TO_UIKEY = Object.fromEntries(
+  Object.entries(VISIT_PHOTO_MAP).map(([uiKey, m]) => [m.col, uiKey])
+);
 
-function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDeleted }) {
+function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDeleted, canEdit = false, onUpdated }) {
   const [lightboxIdx, setLightboxIdx] = useState(null);
   useBackDismiss(true, onClose);                                  // back -> tutup modal detail
   useBackDismiss(lightboxIdx != null, () => setLightboxIdx(null)); // back -> tutup foto fullscreen dulu
+
+  // Ganti foto (admin) — upload foto baru ke R2 lalu update kolom visit.
+  const [photoOverrides, setPhotoOverrides] = useState({}); // col -> url baru
+  const [replacingCol, setReplacingCol] = useState(null);
+  const replaceFileRef = useRef(null);
+  const pendingColRef = useRef(null);
+  const pickReplace = (col) => { pendingColRef.current = col; replaceFileRef.current?.click(); };
+  const onReplaceFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    const col = pendingColRef.current;
+    if (!file || !col) return;
+    const uiKey = PHOTO_COL_TO_UIKEY[col];
+    if (!uiKey) { alert('Slot foto tak dikenal.'); return; }
+    setReplacingCol(col);
+    try {
+      const compressed = await imageCompression(file, { maxSizeMB: 0.3, maxWidthOrHeight: 1280, useWebWorker: true, fileType: 'image/jpeg' });
+      const { url } = await api.uploadOneVisitPhoto(compressed, visit.id, uiKey);
+      await api.updateMaster('visits', visit.id, { [col]: url });
+      setPhotoOverrides(o => ({ ...o, [col]: url }));
+      onUpdated?.();
+    } catch (err) {
+      alert('Gagal ganti foto: ' + (err?.message || err));
+    } finally {
+      setReplacingCol(null);
+    }
+  };
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -545,8 +577,8 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
   });
 
   const availablePhotos = PHOTO_KEYS
-    .filter(k => visit[k])
-    .map(k => ({ key: k, label: PHOTO_LABELS[k], url: visit[k] }));
+    .filter(k => photoOverrides[k] ?? visit[k])
+    .map(k => ({ key: k, label: PHOTO_LABELS[k], url: photoOverrides[k] ?? visit[k] }));
 
   const isMockPhoto = isPlaceholderPhoto;
   const hasBengkelCoord = bengkel?.lat != null && bengkel?.lng != null;
@@ -668,28 +700,39 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
 
           {/* Photo gallery */}
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2 flex items-center gap-2">
+            <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2 flex items-center gap-2 flex-wrap">
               <Camera className="w-3 h-3" />Dokumentasi Foto ({availablePhotos.length}/{PHOTO_KEYS.length})
+              {canEdit && <span className="normal-case tracking-normal font-normal text-zinc-600">· tap "Ganti" untuk perbaiki foto</span>}
             </div>
+            {canEdit && <input ref={replaceFileRef} type="file" accept="image/*" className="hidden" onChange={onReplaceFile} />}
             {availablePhotos.length === 0 ? (
               <div className="text-center text-sm text-zinc-500 py-8 bg-zinc-950 border border-zinc-800 rounded-xl">Tidak ada foto</div>
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {availablePhotos.map((p, i) => (
-                  <button key={p.key} onClick={() => setLightboxIdx(i)}
+                  <div key={p.key}
                     className="relative aspect-square rounded-lg overflow-hidden border border-zinc-800 hover:border-red-600/50 transition group bg-zinc-950">
-                    {isMockPhoto(p.url) ? (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-600">
-                        <Camera className="w-5 h-5 mb-1" />
-                        <span className="text-[9px] uppercase tracking-wider">No Foto</span>
-                      </div>
-                    ) : (
-                      <StoredImage src={p.url} alt={p.label} className="absolute inset-0 w-full h-full object-cover" />
-                    )}
-                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent px-2 py-1.5">
+                    <button onClick={() => setLightboxIdx(i)} className="absolute inset-0 w-full h-full">
+                      {isMockPhoto(p.url) ? (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-600">
+                          <Camera className="w-5 h-5 mb-1" />
+                          <span className="text-[9px] uppercase tracking-wider">No Foto</span>
+                        </div>
+                      ) : (
+                        <StoredImage src={p.url} alt={p.label} className="absolute inset-0 w-full h-full object-cover" />
+                      )}
+                    </button>
+                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent px-2 py-1.5 pointer-events-none">
                       <div className="text-[10px] font-medium text-zinc-100 truncate">{p.label}</div>
                     </div>
-                  </button>
+                    {canEdit && (
+                      <button onClick={() => pickReplace(p.key)} disabled={replacingCol === p.key}
+                        className="absolute top-1 right-1 z-10 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/70 hover:bg-red-600 text-white text-[9px] font-medium backdrop-blur-sm transition disabled:opacity-60"
+                        title="Ganti foto ini">
+                        {replacingCol === p.key ? 'Uploading…' : <><Camera className="w-3 h-3" />Ganti</>}
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
@@ -3100,6 +3143,8 @@ function AdminView({ profile }) {
           md={detailMD}
           onClose={() => setDetailVisitId(null)}
           onDeleted={isSuperAdmin ? () => { setDetailVisitId(null); loadAll(); } : undefined}
+          canEdit={canManageMaster}
+          onUpdated={() => loadAll()}
         />
       )}
     </div>
