@@ -2144,8 +2144,33 @@ function WhatsAppCS({ name }) {
   );
 }
 
+// Sambungkan tombol "kembali" HP ke navigasi tab. App ini SPA (pindah tab cuma
+// ganti state, URL tak berubah) -> tanpa ini, back HP keluar dari app / error.
+// Dengan ini: back -> tab sebelumnya; di tab awal, back sekali lagi keluar wajar.
+function useTabBackButton(tab, setTab) {
+  const skipPush = useRef(false);
+  useEffect(() => {
+    if (!window.history.state || window.history.state.tab == null) {
+      window.history.replaceState({ tab }, '');
+    }
+    const onPop = (e) => {
+      const target = e.state?.tab;
+      if (target != null) { skipPush.current = true; setTab(target); }
+      // target null -> sudah di baseline, biarkan browser keluar app (wajar).
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (skipPush.current) { skipPush.current = false; return; }
+    if (window.history.state?.tab !== tab) window.history.pushState({ tab }, '');
+  }, [tab]);
+}
+
 function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
   const [tab, setTab] = useState('absen');
+  useTabBackButton(tab, setTab);
   const [visits, setVisits] = useState([]);
   const [bengkels, setBengkels] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -2948,6 +2973,7 @@ function LeaderboardTab({ visits, mds, regions }) {
 function AdminView({ profile }) {
   const isSuperAdmin = profile?.role === 'super_admin';
   const [tab, setTab] = useState('dashboard');
+  useTabBackButton(tab, setTab);
   const [visits, setVisits] = useState([]);
   const [mds, setMds] = useState([]);
   const [accounts, setAccounts] = useState([]);
