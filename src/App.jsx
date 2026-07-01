@@ -860,9 +860,14 @@ const SearchableSelect = ({ value, onChange, options, placeholder = 'Pilih…', 
   const listRef = useRef(null);
 
   const selected = options.find(o => String(o.value) === String(value));
-  const filtered = query.trim()
+  // Batasi jumlah opsi yang dirender (mis. 2705 bengkel) -> render semua node
+  // sekaligus bikin HP freeze saat dropdown dibuka. Cap 100; sisanya disaring via ketik.
+  const OPT_CAP = 100;
+  const matched = query.trim()
     ? options.filter(o => o.label.toLowerCase().includes(query.trim().toLowerCase()))
     : options;
+  const filtered = matched.slice(0, OPT_CAP);
+  const moreCount = matched.length - filtered.length;
 
   // Close on outside click
   useEffect(() => {
@@ -937,6 +942,11 @@ const SearchableSelect = ({ value, onChange, options, placeholder = 'Pilih…', 
                 </button>
               );
             })}
+            {moreCount > 0 && (
+              <div className="px-3 py-2 text-[11px] text-zinc-500 text-center border-t border-zinc-800/60">
+                +{moreCount} lagi — ketik untuk mempersempit
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1924,6 +1934,9 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
     if (search.trim() && !`${a.md_name || ''} ${a.md_email || ''}`.toLowerCase().includes(search.trim().toLowerCase())) return false;
     return true;
   });
+  // Batasi render (mis. saat pilih "Semua Bulan") biar HP tak freeze
+  const [visibleCount, setVisibleCount] = useState(50);
+  useEffect(() => { setVisibleCount(50); }, [month, dari, sampai, mdId, search]);
 
   const exportExcel = async () => {
     if (filteredRows.length === 0) return;
@@ -1982,7 +1995,7 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
         <div className="text-center py-12 text-zinc-500 text-sm"><Users className="w-6 h-6 mx-auto mb-2 text-zinc-600" />{search || mdId !== 'all' ? 'Tidak ada absen sesuai filter.' : 'Belum ada absen di bulan ini.'}</div>
       ) : (
         <div className="space-y-3">
-          {filteredRows.map(a => (
+          {filteredRows.slice(0, visibleCount).map(a => (
             <div key={a.id} onClick={() => setDetail(a)}
               className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 cursor-pointer hover:border-zinc-700 transition">
               <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -2006,6 +2019,12 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
               {(a.check_in_note || a.check_out_note) && <p className="text-xs text-zinc-500 mt-3 pt-3 border-t border-zinc-800">{[a.check_in_note, a.check_out_note].filter(Boolean).join(' · ')}</p>}
             </div>
           ))}
+          {filteredRows.length > visibleCount && (
+            <button onClick={() => setVisibleCount(c => c + 100)}
+              className="w-full py-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-sm text-zinc-300 transition">
+              Tampilkan lebih banyak · {filteredRows.length - visibleCount} lagi (dari {filteredRows.length})
+            </button>
+          )}
         </div>
       )}
 
@@ -2724,10 +2743,15 @@ function VisitHistory({ visits, bengkels, kotas, distributors }) {
   const [subType, setSubType] = useState('all');
   const [dari, setDari] = useState('');
   const [sampai, setSampai] = useState('');
-  const findBengkel = (id) => bengkels.find(b => b.id === id);
-  const findKota = (id) => kotas.find(k => k.id === id);
-  const findDist = (id) => distributors.find(d => d.id === id);
+  const [visibleCount, setVisibleCount] = useState(50); // batasi render biar HP tak freeze
+  const bengkelById = useMemo(() => new Map(bengkels.map(b => [b.id, b])), [bengkels]);
+  const kotaById = useMemo(() => new Map(kotas.map(k => [k.id, k])), [kotas]);
+  const distById = useMemo(() => new Map(distributors.map(d => [d.id, d])), [distributors]);
+  const findBengkel = (id) => bengkelById.get(id);
+  const findKota = (id) => kotaById.get(id);
+  const findDist = (id) => distById.get(id);
 
+  useEffect(() => { setVisibleCount(50); }, [search, month, status, subType, dari, sampai]);
   const availableMonths = useMemo(() => [...new Set(visits.map(v => v.visit_date.slice(0, 7)))].sort().reverse(), [visits]);
   const filtered = visits.filter(v => {
     if (dari || sampai) {
@@ -2776,7 +2800,7 @@ function VisitHistory({ visits, bengkels, kotas, distributors }) {
         <div className="text-center py-10 text-zinc-500 text-sm">Tidak ada visit sesuai filter.</div>
       ) : (
       <div className="space-y-3">
-      {filtered.map(v => {
+      {filtered.slice(0, visibleCount).map(v => {
         const b = findBengkel(v.bengkel_id);
         const k = b ? findKota(b.kota_id) : null;
         const d = findDist(v.distributor_id);
@@ -2799,6 +2823,12 @@ function VisitHistory({ visits, bengkels, kotas, distributors }) {
           </div>
         );
       })}
+      {filtered.length > visibleCount && (
+        <button onClick={() => setVisibleCount(c => c + 100)}
+          className="w-full py-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-sm text-zinc-300 transition">
+          Tampilkan lebih banyak · {filtered.length - visibleCount} lagi (dari {filtered.length})
+        </button>
+      )}
       </div>
       )}
     </div>
@@ -3026,6 +3056,9 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
     dari: '',
     sampai: '',
   });
+  // Batasi jumlah baris yang di-render (hindari ribuan node DOM = freeze di HP)
+  const [visibleCount, setVisibleCount] = useState(50);
+  useEffect(() => { setVisibleCount(50); }, [filters]);
 
   // Index Map (O(1)) — hindari .find per-visit (O(n*m)) yang bikin HP freeze
   // saat visit/bengkel banyak.
@@ -3128,7 +3161,7 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
         </div>
       ) : (
         <div className="space-y-1.5">
-          {filtered.map(v => {
+          {filtered.slice(0, visibleCount).map(v => {
             const b = findBengkel(v.bengkel_id);
             const k = b ? findKota(b.kota_id) : null;
             const r = k ? findRegion(k.region_id) : null;
@@ -3161,6 +3194,12 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
               </button>
             );
           })}
+          {filtered.length > visibleCount && (
+            <button onClick={() => setVisibleCount(c => c + 100)}
+              className="w-full mt-2 py-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-sm text-zinc-300 transition">
+              Tampilkan lebih banyak · {filtered.length - visibleCount} lagi (dari {filtered.length})
+            </button>
+          )}
         </div>
       )}
     </div>
