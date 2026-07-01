@@ -3027,10 +3027,16 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
     sampai: '',
   });
 
-  const findBengkel = (id) => bengkels.find(b => b.id === id);
-  const findKota = (id) => kotas.find(k => k.id === id);
-  const findRegion = (id) => regions.find(r => r.id === id);
-  const findMD = (id) => mds.find(m => m.id === id);
+  // Index Map (O(1)) — hindari .find per-visit (O(n*m)) yang bikin HP freeze
+  // saat visit/bengkel banyak.
+  const bengkelById = useMemo(() => new Map(bengkels.map(b => [b.id, b])), [bengkels]);
+  const kotaById = useMemo(() => new Map(kotas.map(k => [k.id, k])), [kotas]);
+  const regionById = useMemo(() => new Map(regions.map(r => [r.id, r])), [regions]);
+  const mdById = useMemo(() => new Map(mds.map(m => [m.id, m])), [mds]);
+  const findBengkel = (id) => bengkelById.get(id);
+  const findKota = (id) => kotaById.get(id);
+  const findRegion = (id) => regionById.get(id);
+  const findMD = (id) => mdById.get(id);
 
   // Build filtered list
   const filtered = useMemo(() => {
@@ -3178,19 +3184,28 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [availableMonths.join(',')]);
 
+  // Index Map (O(1)) — hindari .find per-visit (O(n*m)) yang bikin HP freeze.
+  const bengkelById = useMemo(() => new Map(bengkels.map(b => [b.id, b])), [bengkels]);
+  const kotaById = useMemo(() => new Map(kotas.map(k => [k.id, k])), [kotas]);
+
   // Apply filters
-  const filteredVisits = useMemo(() => visits.filter(v => {
-    const b = bengkels.find(x => x.id === v.bengkel_id);
-    const k = b ? kotas.find(x => x.id === b.kota_id) : null;
-    if (filters.dari || filters.sampai) {
-      if (filters.dari && v.visit_date < filters.dari) return false;
-      if (filters.sampai && v.visit_date > filters.sampai) return false;
-    } else if (filters.month !== 'all' && !v.visit_date.startsWith(filters.month)) return false;
-    if (filters.mdId !== 'all' && v.md_id !== filters.mdId) return false;
-    if (filters.regionId !== 'all' && k?.region_id !== filters.regionId) return false;
-    if (filters.distributorId !== 'all' && v.distributor_id !== filters.distributorId) return false;
-    return true;
-  }), [visits, filters, bengkels, kotas]);
+  const filteredVisits = useMemo(() => {
+    const needRegion = filters.regionId !== 'all';
+    return visits.filter(v => {
+      if (filters.dari || filters.sampai) {
+        if (filters.dari && v.visit_date < filters.dari) return false;
+        if (filters.sampai && v.visit_date > filters.sampai) return false;
+      } else if (filters.month !== 'all' && !v.visit_date.startsWith(filters.month)) return false;
+      if (filters.mdId !== 'all' && v.md_id !== filters.mdId) return false;
+      if (needRegion) {
+        const b = bengkelById.get(v.bengkel_id);
+        const k = b ? kotaById.get(b.kota_id) : null;
+        if (k?.region_id !== filters.regionId) return false;
+      }
+      if (filters.distributorId !== 'all' && v.distributor_id !== filters.distributorId) return false;
+      return true;
+    });
+  }, [visits, filters, bengkelById, kotaById]);
 
   // MDs yang relevan dengan filter (region/distributor)
   const relevantMDs = useMemo(() => {
@@ -3374,17 +3389,21 @@ function FitToVisits({ points }) {
 function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOpenVisit }) {
   const [filters, setFilters] = useState({ mdId: 'all', regionId: 'all', distributorId: 'all', month: 'all', dari: '', sampai: '' });
 
+  // Index Map (O(1)) — hindari .find per-visit (O(n*m)) yang bikin HP freeze.
+  const bengkelById = useMemo(() => new Map(bengkels.map(b => [b.id, b])), [bengkels]);
+  const kotaById = useMemo(() => new Map(kotas.map(k => [k.id, k])), [kotas]);
+
   // Enrich visits with bengkel lat/lng if not stored on visit
   const enriched = useMemo(() => visits.map(v => {
-    const b = bengkels.find(x => x.id === v.bengkel_id);
+    const b = bengkelById.get(v.bengkel_id);
     return {
       ...v,
       visit_lat: v.visit_lat ?? b?.lat,
       visit_lng: v.visit_lng ?? b?.lng,
       _bengkel: b,
-      _kota: b ? kotas.find(k => k.id === b.kota_id) : null,
+      _kota: b ? kotaById.get(b.kota_id) : null,
     };
-  }), [visits, bengkels, kotas]);
+  }), [visits, bengkelById, kotaById]);
 
   const filtered = useMemo(() => enriched.filter(v => {
     if (!v.visit_lat || !v.visit_lng) return false;
