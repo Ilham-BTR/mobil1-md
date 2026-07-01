@@ -52,6 +52,15 @@ const TILE_URL = MAPBOX_TOKEN
   : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 const TILE_ATTR = MAPBOX_TOKEN ? '&copy; Mapbox &copy; OpenStreetMap' : '&copy; CARTO &copy; OSM';
 
+// Kunci scroll body pakai COUNTER, bukan simpan/restore nilai lama. Pola lama
+// (const prev = body.style.overflow) bocor kalau modal bertumpuk: modal terakhir
+// bisa merestore 'hidden' → body ke-lock permanen → halaman terasa "freeze" /
+// tombol di bawah layar tak bisa diklik sampai di-refresh. Counter ini menjamin
+// body baru dibuka kembali saat SEMUA modal tertutup.
+let __scrollLocks = 0;
+const __lockBodyScroll = () => { __scrollLocks++; document.body.style.overflow = 'hidden'; };
+const __unlockBodyScroll = () => { __scrollLocks = Math.max(0, __scrollLocks - 1); if (__scrollLocks === 0) document.body.style.overflow = ''; };
+
 // Haversine distance (meter) between 2 lat/lng
 const haversineMeters = (lat1, lng1, lat2, lng2) => {
   const R = 6371000;
@@ -504,16 +513,14 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
 
   // Kunci scroll body selama modal kebuka — biar background gak ikut scroll
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
+    __lockBodyScroll();
+    return __unlockBodyScroll;
   }, []);
 
   // Kunci scroll background selama modal/preview terbuka
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
+    __lockBodyScroll();
+    return __unlockBodyScroll;
   }, []);
 
   // Esc handler
@@ -1311,9 +1318,8 @@ function PasskeyManagerModal({ onClose }) {
   useEffect(() => {
     api.isPasskeySupported().then(setSupported);
     reload();
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
+    __lockBodyScroll();
+    return __unlockBodyScroll;
   }, []);
 
   const fmt = (s) => s ? new Date(s).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
@@ -1443,9 +1449,8 @@ function MDWelcomeModal({ currentMD, visits, onClose, onGoProgress }) {
   const tglLabel = new Date(todayStr).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
+    __lockBodyScroll();
+    return __unlockBodyScroll;
   }, []);
 
   return (
@@ -4634,9 +4639,8 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
   useEffect(() => {
     const open = addOpen || !!editingBengkelId || !!editingMDId || !!detailMDId;
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
+    __lockBodyScroll();
+    return __unlockBodyScroll;
   }, [addOpen, editingBengkelId, editingMDId, detailMDId]);
 
   const handleAdd = async () => {
