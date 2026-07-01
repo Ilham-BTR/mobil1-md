@@ -122,6 +122,14 @@ const exportToCSV = (rows, filename) => {
   URL.revokeObjectURL(url);
 };
 
+// Format timestamp -> "YYYY-MM-DD HH:mm" waktu lokal (biar seragam dgn kolom tanggal).
+const fmtLocalDateTime = (ts) => {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
 // Build flat row dari visit untuk CSV export
 const visitToCSVRow = (v, ctx) => {
   const b = ctx.bengkels.find(x => x.id === v.bengkel_id);
@@ -133,7 +141,7 @@ const visitToCSVRow = (v, ctx) => {
   return {
     visit_id: v.id,
     tanggal: v.visit_date,
-    waktu_submit: v.created_at ? new Date(v.created_at).toLocaleString('id-ID') : '',
+    waktu_submit: fmtLocalDateTime(v.created_at),
     md_name: md?.full_name || v.md_name || '',
     md_email: md?.email || v.md_email || '',
     bengkel_code: b?.code || '',
