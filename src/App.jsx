@@ -505,6 +505,8 @@ const PHOTO_KEYS = Object.keys(PHOTO_LABELS);
 
 function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDeleted }) {
   const [lightboxIdx, setLightboxIdx] = useState(null);
+  useBackDismiss(true, onClose);                                  // back -> tutup modal detail
+  useBackDismiss(lightboxIdx != null, () => setLightboxIdx(null)); // back -> tutup foto fullscreen dulu
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -1312,6 +1314,7 @@ function ForgotPasswordScreen({ onBack }) {
 
 // Kelola passkey: lihat perangkat terdaftar, tambah passkey di HP ini, hapus perangkat
 function PasskeyManagerModal({ onClose }) {
+  useBackDismiss(true, onClose);
   const [items, setItems] = useState(null); // null = loading
   const [supported, setSupported] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -1443,6 +1446,7 @@ function PasskeyManagerModal({ onClose }) {
 
 // Popup ringkasan target — muncul sekali tiap MD login
 function MDWelcomeModal({ currentMD, visits, onClose, onGoProgress }) {
+  useBackDismiss(true, onClose);
   const todayStr = localDateStr();
   const month = todayStr.slice(0, 7);
   const [yy, mm] = month.split('-').map(Number);
@@ -1694,6 +1698,7 @@ function AbsenHistory({ currentMD }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState(null);
+  useBackDismiss(!!lightbox, () => setLightbox(null)); // back -> tutup foto absen
   const [month, setMonth] = useState('all');
   const [search, setSearch] = useState('');
   const [dari, setDari] = useState('');
@@ -1913,6 +1918,8 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
   const [lightbox, setLightbox] = useState(null);
   const [detail, setDetail] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  useBackDismiss(!!detail, () => setDetail(null));    // back -> tutup detail absen
+  useBackDismiss(!!lightbox, () => setLightbox(null)); // back -> tutup foto (di atas detail)
 
   const handleDeleteAbsen = async (id) => {
     if (!confirm('Hapus record absen ini (foto + GPS)? Tidak bisa dibatalkan.')) return;
@@ -2166,6 +2173,38 @@ function useTabBackButton(tab, setTab) {
     if (skipPush.current) { skipPush.current = false; return; }
     if (window.history.state?.tab !== tab) window.history.pushState({ tab }, '');
   }, [tab]);
+}
+
+// Tekan "kembali" HP saat popup terbuka -> TUTUP popup TERATAS dulu (bukan pindah
+// tab). Pakai 1 stack global + 1 listener supaya back cuma menutup 1 popup, bukan
+// semua sekaligus (kasus popup bertumpuk, mis. detail visit -> foto fullscreen).
+const __modalStack = [];
+let __ignoreNextPop = false;
+let __modalListenerReady = false;
+function __ensureModalListener() {
+  if (__modalListenerReady) return;
+  __modalListenerReady = true;
+  window.addEventListener('popstate', () => {
+    if (__ignoreNextPop) { __ignoreNextPop = false; return; } // dipicu tutup via UI
+    const top = __modalStack[__modalStack.length - 1];
+    if (top) { top.poppedByBack = true; __modalStack.pop(); top.onClose(); }
+  });
+}
+function useBackDismiss(isOpen, onClose) {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    if (!isOpen) return;
+    __ensureModalListener();
+    const entry = { poppedByBack: false, onClose: () => onCloseRef.current?.() };
+    __modalStack.push(entry);
+    window.history.pushState({ modal: true }, '');
+    return () => {
+      const i = __modalStack.indexOf(entry);
+      if (i !== -1) __modalStack.splice(i, 1);
+      if (!entry.poppedByBack) { __ignoreNextPop = true; window.history.back(); } // tutup via UI -> buang entri
+    };
+  }, [isOpen]);
 }
 
 function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
@@ -4607,6 +4646,7 @@ function MdCredential({ email, password }) {
 
 // Modal detail akun MD (semua admin bisa lihat)
 function MdDetailModal({ md, regionName, onClose }) {
+  useBackDismiss(true, onClose);
   const [showPw, setShowPw] = useState(false);
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -4678,6 +4718,9 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
   const [page, setPage] = useState(1);
   const [filterRegion, setFilterRegion] = useState(''); // filter list bengkel
   const [filterKota, setFilterKota] = useState('');
+
+  // back HP -> tutup form popup (Tambah/Edit Bengkel/Akun) dgn animasi, bukan pindah tab
+  useBackDismiss(!!(editingBengkelId || editingMDId || addOpen), closeForm);
 
   const editingBengkel = editingBengkelId ? bengkels.find(b => b.id === editingBengkelId) : null;
   const editingMD = editingMDId ? mds.find(m => m.id === editingMDId) : null;
