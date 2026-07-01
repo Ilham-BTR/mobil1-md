@@ -517,12 +517,6 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
     return __unlockBodyScroll;
   }, []);
 
-  // Kunci scroll background selama modal/preview terbuka
-  useEffect(() => {
-    __lockBodyScroll();
-    return __unlockBodyScroll;
-  }, []);
-
   // Esc handler
   useEffect(() => {
     const onKey = (e) => {
