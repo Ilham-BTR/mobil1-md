@@ -2071,7 +2071,7 @@ function DateRangeRow({ dari, sampai, onDari, onSampai, onReset, className = '' 
   );
 }
 
-function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
+function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin, regions = [] }) {
   const monthsList = useMemo(() => {
     const arr = []; const now = new Date();
     for (let i = 0; i < 12; i++) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); arr.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); }
@@ -2087,6 +2087,10 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
   const [lightbox, setLightbox] = useState(null);
   const [detail, setDetail] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  // Area/region MD (dari nama) untuk ditampilkan di samping nama
+  const mdById = useMemo(() => new Map(mds.map(m => [m.id, m])), [mds]);
+  const regionById = useMemo(() => new Map((regions || []).map(r => [r.id, r])), [regions]);
+  const areaOf = (mdId) => { const m = mdById.get(mdId); return m?.region?.name || regionById.get(m?.region_id)?.name || ''; };
   useBackDismiss(!!detail, () => setDetail(null));    // back -> tutup detail absen
   useBackDismiss(!!lightbox, () => setLightbox(null)); // back -> tutup foto (di atas detail)
 
@@ -2186,6 +2190,7 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
     const data = filteredRows.map(a => ({
       Tanggal: a.date,
       'Nama MD': a.md_name || '',
+      Region: areaOf(a.md_id),
       Email: a.md_email || '',
       'Jam Masuk': a.check_in_at ? fmtAbsenTime(a.check_in_at) : '',
       'Jam Pulang': a.check_out_at ? fmtAbsenTime(a.check_out_at) : '',
@@ -2242,7 +2247,10 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
               className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 cursor-pointer hover:border-zinc-700 transition">
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div className="min-w-0">
-                  <div className="text-sm font-bold text-zinc-100 truncate">{a.md_name || a.md_email || '—'}</div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="text-sm font-bold text-zinc-100 truncate">{a.md_name || a.md_email || '—'}</div>
+                    {areaOf(a.md_id) && <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-zinc-800 text-zinc-300 shrink-0 flex items-center gap-1"><MapPin className="w-2.5 h-2.5" />{areaOf(a.md_id)}</span>}
+                  </div>
                   <div className="text-[11px] text-zinc-500">{dLabel(a.date)}</div>
                 </div>
                 <div className="flex items-center gap-3 sm:gap-4 ml-auto">
@@ -2275,7 +2283,10 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
           <div className="bg-zinc-950 border border-zinc-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-start justify-between gap-3 p-4 border-b border-zinc-800 sticky top-0 bg-zinc-950">
               <div className="min-w-0">
-                <div className="text-base font-bold text-zinc-100 truncate">{detail.md_name || detail.md_email || '—'}</div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="text-base font-bold text-zinc-100 truncate">{detail.md_name || detail.md_email || '—'}</div>
+                  {areaOf(detail.md_id) && <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-zinc-800 text-zinc-300 shrink-0 flex items-center gap-1"><MapPin className="w-2.5 h-2.5" />{areaOf(detail.md_id)}</span>}
+                </div>
                 <div className="text-xs text-zinc-500 truncate">{dLabel(detail.date)}{detail.md_email ? ` · ${detail.md_email}` : ''}</div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -3358,7 +3369,7 @@ function AdminView({ profile }) {
       {tab === 'dashboard' && <DashboardTab visits={sVisits} mds={activeMds} onOpenVisit={openDetail} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} />}
       {tab === 'ranking' && <LeaderboardTab visits={sVisits} mds={activeMds} regions={regions} />}
       {tab === 'visits' && <VisitsTab visits={sVisits} mds={activeMds} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} onOpenVisit={openDetail} />}
-      {tab === 'absen' && <AdminAbsenTab mds={activeMds} allowedMdIds={allowedMdIds} isSuperAdmin={isSuperAdmin} />}
+      {tab === 'absen' && <AdminAbsenTab mds={activeMds} allowedMdIds={allowedMdIds} isSuperAdmin={isSuperAdmin} regions={regions} />}
       {tab === 'coverage' && <CoverageTab visits={sVisits} mds={activeMds} bengkels={bengkels} kotas={kotas} regions={regions} distributors={distributors} onOpenVisit={openDetail} />}
       {tab === 'master' && <MasterTab regions={regions} kotas={kotas} distributors={distributors} bengkels={bengkels} mds={sMds} accounts={sAccounts} onChange={() => loadAll(true)} isSuperAdmin={isSuperAdmin} canManageMaster={canManageMaster} />}
 
