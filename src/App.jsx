@@ -3639,6 +3639,17 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
   // MD yang benar-benar ada visit di filter ini (bukan sekadar jumlah MD terdaftar)
   const activeMdCount = new Set(filteredVisits.map(v => v.md_id)).size;
 
+  // Label sumbu-X: baris 1 nama MD (putih), baris 2 area/region (abu)
+  const renderMdTick = ({ x, y, payload }) => {
+    const region = chartData[payload.index]?.region || '';
+    return (
+      <g transform={`translate(${x},${y}) rotate(-40)`}>
+        <text x={0} y={0} dy={4} textAnchor="end" fill="#ffffff" fontSize={10} fontWeight={600}>{payload.value}</text>
+        {region && <text x={0} y={0} dy={15} textAnchor="end" fill="#9ca3af" fontSize={8}>{region}</text>}
+      </g>
+    );
+  };
+
   const handleExport = async () => {
     const ctx = { bengkels, kotas, regions, distributors, mds };
     const fname = `visits_${filters.month}_${new Date().toISOString().slice(0, 10)}.xlsx`;
@@ -3707,11 +3718,11 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
       </div>
 
       <Section title="Visit per MD" subtitle={`Actual vs Target — ${filters.month === 'all' ? 'semua bulan' : monthLabel(filters.month)}`} icon={Activity}>
-        <div className="h-80">
+        <div className="h-96">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData} margin={{ top: 10, right: 10, bottom: 10, left: -20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-              <XAxis dataKey="name" stroke="#71717a" tick={{ fontSize: 10, fill: '#ffffff' }} interval={0} angle={-40} textAnchor="end" height={70} />
+              <XAxis dataKey="name" stroke="#71717a" interval={0} height={95} tick={renderMdTick} />
               <YAxis stroke="#71717a" tick={{ fontSize: 11 }} />
               <Tooltip contentStyle={{ background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', fontSize: '12px' }} labelStyle={{ color: '#e4e4e7' }} itemStyle={{ color: '#e4e4e7' }} cursor={{ fill: 'rgba(239,68,68,0.05)' }} />
               <Legend wrapperStyle={{ fontSize: '12px' }} />
