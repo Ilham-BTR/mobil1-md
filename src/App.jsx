@@ -1780,6 +1780,14 @@ function PasskeyEnrollBanner() {
 // ABSEN MD (Masuk & Pulang) — selfie + GPS + catatan. Tabel attendances.
 // ============================================================
 const fmtAbsenTime = (iso) => iso ? new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '—';
+// Durasi kerja "Xj Ym" dari timestamp masuk/pulang (null kalau belum lengkap).
+const fmtWorkDuration = (a) => {
+  if (!a?.check_in_at || !a?.check_out_at) return null;
+  const mins = Math.round((new Date(a.check_out_at) - new Date(a.check_in_at)) / 60000);
+  if (mins < 0) return null;
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return h > 0 ? (m > 0 ? `${h}j ${m}m` : `${h}j`) : `${m}m`;
+};
 // Tanggal LOKAL (bukan UTC) agar absen tercatat di hari yang benar di Indonesia.
 const localDateStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
@@ -1877,7 +1885,6 @@ function AbsenHistory({ currentMD }) {
   if (loading) return <Loading />;
   if (rows.length === 0) return <div className="text-center py-12 text-zinc-500 text-sm">Belum ada riwayat absen.</div>;
 
-  const workHours = (a) => (a.check_in_at && a.check_out_at) ? ((new Date(a.check_out_at) - new Date(a.check_in_at)) / 3600000).toFixed(1) : null;
   const dLabel = (d) => new Date(d + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
   const filtered = rows.filter(a => {
     if (dari || sampai) {
@@ -1907,12 +1914,12 @@ function AbsenHistory({ currentMD }) {
       {filtered.length === 0 ? (
         <div className="text-center py-10 text-zinc-500 text-sm">Tidak ada absen di bulan ini.</div>
       ) : filtered.map(a => {
-        const wh = workHours(a);
+        const wh = fmtWorkDuration(a);
         return (
           <div key={a.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-semibold text-zinc-100">{dLabel(a.date)}</span>
-              {wh != null && <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-600/10 px-2 py-0.5 rounded-full"><Clock className="w-3 h-3" />{wh} jam</span>}
+              {wh && <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-600/10 px-2 py-0.5 rounded-full"><Clock className="w-3 h-3" />{wh}</span>}
             </div>
             <div className="grid grid-cols-2 gap-4">
               {[{ icon: LogIn, label: 'Masuk', time: a.check_in_at, photo: a.check_in_photo },
@@ -2248,7 +2255,7 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
                       </div>
                     ))}
                   </div>
-                  {a.work_hours != null && <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-600/10 px-2 py-0.5 rounded-full shrink-0"><Clock className="w-3 h-3" />{a.work_hours} jam</span>}
+                  {fmtWorkDuration(a) && <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-600/10 px-2 py-0.5 rounded-full shrink-0"><Clock className="w-3 h-3" />{fmtWorkDuration(a)}</span>}
                 </div>
               </div>
               {(a.check_in_note || a.check_out_note) && <p className="text-xs text-zinc-500 mt-3 pt-3 border-t border-zinc-800">{[a.check_in_note, a.check_out_note].filter(Boolean).join(' · ')}</p>}
@@ -2272,7 +2279,7 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
                 <div className="text-xs text-zinc-500 truncate">{dLabel(detail.date)}{detail.md_email ? ` · ${detail.md_email}` : ''}</div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                {detail.work_hours != null && <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-600/10 px-2 py-0.5 rounded-full"><Clock className="w-3 h-3" />{detail.work_hours} jam</span>}
+                {fmtWorkDuration(detail) && <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-600/10 px-2 py-0.5 rounded-full"><Clock className="w-3 h-3" />{fmtWorkDuration(detail)}</span>}
                 {isSuperAdmin && !editMode && (
                   <button onClick={startEditAbsen} title="Edit absen"
                     className="h-8 px-3 rounded-lg bg-zinc-800 hover:bg-amber-600 text-zinc-200 hover:text-white text-xs font-medium flex items-center gap-1.5 transition">
