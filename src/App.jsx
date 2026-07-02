@@ -507,6 +507,13 @@ const PHOTO_KEYS = Object.keys(PHOTO_LABELS);
 const PHOTO_COL_TO_UIKEY = Object.fromEntries(
   Object.entries(VISIT_PHOTO_MAP).map(([uiKey, m]) => [m.col, uiKey])
 );
+// Warna ikon kartu KPI -> class LITERAL. Tailwind hanya generate class yang
+// muncul utuh di source; `text-${x}-500` dinamis TIDAK ke-generate (mis. sky/amber
+// jadi tak berwarna). Simpan literal di sini supaya semua warna kartu benar muncul.
+const KPI_ICON_COLOR = {
+  red: 'text-red-500', emerald: 'text-emerald-500', sky: 'text-sky-500',
+  blue: 'text-blue-500', amber: 'text-amber-500', rose: 'text-rose-500',
+};
 
 function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDeleted, canEdit = false, onUpdated, bengkels = [], distributors = [] }) {
   const [lightboxIdx, setLightboxIdx] = useState(null);
@@ -2602,7 +2609,7 @@ function MDDashboard({ currentMD, visits, bengkels, kotas }) {
           <div key={i} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs text-zinc-500 uppercase tracking-wider font-medium">{k.label}</span>
-              <k.icon className={`w-4 h-4 text-${k.color}-500`} />
+              <k.icon className={`w-4 h-4 ${KPI_ICON_COLOR[k.color] || 'text-zinc-400'}`} />
             </div>
             <div className="text-2xl font-bold text-zinc-100 mb-0.5">{k.value}</div>
             <div className="text-xs text-zinc-500">{k.sub}</div>
@@ -3610,6 +3617,7 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
   const totalTarget = relevantMDs.reduce((s, m) => s + (m.monthly_target || 30), 0);
   const completionRate = totalTarget > 0 ? Math.round((totalVisits / totalTarget) * 100) : 0;
   const pemasangan = filteredVisits.filter(v => v.status === 'Pemasangan').length;
+  const revisit = filteredVisits.filter(v => v.status === 'Revisit').length;
   // MD yang benar-benar ada visit di filter ini (bukan sekadar jumlah MD terdaftar)
   const activeMdCount = new Set(filteredVisits.map(v => v.md_id)).size;
 
@@ -3661,17 +3669,18 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
         onDari={v => setFilters({ ...filters, dari: v })} onSampai={v => setFilters({ ...filters, sampai: v })}
         onReset={() => setFilters({ ...filters, dari: '', sampai: '' })} />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
         {[
           { label: 'Total Visit', value: totalVisits, sub: `dari ${totalTarget} target`, icon: Activity, color: 'red' },
           { label: 'Achievement', value: `${completionRate}%`, sub: 'completion rate', icon: Target, color: 'emerald' },
           { label: 'Pemasangan', value: pemasangan, sub: 'POSM aktif', icon: Check, color: 'sky' },
+          { label: 'Revisit', value: revisit, sub: 'kunjungan ulang', icon: Navigation, color: 'blue' },
           { label: 'MD Aktif', value: activeMdCount, sub: `dari ${relevantMDs.length} MD · ada visit`, icon: Users, color: 'amber' },
         ].map((k, i) => (
           <div key={i} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs text-zinc-500 uppercase tracking-wider font-medium">{k.label}</span>
-              <k.icon className={`w-4 h-4 text-${k.color}-500`} />
+              <k.icon className={`w-4 h-4 ${KPI_ICON_COLOR[k.color] || 'text-zinc-400'}`} />
             </div>
             <div className="text-2xl font-bold text-zinc-100 mb-0.5">{k.value}</div>
             <div className="text-xs text-zinc-500">{k.sub}</div>
