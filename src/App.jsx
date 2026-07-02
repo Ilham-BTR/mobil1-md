@@ -2090,6 +2090,63 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
     }
   };
 
+  // Muat ulang data absen sesuai filter aktif (dipakai setelah edit)
+  const reload = async () => {
+    const d = (dari || sampai) ? await api.fetchAttendancesByRange(dari, sampai) : await api.fetchAttendancesByMonth(month);
+    setRows(d);
+    return d;
+  };
+
+  // Edit absen (super admin) — jam, catatan, foto, kosongkan sesi
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [eform, setEform] = useState(null);
+  const [replacingKind, setReplacingKind] = useState(null);
+  const absenFileRef = useRef(null);
+  const pendingKindRef = useRef(null);
+  const setEF = (patch) => setEform(f => ({ ...f, ...patch }));
+  const toLocalInput = (iso) => { if (!iso) return ''; const d = new Date(iso); const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
+  useEffect(() => { setEditMode(false); }, [detail?.id]); // reset saat ganti/tutup record
+  const startEditAbsen = () => {
+    setEform({
+      check_in_at: toLocalInput(detail.check_in_at), check_in_note: detail.check_in_note || '', check_in_photo: detail.check_in_photo || null, check_in_lat: detail.check_in_lat, check_in_lng: detail.check_in_lng,
+      check_out_at: toLocalInput(detail.check_out_at), check_out_note: detail.check_out_note || '', check_out_photo: detail.check_out_photo || null, check_out_lat: detail.check_out_lat, check_out_lng: detail.check_out_lng,
+    });
+    setEditMode(true);
+  };
+  const clearSession = (kind) => {
+    if (!confirm(`Kosongkan sesi Absen ${kind === 'in' ? 'Masuk' : 'Pulang'}? (jam, foto, lokasi, catatan sesi ini dihapus saat disimpan)`)) return;
+    if (kind === 'in') setEF({ check_in_at: '', check_in_note: '', check_in_photo: null, check_in_lat: null, check_in_lng: null });
+    else setEF({ check_out_at: '', check_out_note: '', check_out_photo: null, check_out_lat: null, check_out_lng: null });
+  };
+  const pickReplaceAbsen = (kind) => { pendingKindRef.current = kind; absenFileRef.current?.click(); };
+  const onReplaceAbsenFile = async (e) => {
+    const file = e.target.files?.[0]; e.target.value = '';
+    const kind = pendingKindRef.current;
+    if (!file || !kind) return;
+    setReplacingKind(kind);
+    try {
+      const compressed = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 1024, useWebWorker: true, fileType: 'image/jpeg' });
+      const url = await api.uploadAttendancePhoto(compressed, detail.md_id, detail.date, kind);
+      setEF(kind === 'in' ? { check_in_photo: url } : { check_out_photo: url });
+    } catch (err) { alert('Gagal ganti foto: ' + (err?.message || err)); }
+    finally { setReplacingKind(null); }
+  };
+  const saveAbsen = async () => {
+    setSaving(true);
+    try {
+      const iso = (v) => v ? new Date(v).toISOString() : null;
+      await api.updateMaster('attendances', detail.id, {
+        check_in_at: iso(eform.check_in_at), check_in_note: eform.check_in_note?.trim() || null, check_in_photo: eform.check_in_photo || null, check_in_lat: eform.check_in_lat, check_in_lng: eform.check_in_lng,
+        check_out_at: iso(eform.check_out_at), check_out_note: eform.check_out_note?.trim() || null, check_out_photo: eform.check_out_photo || null, check_out_lat: eform.check_out_lat, check_out_lng: eform.check_out_lng,
+      });
+      const fresh = await reload();
+      setDetail(fresh.find(r => r.id === detail.id) || null);
+      setEditMode(false);
+    } catch (err) { alert('Gagal simpan absen: ' + (err?.message || err)); }
+    finally { setSaving(false); }
+  };
+
   useEffect(() => {
     let on = true; setLoading(true);
     // Rentang tanggal (kalau diisi) meng-override dropdown bulan
@@ -2209,6 +2266,12 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {detail.work_hours != null && <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-600/10 px-2 py-0.5 rounded-full"><Clock className="w-3 h-3" />{detail.work_hours} jam</span>}
+                {isSuperAdmin && !editMode && (
+                  <button onClick={startEditAbsen} title="Edit absen"
+                    className="h-8 px-3 rounded-lg bg-zinc-800 hover:bg-amber-600 text-zinc-200 hover:text-white text-xs font-medium flex items-center gap-1.5 transition">
+                    <Pencil className="w-3.5 h-3.5" />Edit
+                  </button>
+                )}
                 <button onClick={() => setDetail(null)} className="text-zinc-400 hover:text-zinc-100"><X className="w-5 h-5" /></button>
               </div>
             </div>
@@ -2216,16 +2279,43 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
               {[{ k: 'in', icon: LogIn, label: 'Absen Masuk', time: detail.check_in_at, photo: detail.check_in_photo, lat: detail.check_in_lat, lng: detail.check_in_lng, note: detail.check_in_note },
                 { k: 'out', icon: LogOut, label: 'Absen Pulang', time: detail.check_out_at, photo: detail.check_out_photo, lat: detail.check_out_lat, lng: detail.check_out_lng, note: detail.check_out_note }].map(s => (
                 <div key={s.k} className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-3">
-                  <div className="flex items-center gap-2 mb-2"><s.icon className="w-4 h-4 text-zinc-400" /><span className="text-sm font-semibold text-zinc-200">{s.label}</span></div>
-                  {s.photo ? <StoredImage src={s.photo} alt={s.label} className="w-full h-56 rounded-lg object-cover cursor-pointer mb-3" onClick={() => setLightbox(s.photo)} />
-                    : <div className="w-full h-56 rounded-lg bg-zinc-800 flex items-center justify-center mb-3 text-zinc-600 text-xs">Tidak ada foto</div>}
-                  <div className="text-[11px] text-zinc-500">Jam</div>
-                  <div className={`text-sm font-semibold mb-2 ${s.time ? 'text-emerald-400' : 'text-zinc-500'}`}>{s.time ? fmtAbsenTime(s.time) : 'Belum'}</div>
-                  <div className="text-[11px] text-zinc-500">Lokasi</div>
-                  {s.lat != null && s.lng != null
-                    ? <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm text-red-400 hover:text-red-300"><MapPin className="w-3.5 h-3.5" />{Number(s.lat).toFixed(5)}, {Number(s.lng).toFixed(5)}</a>
-                    : <div className="text-sm text-zinc-500">—</div>}
-                  {s.note && <><div className="text-[11px] text-zinc-500 mt-2">Catatan</div><div className="text-sm text-zinc-300">{s.note}</div></>}
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2"><s.icon className="w-4 h-4 text-zinc-400" /><span className="text-sm font-semibold text-zinc-200">{s.label}</span></div>
+                    {editMode && (
+                      <button onClick={() => clearSession(s.k)} className="text-[11px] text-rose-300 hover:text-rose-200 flex items-center gap-1"><Trash2 className="w-3 h-3" />Kosongkan</button>
+                    )}
+                  </div>
+                  <div className="relative mb-3">
+                    {(editMode ? eform[`check_${s.k}_photo`] : s.photo)
+                      ? <StoredImage src={editMode ? eform[`check_${s.k}_photo`] : s.photo} alt={s.label} className="w-full h-56 rounded-lg object-cover cursor-pointer" onClick={() => { if (!editMode) setLightbox(s.photo); }} />
+                      : <div className="w-full h-56 rounded-lg bg-zinc-800 flex items-center justify-center text-zinc-600 text-xs">Tidak ada foto</div>}
+                    {editMode && (
+                      <button onClick={() => pickReplaceAbsen(s.k)} disabled={replacingKind === s.k}
+                        className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-md bg-black/70 hover:bg-red-600 text-white text-[10px] font-medium backdrop-blur-sm transition disabled:opacity-60">
+                        {replacingKind === s.k ? 'Uploading…' : <><Camera className="w-3 h-3" />Ganti</>}
+                      </button>
+                    )}
+                  </div>
+                  {editMode ? (
+                    <div className="space-y-2">
+                      <div>
+                        <div className="text-[11px] text-zinc-500 mb-0.5">Jam</div>
+                        <Input type="datetime-local" value={eform[`check_${s.k}_at`]} onChange={e => setEF({ [`check_${s.k}_at`]: e.target.value })} />
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-zinc-500 mb-0.5">Catatan</div>
+                        <Input value={eform[`check_${s.k}_note`]} onChange={e => setEF({ [`check_${s.k}_note`]: e.target.value })} placeholder="—" />
+                      </div>
+                    </div>
+                  ) : (<>
+                    <div className="text-[11px] text-zinc-500">Jam</div>
+                    <div className={`text-sm font-semibold mb-2 ${s.time ? 'text-emerald-400' : 'text-zinc-500'}`}>{s.time ? fmtAbsenTime(s.time) : 'Belum'}</div>
+                    <div className="text-[11px] text-zinc-500">Lokasi</div>
+                    {s.lat != null && s.lng != null
+                      ? <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm text-red-400 hover:text-red-300"><MapPin className="w-3.5 h-3.5" />{Number(s.lat).toFixed(5)}, {Number(s.lng).toFixed(5)}</a>
+                      : <div className="text-sm text-zinc-500">—</div>}
+                    {s.note && <><div className="text-[11px] text-zinc-500 mt-2">Catatan</div><div className="text-sm text-zinc-300">{s.note}</div></>}
+                  </>)}
                 </div>
               ))}
             </div>
@@ -2253,11 +2343,23 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin }) {
               );
             })()}
             {isSuperAdmin && (
-              <div className="p-4 pt-0">
-                <button onClick={() => handleDeleteAbsen(detail.id)} disabled={deleting}
-                  className="w-full flex items-center justify-center gap-2 text-sm text-rose-300 bg-rose-600/10 hover:bg-rose-600/20 border border-rose-600/30 rounded-lg py-2.5 disabled:opacity-50">
-                  {deleting ? <><Loader2 className="w-4 h-4 animate-spin" />Menghapus…</> : <><Trash2 className="w-4 h-4" />Hapus Absen ini</>}
-                </button>
+              <div className="p-4 pt-0 space-y-2">
+                <input ref={absenFileRef} type="file" accept="image/*" className="hidden" onChange={onReplaceAbsenFile} />
+                {editMode ? (
+                  <div className="flex items-center justify-end gap-2">
+                    <button onClick={() => setEditMode(false)} disabled={saving}
+                      className="px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm border border-zinc-700 transition disabled:opacity-60">Batal</button>
+                    <button onClick={saveAbsen} disabled={saving}
+                      className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition disabled:opacity-60 flex items-center gap-1.5">
+                      {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Menyimpan…</> : <><Check className="w-3.5 h-3.5" />Simpan Perubahan</>}
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => handleDeleteAbsen(detail.id)} disabled={deleting}
+                    className="w-full flex items-center justify-center gap-2 text-sm text-rose-300 bg-rose-600/10 hover:bg-rose-600/20 border border-rose-600/30 rounded-lg py-2.5 disabled:opacity-50">
+                    {deleting ? <><Loader2 className="w-4 h-4 animate-spin" />Menghapus…</> : <><Trash2 className="w-4 h-4" />Hapus Absen ini</>}
+                  </button>
+                )}
               </div>
             )}
           </div>
