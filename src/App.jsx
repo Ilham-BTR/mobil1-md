@@ -2375,7 +2375,7 @@ function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
   useEffect(() => {
     Promise.all([
       api.fetchVisits({ mdId: currentMD.id }),
-      api.fetchBengkels(),
+      api.fetchBengkels(currentMD.region_id || null),  // hanya bengkel region MD -> hemat memori HP
       api.fetchRegions(),
       api.fetchKotas(),
       api.fetchDistributors(),

@@ -270,8 +270,24 @@ async function fetchAllPaged(buildQuery, batch = 1000) {
   return all;
 }
 
-export async function fetchBengkels() {
-  if (MOCK_MODE) return [...MOCK_DATA.bengkels];
+// regionId (opsional): batasi ke bengkel di region itu saja. Dipakai MD supaya
+// tak menarik SEMUA bengkel (2000+) yang bikin OOM di HP RAM kecil.
+export async function fetchBengkels(regionId = null) {
+  if (MOCK_MODE) {
+    const all = [...MOCK_DATA.bengkels];
+    if (!regionId) return all;
+    const kotaIds = new Set(MOCK_DATA.kotas.filter(k => k.region_id === regionId).map(k => k.id));
+    return all.filter(b => kotaIds.has(b.kota_id));
+  }
+  if (regionId) {
+    // inner join kotas + filter region -> hanya bengkel di region MD
+    return fetchAllPaged(() =>
+      supabase.from('bengkels')
+        .select('*, kota:kotas!inner(*, region:regions!region_id(*))')
+        .eq('kota.region_id', regionId)
+        .order('code')
+    );
+  }
   return fetchAllPaged(() =>
     supabase.from('bengkels').select('*, kota:kotas(*, region:regions!region_id(*))').order('code')
   );
