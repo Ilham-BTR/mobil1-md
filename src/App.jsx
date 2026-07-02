@@ -3,7 +3,7 @@ import imageCompression from 'browser-image-compression';
 import { VISIT_PHOTO_MAP } from './lib/storage';
 import {
   BarChart, Bar, ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, Cell, ReferenceLine
+  ResponsiveContainer, Legend, Cell, ReferenceLine, LabelList
 } from 'recharts';
 import {
   MapPin, Camera, Calendar, User, Building2, Check, X,
@@ -3715,7 +3715,9 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
               <YAxis stroke="#71717a" tick={{ fontSize: 11 }} />
               <Tooltip contentStyle={{ background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', fontSize: '12px' }} labelStyle={{ color: '#e4e4e7' }} itemStyle={{ color: '#e4e4e7' }} cursor={{ fill: 'rgba(239,68,68,0.05)' }} />
               <Legend wrapperStyle={{ fontSize: '12px' }} />
-              <Bar dataKey="Actual" fill="#60a5fa" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Actual" fill="#60a5fa" radius={[4, 4, 0, 0]}>
+                <LabelList dataKey="Actual" position="top" fill="#ffffff" fontSize={10} fontWeight={600} />
+              </Bar>
               <Line dataKey="Target" stroke="#dc2626" strokeWidth={2} strokeDasharray="6 4" dot={false} />
             </ComposedChart>
           </ResponsiveContainer>
