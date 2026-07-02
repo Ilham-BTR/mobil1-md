@@ -528,7 +528,7 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
     if (!uiKey) { alert('Slot foto tak dikenal.'); return; }
     setReplacingCol(col);
     try {
-      const compressed = await imageCompression(file, { maxSizeMB: 0.3, maxWidthOrHeight: 1280, useWebWorker: true, fileType: 'image/jpeg' });
+      const compressed = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 1024, useWebWorker: true, fileType: 'image/jpeg' });
       const { url } = await api.uploadOneVisitPhoto(compressed, visit.id, uiKey);
       await api.updateMaster('visits', visit.id, { [col]: url });
       setPhotoOverrides(o => ({ ...o, [col]: url }));
@@ -1159,19 +1159,20 @@ const PhotoTile = ({ label, photo, onChange, required }) => {
     if (!file) return;
     e.target.value = '';
 
-    const initialPreview = URL.createObjectURL(file);
-    onChange({ status: 'compressing', preview: initialPreview, file: null, originalSize: file.size, compressedSize: 0 });
+    // JANGAN decode foto original untuk preview — di HP RAM kecil, decode foto
+    // kamera 12-48MP bisa makan ratusan MB -> app force close. Cukup tampilkan
+    // overlay "Compressing", preview diisi versi kompres (kecil) setelah selesai.
+    onChange({ status: 'compressing', preview: null, file: null, originalSize: file.size, compressedSize: 0 });
 
     try {
       const compressed = await imageCompression(file, {
-        maxSizeMB: 0.3, maxWidthOrHeight: 1280, useWebWorker: true, fileType: 'image/jpeg',
+        maxSizeMB: 0.2, maxWidthOrHeight: 1024, useWebWorker: true, fileType: 'image/jpeg',
       });
       const compressedPreview = URL.createObjectURL(compressed);
-      URL.revokeObjectURL(initialPreview);
       onChange({ status: 'ready', preview: compressedPreview, file: compressed, originalSize: file.size, compressedSize: compressed.size });
     } catch (err) {
       console.error('Compression failed:', err);
-      onChange({ status: 'error', preview: initialPreview, error: err.message });
+      onChange({ status: 'error', preview: null, error: err.message });
     }
   };
 
@@ -1197,7 +1198,7 @@ const PhotoTile = ({ label, photo, onChange, required }) => {
       >
         {hasPhoto ? (
           <>
-            <img src={photo.preview} alt={label} className="absolute inset-0 w-full h-full object-cover" />
+            {photo.preview && <img src={photo.preview} alt={label} className="absolute inset-0 w-full h-full object-cover" />}
             {photo.status === 'compressing' && (
               <div className="absolute inset-0 bg-zinc-950/70 backdrop-blur-sm flex flex-col items-center justify-center">
                 <Loader2 className="w-6 h-6 text-white animate-spin" />
@@ -1952,17 +1953,17 @@ function AbsenForm({ kind, currentMD, todayStr, onCancel, onDone }) {
 
   const handleSelfie = async (e) => {
     const file = e.target.files?.[0]; if (!file) return; e.target.value = '';
-    const preview = URL.createObjectURL(file);
-    setSelfie({ status: 'compressing', preview, file: null });
+    // Jangan decode foto original (boros RAM di HP lama) — overlay saja saat kompres.
+    setSelfie({ status: 'compressing', preview: null, file: null });
     try {
-      const compressed = await imageCompression(file, { maxSizeMB: 0.3, maxWidthOrHeight: 1280, useWebWorker: true, fileType: 'image/jpeg' });
+      const compressed = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 1024, useWebWorker: true, fileType: 'image/jpeg' });
       const cPreview = URL.createObjectURL(compressed);
       setSelfie({ status: 'uploading', preview: cPreview, file: compressed });
       // Upload-saat-diambil: selfie langsung naik ke storage (path attendance/{userId}/{date}/{kind})
       api.uploadAttendancePhoto(compressed, currentMD.id, todayStr, kind)
         .then(url => setSelfie(s => (s?.file === compressed ? { ...s, status: 'uploaded', url } : s)))
         .catch(err => setSelfie(s => (s?.file === compressed ? { ...s, status: 'error', error: err.message } : s)));
-    } catch (err) { setSelfie({ status: 'error', preview, error: err.message }); }
+    } catch (err) { setSelfie({ status: 'error', preview: null, error: err.message }); }
   };
 
   const selfieReady = ['ready', 'uploading', 'uploaded'].includes(selfie?.status);
@@ -1989,7 +1990,7 @@ function AbsenForm({ kind, currentMD, todayStr, onCancel, onDone }) {
         <button type="button" onClick={() => inputRef.current?.click()}
           className={`relative w-40 h-40 rounded-xl border-2 overflow-hidden transition ${selfie ? 'border-emerald-600/40 border-solid' : 'border-zinc-800 border-dashed bg-zinc-950 hover:border-red-600/40'}`}>
           {selfie ? <>
-            <img src={selfie.preview} alt="selfie" className="absolute inset-0 w-full h-full object-cover" />
+            {selfie.preview && <img src={selfie.preview} alt="selfie" className="absolute inset-0 w-full h-full object-cover" />}
             {selfie.status === 'compressing' && <div className="absolute inset-0 bg-zinc-950/70 flex items-center justify-center"><Loader2 className="w-6 h-6 text-white animate-spin" /></div>}
             {selfie.status === 'uploading' && <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-sky-500 flex items-center justify-center" title="Mengupload…"><Loader2 className="w-3 h-3 text-zinc-900 animate-spin" /></div>}
             {(selfie.status === 'ready' || selfie.status === 'uploaded') && <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center"><Check className="w-3 h-3 text-zinc-900" strokeWidth={3} /></div>}
