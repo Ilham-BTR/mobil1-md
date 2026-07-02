@@ -3650,6 +3650,12 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
     );
   };
 
+  // Warna batang per area/region
+  const REGION_COLORS = ['#60a5fa', '#34d399', '#fbbf24', '#f472b6', '#a78bfa', '#fb923c', '#22d3ee', '#f87171'];
+  const regionNames = [...new Set(chartData.map(d => d.region).filter(Boolean))].sort();
+  const regionColor = Object.fromEntries(regionNames.map((n, i) => [n, REGION_COLORS[i % REGION_COLORS.length]]));
+  const colorForRegion = (r) => regionColor[r] || '#71717a';
+
   const handleExport = async () => {
     const ctx = { bengkels, kotas, regions, distributors, mds };
     const fname = `visits_${filters.month}_${new Date().toISOString().slice(0, 10)}.xlsx`;
@@ -3725,13 +3731,23 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
               <XAxis dataKey="name" stroke="#71717a" interval={0} height={95} tick={renderMdTick} />
               <YAxis stroke="#71717a" tick={{ fontSize: 11 }} />
               <Tooltip contentStyle={{ background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', fontSize: '12px' }} labelStyle={{ color: '#e4e4e7' }} itemStyle={{ color: '#e4e4e7' }} cursor={{ fill: 'rgba(239,68,68,0.05)' }} />
-              <Legend wrapperStyle={{ fontSize: '12px' }} />
-              <Bar dataKey="Actual" fill="#60a5fa" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="Actual" radius={[4, 4, 0, 0]}>
+                {chartData.map((d, i) => <Cell key={i} fill={colorForRegion(d.region)} />)}
                 <LabelList dataKey="Actual" position="top" fill="#ffffff" fontSize={10} fontWeight={600} />
               </Bar>
               <Line dataKey="Target" stroke="#dc2626" strokeWidth={2} strokeDasharray="6 4" dot={false} />
             </ComposedChart>
           </ResponsiveContainer>
+        </div>
+
+        {/* Legenda warna per area */}
+        <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-1.5 mt-2 text-[11px]">
+          {regionNames.map(n => (
+            <span key={n} className="flex items-center gap-1.5 text-zinc-400">
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ background: colorForRegion(n) }} />{n}
+            </span>
+          ))}
+          <span className="flex items-center gap-1.5 text-zinc-400"><span className="inline-block w-3.5 border-t-2 border-dashed border-red-600" />Target</span>
         </div>
 
         <div className="mt-5 space-y-2">
