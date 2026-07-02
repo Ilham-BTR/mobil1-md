@@ -12,7 +12,7 @@ import {
   Users, Briefcase, Globe, ChevronDown, LogOut, Shield,
   Lock, Mail, Eye, EyeOff, AlertCircle, Fingerprint, Loader2,
   Navigation, Phone, FileText, Download, Search, Upload, FileSpreadsheet,
-  LogIn, Clock, CalendarDays, Trophy, Power, MessageCircle
+  LogIn, Clock, CalendarDays, Trophy, Power, MessageCircle, Pencil
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Polyline, Circle } from 'react-leaflet';
 import L from 'leaflet';
@@ -508,7 +508,7 @@ const PHOTO_COL_TO_UIKEY = Object.fromEntries(
   Object.entries(VISIT_PHOTO_MAP).map(([uiKey, m]) => [m.col, uiKey])
 );
 
-function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDeleted, canEdit = false, onUpdated }) {
+function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDeleted, canEdit = false, onUpdated, bengkels = [], distributors = [] }) {
   const [lightboxIdx, setLightboxIdx] = useState(null);
   useBackDismiss(true, onClose);                                  // back -> tutup modal detail
   useBackDismiss(lightboxIdx != null, () => setLightboxIdx(null)); // back -> tutup foto fullscreen dulu
@@ -576,6 +576,47 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
     return () => window.removeEventListener('keydown', onKey);
   });
 
+  // Edit data visit (super admin) — ubah field yang diisi MD.
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState(null);
+  const setF = (patch) => setForm(f => ({ ...f, ...patch }));
+  const startEdit = () => {
+    setForm({
+      visit_date: visit.visit_date || '',
+      status: visit.status || 'Pemasangan',
+      sub_type: visit.sub_type || '',
+      bengkel_id: visit.bengkel_id || '',
+      distributor_id: visit.distributor_id || '',
+      pic_name: visit.pic_name || '',
+      pic_phone: visit.pic_phone || '',
+      remarks: visit.remarks || '',
+    });
+    setEditMode(true);
+  };
+  const saveEdit = async () => {
+    if (!form.visit_date || !form.bengkel_id) { alert('Tanggal & bengkel wajib diisi.'); return; }
+    setSaving(true);
+    try {
+      await api.updateMaster('visits', visit.id, {
+        visit_date: form.visit_date,
+        status: form.status,
+        sub_type: form.sub_type || null,
+        bengkel_id: form.bengkel_id,
+        distributor_id: form.distributor_id || null,
+        pic_name: form.pic_name?.trim() || null,
+        pic_phone: form.pic_phone?.trim() || null,
+        remarks: form.remarks?.trim() || null,
+      });
+      onUpdated?.();
+      setEditMode(false);
+    } catch (e) {
+      alert('Gagal simpan perubahan: ' + (e?.message || e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const availablePhotos = PHOTO_KEYS
     .filter(k => photoOverrides[k] ?? visit[k])
     .map(k => ({ key: k, label: PHOTO_LABELS[k], url: photoOverrides[k] ?? visit[k] }));
@@ -603,6 +644,12 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
               <StatusBadge status={visit.status} />
               {visit.sub_type && <span className="text-[10px] text-zinc-400">{visit.sub_type}</span>}
             </div>
+            {canEdit && !editMode && (
+              <button onClick={startEdit} title="Edit data visit"
+                className="h-9 px-3 rounded-lg bg-zinc-800 hover:bg-amber-600 text-zinc-200 hover:text-white text-xs font-medium flex items-center gap-1.5 transition">
+                <Pencil className="w-3.5 h-3.5" />Edit
+              </button>
+            )}
             <button onClick={onClose} className="w-9 h-9 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 flex items-center justify-center">
               <X className="w-4 h-4" />
             </button>
@@ -610,6 +657,68 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
         </div>
 
         <div className="p-5 space-y-5">
+          {/* Edit form (super admin) */}
+          {editMode && form && (
+            <div className="bg-amber-950/20 border border-amber-700/40 rounded-xl p-4 space-y-3">
+              <div className="text-[11px] uppercase tracking-wider text-amber-400 font-semibold flex items-center gap-2">
+                <Pencil className="w-3.5 h-3.5" />Edit Data Visit
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="text-[11px] text-zinc-400">Tanggal Visit</span>
+                  <Input type="date" value={form.visit_date} onChange={e => setF({ visit_date: e.target.value })} />
+                </label>
+                <label className="block">
+                  <span className="text-[11px] text-zinc-400">Distributor</span>
+                  <Select value={form.distributor_id} onChange={e => setF({ distributor_id: e.target.value })}>
+                    <option value="">— tidak ada —</option>
+                    {distributors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </Select>
+                </label>
+                <label className="block">
+                  <span className="text-[11px] text-zinc-400">Status</span>
+                  <Select value={form.status} onChange={e => { const s = e.target.value; setF({ status: s, sub_type: (STATUS_SUBTYPES[s] || []).includes(form.sub_type) ? form.sub_type : '' }); }}>
+                    {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                  </Select>
+                </label>
+                <label className="block">
+                  <span className="text-[11px] text-zinc-400">Sub-tipe</span>
+                  <Select value={form.sub_type} onChange={e => setF({ sub_type: e.target.value })}>
+                    <option value="">— pilih —</option>
+                    {(STATUS_SUBTYPES[form.status] || []).map(s => <option key={s} value={s}>{s}</option>)}
+                  </Select>
+                </label>
+                <div className="sm:col-span-2">
+                  <span className="text-[11px] text-zinc-400">Bengkel</span>
+                  <SearchableSelect value={form.bengkel_id} onChange={v => setF({ bengkel_id: v })}
+                    options={bengkels.map(b => ({ value: b.id, label: `${b.code} - ${b.name}` }))} placeholder="Pilih bengkel…" />
+                </div>
+                <label className="block">
+                  <span className="text-[11px] text-zinc-400">PIC / Nama</span>
+                  <Input value={form.pic_name} onChange={e => setF({ pic_name: e.target.value })} />
+                </label>
+                <label className="block">
+                  <span className="text-[11px] text-zinc-400">PIC / No. HP</span>
+                  <Input value={form.pic_phone} onChange={e => setF({ pic_phone: e.target.value })} />
+                </label>
+                <label className="block sm:col-span-2">
+                  <span className="text-[11px] text-zinc-400">Remarks</span>
+                  <textarea value={form.remarks} onChange={e => setF({ remarks: e.target.value })} rows={2}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-600/50" />
+                </label>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button onClick={() => setEditMode(false)} disabled={saving}
+                  className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm border border-zinc-700 transition disabled:opacity-60">Batal</button>
+                <button onClick={saveEdit} disabled={saving || !form.visit_date || !form.bengkel_id}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition disabled:opacity-60 flex items-center gap-1.5">
+                  {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Menyimpan…</> : <><Check className="w-3.5 h-3.5" />Simpan Perubahan</>}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!editMode && (<>
           {/* Quick info grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <InfoCell icon={Calendar} label="Tanggal Visit" value={`${visit.visit_date}${visit.created_at ? ` · ${fmtAbsenTime(visit.created_at)}` : ''}`} />
@@ -635,6 +744,8 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
               </div>
             </div>
           </div>
+
+          </>)}
 
           {/* Map */}
           {(hasBengkelCoord || hasVisitCoord) && (
@@ -739,7 +850,7 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
           </div>
 
           {/* Remarks */}
-          {visit.remarks && (
+          {!editMode && visit.remarks && (
             <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
               <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2 flex items-center gap-1.5">
                 <FileText className="w-3 h-3" />Remarks
@@ -3145,6 +3256,8 @@ function AdminView({ profile }) {
           onDeleted={isSuperAdmin ? () => { setDetailVisitId(null); loadAll(); } : undefined}
           canEdit={isSuperAdmin}
           onUpdated={() => loadAll()}
+          bengkels={bengkels}
+          distributors={distributors}
         />
       )}
     </div>
