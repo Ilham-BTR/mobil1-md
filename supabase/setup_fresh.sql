@@ -265,7 +265,7 @@ create or replace function backfill_bengkel_coords(
   p_bengkel_id uuid, p_lat double precision, p_lng double precision
 )
 returns boolean language plpgsql security definer set search_path = public as $$
-declare v_updated boolean := false;
+declare v_updated integer := 0;
 begin
   if p_bengkel_id is null or p_lat is null or p_lng is null then return false; end if;
   if p_lat < -90 or p_lat > 90 or p_lng < -180 or p_lng > 180 then return false; end if;

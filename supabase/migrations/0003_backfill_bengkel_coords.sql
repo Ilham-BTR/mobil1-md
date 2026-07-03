@@ -25,7 +25,7 @@ security definer
 set search_path = public
 as $$
 declare
-  v_updated boolean := false;
+  v_updated integer := 0;
 begin
   -- Param validation
   if p_bengkel_id is null or p_lat is null or p_lng is null then
