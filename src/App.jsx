@@ -2850,7 +2850,7 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
   const GEOFENCE_RADIUS = 200; // meter — MD wajib dalam radius ini dari titik bengkel
   const gpsFar = gpsDistance != null && gpsDistance > GEOFENCE_RADIUS; // terlalu jauh → blokir
 
-  const canSubmit = checkedInToday !== false && form.bengkelId && form.distributorId && form.subType && form.pic && form.phone && hasAllRequiredPhotos && !anyCompressing && !gpsFar && !submitting;
+  const canSubmit = checkedInToday !== false && form.bengkelId && form.distributorId && form.subType && form.pic && form.phone && hasAllRequiredPhotos && !anyCompressing && gps.status === 'ready' && !gpsFar && !submitting;
 
   const handleSubmit = async () => {
     if (submitLock.current || !canSubmit) return;  // guard sinkron, gak nunggu re-render
@@ -3093,6 +3093,15 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
           <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
           <p className="text-xs text-rose-300">
             <span className="font-semibold">Bengkel yang Anda pilih salah — mohon periksa kembali, atau hubungi admin.</span>
+          </p>
+        </div>
+      )}
+
+      {form.bengkelId && gps.status !== 'ready' && (
+        <div className="mb-3 p-3 bg-amber-600/10 border border-amber-600/30 rounded-lg flex items-start gap-2.5">
+          <MapPin className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-300">
+            <span className="font-semibold">GPS belum aktif.</span> Visit tidak bisa disimpan tanpa lokasi. Aktifkan GPS/izin lokasi, lalu tekan "Ambil GPS".
           </p>
         </div>
       )}
