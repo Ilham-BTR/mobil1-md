@@ -706,7 +706,7 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
                 </label>
                 <label className="block">
                   <span className="text-[11px] text-zinc-400">PIC / No. HP</span>
-                  <Input value={form.pic_phone} onChange={e => setF({ pic_phone: e.target.value })} />
+                  <Input inputMode="numeric" value={form.pic_phone} onChange={e => setF({ pic_phone: e.target.value.replace(/\D/g, '') })} />
                 </label>
                 <label className="block sm:col-span-2">
                   <span className="text-[11px] text-zinc-400">Remarks</span>
@@ -2859,7 +2859,8 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
   const GEOFENCE_RADIUS = 200; // meter — MD wajib dalam radius ini dari titik bengkel
   const gpsFar = gpsDistance != null && gpsDistance > GEOFENCE_RADIUS; // terlalu jauh → blokir
 
-  const canSubmit = checkedInToday !== false && form.bengkelId && form.distributorId && form.subType && form.pic && form.phone && hasAllRequiredPhotos && !anyCompressing && gps.status === 'ready' && !gpsFar && !submitting;
+  const phoneValid = /^0\d{8,14}$/.test(form.phone); // angka, diawali 0, total 9-15 digit
+  const canSubmit = checkedInToday !== false && form.bengkelId && form.distributorId && form.subType && form.pic && phoneValid && hasAllRequiredPhotos && !anyCompressing && gps.status === 'ready' && !gpsFar && !submitting;
 
   const handleSubmit = async () => {
     if (submitLock.current || !canSubmit) return;  // guard sinkron, gak nunggu re-render
@@ -3034,7 +3035,11 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
           <Input placeholder="Mis. Pak Hendra" value={form.pic} onChange={e => setForm({ ...form, pic: e.target.value })} />
         </Field>
         <Field label="No. Telpon" required>
-          <Input type="tel" placeholder="08xx-xxxx-xxxx" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+          <Input type="tel" inputMode="numeric" placeholder="08xxxxxxxxxx" value={form.phone}
+            onChange={e => setForm({ ...form, phone: e.target.value.replace(/\D/g, '') })} />
+          {form.phone && !phoneValid && (
+            <p className="text-[10px] text-rose-400 mt-1">Nomor harus angka & diawali 0 (mis. 08123456789).</p>
+          )}
         </Field>
       </Section>
 
