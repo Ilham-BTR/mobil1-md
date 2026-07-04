@@ -2724,8 +2724,15 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
     const base = makeDefaultForm();
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
-      // date selalu hari ini (read-only) — jangan pakai tanggal draft lama
-      if (raw) return { ...base, ...JSON.parse(raw), date: localDateStr(), photos: { ...emptyPhotos } };
+      if (raw) {
+        const saved = JSON.parse(raw);
+        // Draft dari hari sebelumnya -> buang, mulai form FRESH (tanggal selalu hari ini)
+        if (saved.date && saved.date !== localDateStr()) {
+          localStorage.removeItem(DRAFT_KEY);
+        } else {
+          return { ...base, ...saved, date: localDateStr(), photos: { ...emptyPhotos } };
+        }
+      }
     } catch { /* abaikan draft rusak */ }
     return base;
   });
@@ -2733,8 +2740,11 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
   useEffect(() => {
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
-      if (raw && draftHasContent(JSON.parse(raw))) setDraftRestored(true);
-      else if (raw) localStorage.removeItem(DRAFT_KEY);  // bersihkan draft kosong lama
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved.date && saved.date !== localDateStr()) { localStorage.removeItem(DRAFT_KEY); return; } // draft hari lain -> buang
+      if (draftHasContent(saved)) setDraftRestored(true);
+      else localStorage.removeItem(DRAFT_KEY);  // bersihkan draft kosong lama
     } catch { /* noop */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
