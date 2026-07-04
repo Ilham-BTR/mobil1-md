@@ -2724,7 +2724,8 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
     const base = makeDefaultForm();
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
-      if (raw) return { ...base, ...JSON.parse(raw), photos: { ...emptyPhotos } };
+      // date selalu hari ini (read-only) — jangan pakai tanggal draft lama
+      if (raw) return { ...base, ...JSON.parse(raw), date: localDateStr(), photos: { ...emptyPhotos } };
     } catch { /* abaikan draft rusak */ }
     return base;
   });
@@ -3005,8 +3006,10 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
       </Section>
 
       <Section title="Detail Kunjungan" icon={Calendar}>
-        <Field label="Tanggal Visit" required>
-          <Input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+        <Field label="Tanggal Visit">
+          <Input type="date" value={form.date} readOnly disabled tabIndex={-1}
+            className="opacity-80 cursor-not-allowed" />
+          <p className="text-[10px] text-zinc-500 mt-1">Otomatis hari ini · tidak bisa diubah</p>
         </Field>
         <Field label="Nama PIC / Owner" required>
           <Input placeholder="Mis. Pak Hendra" value={form.pic} onChange={e => setForm({ ...form, pic: e.target.value })} />
