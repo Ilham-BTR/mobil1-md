@@ -2776,7 +2776,7 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
   const selectedBengkel = bengkels.find(b => b.id === form.bengkelId);
 
   // Fetch GPS user
-  const fetchGPS = () => {
+  const fetchGPS = (attempt = 0) => {
     if (!navigator.geolocation) {
       setGps({ status: 'error', lat: null, lng: null, accuracy: null, error: 'GPS tidak didukung browser' });
       return;
@@ -2791,10 +2791,19 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
         error: null,
       }),
       (err) => {
-        const msg = err.code === 1 ? 'Izin GPS ditolak' : err.code === 2 ? 'Posisi tidak tersedia' : err.code === 3 ? 'GPS timeout' : 'GPS gagal';
+        // code 1 = izin ditolak (tak bisa re-prompt otomatis -> arahkan ke setelan).
+        // code 2/3 = posisi tak tersedia / timeout -> otomatis minta lagi s/d 3x.
+        if (err.code !== 1 && attempt < 2) {
+          setTimeout(() => fetchGPS(attempt + 1), 1200);
+          return;
+        }
+        const msg = err.code === 1
+          ? 'Izin lokasi ditolak. Aktifkan izin Lokasi untuk situs ini di setelan browser/HP, lalu tekan "Ambil GPS lagi".'
+          : err.code === 2 ? 'Posisi tidak tersedia — pastikan GPS/Lokasi HP menyala, lalu coba lagi.'
+          : 'GPS timeout — coba lagi di area terbuka.';
         setGps({ status: 'error', lat: null, lng: null, accuracy: null, error: msg });
       },
-      { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 }
+      { timeout: 10000, enableHighAccuracy: true, maximumAge: attempt === 0 ? 60000 : 0 }
     );
   };
 
@@ -3100,9 +3109,18 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
       {form.bengkelId && gps.status !== 'ready' && (
         <div className="mb-3 p-3 bg-amber-600/10 border border-amber-600/30 rounded-lg flex items-start gap-2.5">
           <MapPin className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-300">
-            <span className="font-semibold">GPS belum aktif.</span> Visit tidak bisa disimpan tanpa lokasi. Aktifkan GPS/izin lokasi, lalu tekan "Ambil GPS".
-          </p>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-amber-300">
+              <span className="font-semibold">{gps.status === 'loading' ? 'Mengambil lokasi GPS…' : 'GPS belum aktif.'}</span>{' '}
+              {gps.status === 'error' ? (gps.error || 'Visit tidak bisa disimpan tanpa lokasi.') : 'Visit tidak bisa disimpan tanpa lokasi.'}
+            </p>
+            {gps.status !== 'loading' && (
+              <button type="button" onClick={() => fetchGPS()}
+                className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium transition">
+                <Navigation className="w-3.5 h-3.5" />Ambil GPS lagi
+              </button>
+            )}
+          </div>
         </div>
       )}
 
