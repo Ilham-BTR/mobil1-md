@@ -368,7 +368,7 @@ const BengkelPickerMap = ({ lat, lng, onChange }) => {
     navigator.geolocation.getCurrentPosition(
       (pos) => onChange(pos.coords.latitude, pos.coords.longitude),
       (err) => alert('Gagal ambil GPS: ' + (err.message || 'unknown')),
-      { timeout: 10000, enableHighAccuracy: true }
+      { timeout: 20000, enableHighAccuracy: true }
     );
   };
 
@@ -1960,7 +1960,7 @@ function AbsenForm({ kind, currentMD, todayStr, onCancel, onDone }) {
     navigator.geolocation.getCurrentPosition(
       (pos) => setGps({ status: 'ready', lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy, error: null }),
       (err) => setGps({ status: 'error', error: err.code === 1 ? 'Izin GPS ditolak' : 'GPS gagal' }),
-      { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 }
+      { timeout: 20000, enableHighAccuracy: true, maximumAge: 60000 }
     );
   };
   useEffect(() => { fetchGPS(); /* eslint-disable-next-line */ }, []);
@@ -2803,7 +2803,7 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
           : 'GPS timeout — coba lagi di area terbuka.';
         setGps({ status: 'error', lat: null, lng: null, accuracy: null, error: msg });
       },
-      { timeout: 10000, enableHighAccuracy: true, maximumAge: attempt === 0 ? 60000 : 0 }
+      { timeout: 20000, enableHighAccuracy: true, maximumAge: attempt === 0 ? 60000 : 0 }
     );
   };
 
