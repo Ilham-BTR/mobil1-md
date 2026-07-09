@@ -123,12 +123,18 @@ const exportToCSV = (rows, filename) => {
   URL.revokeObjectURL(url);
 };
 
-// Format timestamp -> "YYYY-MM-DD HH:mm" waktu lokal (biar seragam dgn kolom tanggal).
+// Format timestamp -> "DD/MM/YYYY HH:mm" waktu lokal (untuk export Excel).
 const fmtLocalDateTime = (ts) => {
   if (!ts) return '';
   const d = new Date(ts);
   const p = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+// Tanggal "YYYY-MM-DD" -> "DD/MM/YYYY" untuk export Excel.
+const fmtDateDMY = (s) => {
+  if (!s) return '';
+  const [y, m, d] = String(s).slice(0, 10).split('-');
+  return (y && m && d) ? `${d}/${m}/${y}` : s;
 };
 
 // Build flat row dari visit untuk CSV export
@@ -141,7 +147,7 @@ const visitToCSVRow = (v, ctx) => {
   const photoCount = PHOTO_KEYS.filter(key => v[key]).length;
   return {
     visit_id: v.id,
-    tanggal: v.visit_date,
+    tanggal: fmtDateDMY(v.visit_date),
     waktu_submit: fmtLocalDateTime(v.created_at),
     md_name: md?.full_name || v.md_name || '',
     md_email: md?.email || v.md_email || '',
@@ -2189,7 +2195,7 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin, regions = [] }) {
     if (filteredRows.length === 0) return;
     const XLSX = await import('xlsx');
     const data = filteredRows.map(a => ({
-      Tanggal: a.date,
+      Tanggal: fmtDateDMY(a.date),
       'Nama MD': a.md_name || '',
       Region: areaOf(a.md_id),
       Email: a.md_email || '',
