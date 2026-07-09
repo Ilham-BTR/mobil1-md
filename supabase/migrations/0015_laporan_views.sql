@@ -8,8 +8,8 @@
 -- ---------- LAPORAN VISIT ----------
 create or replace view laporan_visit as
 select
-  v.visit_date                               as tanggal,
-  (v.created_at at time zone 'Asia/Jakarta') as waktu_submit,
+  to_char(v.visit_date, 'DD/MM/YYYY')        as tanggal,
+  to_char(v.created_at at time zone 'Asia/Jakarta', 'DD/MM/YYYY HH24:MI') as waktu_submit,
   p.full_name                                as md,
   r.name                                     as region,
   k.name                                     as kota,
@@ -51,7 +51,7 @@ left join distributors d on d.id = v.distributor_id;
 -- ---------- LAPORAN ABSEN ----------
 create or replace view laporan_absen as
 select
-  a.date                                     as tanggal,
+  to_char(a.date, 'DD/MM/YYYY')              as tanggal,
   p.full_name                                as md,
   r.name                                     as region,
   p.email                                    as email,
