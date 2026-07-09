@@ -6,7 +6,9 @@
 -- ============================================================
 
 -- ---------- LAPORAN VISIT ----------
-create or replace view laporan_visit as
+-- DROP dulu: create-or-replace tak bisa ubah tipe kolom (tanggal date -> text)
+drop view if exists laporan_visit;
+create view laporan_visit as
 select
   to_char(v.visit_date, 'DD/MM/YYYY')        as tanggal,
   to_char(v.created_at at time zone 'Asia/Jakarta', 'DD/MM/YYYY HH24:MI') as waktu_submit,
@@ -49,7 +51,8 @@ join regions r         on r.id = k.region_id
 left join distributors d on d.id = v.distributor_id;
 
 -- ---------- LAPORAN ABSEN ----------
-create or replace view laporan_absen as
+drop view if exists laporan_absen;
+create view laporan_absen as
 select
   to_char(a.date, 'DD/MM/YYYY')              as tanggal,
   p.full_name                                as md,
