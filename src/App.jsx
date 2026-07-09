@@ -147,6 +147,7 @@ const visitToCSVRow = (v, ctx) => {
     md_email: md?.email || v.md_email || '',
     bengkel_code: b?.code || '',
     bengkel_name: b?.name || v.bengkel_name || '',
+    bengkel_alamat: b?.address || '',
     kota: k?.name || v.kota_name || '',
     region: r?.name || v.region_name || '',
     distributor: d?.name || v.distributor_name || '',
