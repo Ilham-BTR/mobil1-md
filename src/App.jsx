@@ -84,12 +84,24 @@ const monthLabel = (ym) => {
   return `${ID_MONTHS[Number(m) - 1] || m} ${y}`;
 };
 
+// Set format tampilan cell tanggal (kolom cell type Date) -> tampil dd/mm/yyyy
+// tapi tetap tipe DATE di Excel (bisa di-sort/filter tanggal).
+function setColDateFormat(XLSX, ws, header, fmt) {
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  let col = -1;
+  for (let c = range.s.c; c <= range.e.c; c++) { const h = ws[XLSX.utils.encode_cell({ r: 0, c })]; if (h && String(h.v) === header) { col = c; break; } }
+  if (col < 0) return;
+  for (let r = 1; r <= range.e.r; r++) { const cell = ws[XLSX.utils.encode_cell({ r, c: col })]; if (cell && (cell.t === 'd' || cell.t === 'n') && cell.v != null) cell.z = fmt; }
+}
+
 // Export daftar visit ke Excel (.xlsx) — XLSX di-load dinamis (lazy)
 async function exportVisitsXlsx(visits, ctx, filename) {
   if (!visits || visits.length === 0) return;
   const XLSX = await import('xlsx');
   const rows = visits.map(v => visitToCSVRow(v, ctx));
-  const ws = XLSX.utils.json_to_sheet(rows);
+  const ws = XLSX.utils.json_to_sheet(rows, { cellDates: true });
+  setColDateFormat(XLSX, ws, 'tanggal', 'dd/mm/yyyy');
+  setColDateFormat(XLSX, ws, 'waktu_submit', 'dd/mm/yyyy hh:mm');
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Visits');
   XLSX.writeFile(wb, filename);
@@ -123,18 +135,22 @@ const exportToCSV = (rows, filename) => {
   URL.revokeObjectURL(url);
 };
 
-// Format timestamp -> "DD/MM/YYYY HH:mm" waktu lokal (untuk export Excel).
-const fmtLocalDateTime = (ts) => {
-  if (!ts) return '';
-  const d = new Date(ts);
-  const p = (n) => String(n).padStart(2, '0');
-  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
-};
-// Tanggal "YYYY-MM-DD" -> "DD/MM/YYYY" untuk export Excel.
-const fmtDateDMY = (s) => {
+// Serial Excel (angka) untuk tanggal/waktu -> cell jadi tipe DATE asli di Excel
+// (bisa di-sort/filter tanggal), format tampilan diatur via setColDateFormat.
+// Pakai serial (bukan objek Date) supaya bebas bug timezone SheetJS (off-by-one).
+const XL_EPOCH = Date.UTC(1899, 11, 30);
+// "YYYY-MM-DD" -> serial hari
+const excelDateSerial = (s) => {
   if (!s) return '';
-  const [y, m, d] = String(s).slice(0, 10).split('-');
-  return (y && m && d) ? `${d}/${m}/${y}` : s;
+  const [y, m, d] = String(s).slice(0, 10).split('-').map(Number);
+  if (!y || !m || !d) return '';
+  return Math.round((Date.UTC(y, m - 1, d) - XL_EPOCH) / 86400000);
+};
+// timestamp ISO (UTC) -> serial (hari + pecahan jam), ditampilkan dlm WIB (UTC+7)
+const excelDateTimeSerial = (ts) => {
+  if (!ts) return '';
+  const w = new Date(new Date(ts).getTime() + 7 * 3600000);
+  return (Date.UTC(w.getUTCFullYear(), w.getUTCMonth(), w.getUTCDate(), w.getUTCHours(), w.getUTCMinutes(), w.getUTCSeconds()) - XL_EPOCH) / 86400000;
 };
 
 // Build flat row dari visit untuk CSV export
@@ -147,8 +163,8 @@ const visitToCSVRow = (v, ctx) => {
   const photoCount = PHOTO_KEYS.filter(key => v[key]).length;
   return {
     visit_id: v.id,
-    tanggal: fmtDateDMY(v.visit_date),
-    waktu_submit: fmtLocalDateTime(v.created_at),
+    tanggal: excelDateSerial(v.visit_date),
+    waktu_submit: excelDateTimeSerial(v.created_at),
     md_name: md?.full_name || v.md_name || '',
     md_email: md?.email || v.md_email || '',
     bengkel_code: b?.code || '',
@@ -2195,7 +2211,7 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin, regions = [] }) {
     if (filteredRows.length === 0) return;
     const XLSX = await import('xlsx');
     const data = filteredRows.map(a => ({
-      Tanggal: fmtDateDMY(a.date),
+      Tanggal: excelDateSerial(a.date),
       'Nama MD': a.md_name || '',
       Region: areaOf(a.md_id),
       Email: a.md_email || '',
@@ -2209,7 +2225,8 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin, regions = [] }) {
       'Catatan Masuk': a.check_in_note || '',
       'Catatan Pulang': a.check_out_note || '',
     }));
-    const ws = XLSX.utils.json_to_sheet(data);
+    const ws = XLSX.utils.json_to_sheet(data, { cellDates: true });
+    setColDateFormat(XLSX, ws, 'Tanggal', 'dd/mm/yyyy');
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Absen');
     XLSX.writeFile(wb, `absen_${(dari || sampai) ? `${dari || 'awal'}_sd_${sampai || 'akhir'}` : month}.xlsx`);
