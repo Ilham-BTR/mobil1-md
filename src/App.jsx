@@ -611,9 +611,12 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(null);
   const setF = (patch) => setForm(f => ({ ...f, ...patch }));
+  // timestamptz (UTC) -> nilai datetime-local (waktu browser/WIB)
+  const toDTLocal = (iso) => { if (!iso) return ''; const d = new Date(iso); const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
   const startEdit = () => {
     setForm({
       visit_date: visit.visit_date || '',
+      created_at: toDTLocal(visit.created_at),
       status: visit.status || 'Pemasangan',
       sub_type: visit.sub_type || '',
       bengkel_id: visit.bengkel_id || '',
@@ -630,6 +633,7 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
     try {
       await api.updateMaster('visits', visit.id, {
         visit_date: form.visit_date,
+        created_at: form.created_at ? new Date(form.created_at).toISOString() : visit.created_at,
         status: form.status,
         sub_type: form.sub_type || null,
         bengkel_id: form.bengkel_id,
@@ -697,6 +701,10 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
                 <label className="block">
                   <span className="text-[11px] text-zinc-400">Tanggal Visit</span>
                   <Input type="date" value={form.visit_date} onChange={e => setF({ visit_date: e.target.value })} />
+                </label>
+                <label className="block">
+                  <span className="text-[11px] text-zinc-400">Waktu Submit (Dibuat)</span>
+                  <Input type="datetime-local" value={form.created_at} onChange={e => setF({ created_at: e.target.value })} />
                 </label>
                 <label className="block">
                   <span className="text-[11px] text-zinc-400">Distributor</span>
