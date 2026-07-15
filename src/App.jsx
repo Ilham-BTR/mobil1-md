@@ -518,10 +518,10 @@ const PHOTO_LABELS = {
   photo_tampak_depan:    'Tampak Depan',
   photo_in:              'Foto In',
   photo_out:             'Foto Out',
-  photo_spanduk_before:  'Spanduk Before',
-  photo_spanduk_after:   'Spanduk After',
-  photo_poster_before:   'Poster Before',
-  photo_poster_after:    'Poster After',
+  photo_spanduk_before:  'Spanduk Biru',
+  photo_spanduk_after:   'Spanduk Putih',
+  photo_poster_before:   'Poster Biru',
+  photo_poster_after:    'Poster Putih',
   photo_delivery_gimmick:'Delivery Gimmick',
   photo_deploy_planogram:'Deploy Planogram',
 };
@@ -2882,6 +2882,8 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
   const anyUploading = Object.values(form.photos).some(p => p?.status === 'uploading');
 
   const requiredPhotos = ['in', 'tampakDepan', 'out'];
+  if (form.subType === 'Delivery Gimmick') requiredPhotos.push('deliveryGimmick');
+  if (form.subType === 'Deploy Planogram') requiredPhotos.push('deployPlanogram');
   const hasAllRequiredPhotos = requiredPhotos.every(k => PRESENT.includes(form.photos[k]?.status));
   // Jarak GPS user ↔ bengkel (kalau dua-duanya ada). Bengkel tanpa koordinat →
   // null → tidak diblokir (mis. visit pertama yang justru mengisi koordinatnya).
@@ -3084,12 +3086,10 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Dokumentasi POSM</div>
         <div className="grid grid-cols-3 gap-3">
           <PhotoTile label="Tampak Depan" required photo={form.photos.tampakDepan} onChange={v => setPhoto('tampakDepan', v)} />
-          <PhotoTile label="Spanduk Before" photo={form.photos.spandukBefore} onChange={v => setPhoto('spandukBefore', v)} />
-          <PhotoTile label="Spanduk After" photo={form.photos.spandukAfter} onChange={v => setPhoto('spandukAfter', v)} />
-          <PhotoTile label="Poster Before" photo={form.photos.posterBefore} onChange={v => setPhoto('posterBefore', v)} />
-          <PhotoTile label="Poster After" photo={form.photos.posterAfter} onChange={v => setPhoto('posterAfter', v)} />
-          <PhotoTile label="Delivery Gimmick" photo={form.photos.deliveryGimmick} onChange={v => setPhoto('deliveryGimmick', v)} />
-          <PhotoTile label="Deploy Planogram" photo={form.photos.deployPlanogram} onChange={v => setPhoto('deployPlanogram', v)} />
+          <PhotoTile label="Spanduk Biru" photo={form.photos.spandukBefore} onChange={v => setPhoto('spandukBefore', v)} />
+          <PhotoTile label="Spanduk Putih" photo={form.photos.spandukAfter} onChange={v => setPhoto('spandukAfter', v)} />
+          <PhotoTile label="Poster Biru" photo={form.photos.posterBefore} onChange={v => setPhoto('posterBefore', v)} />
+          <PhotoTile label="Poster Putih" photo={form.photos.posterAfter} onChange={v => setPhoto('posterAfter', v)} />
         </div>
 
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Saat Pulang</div>
@@ -3132,6 +3132,21 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
         <Field label="Remarks">
           <Textarea rows={3} placeholder="Catatan tambahan…" value={form.remarks} onChange={e => setForm({ ...form, remarks: e.target.value })} />
         </Field>
+
+        {form.subType === 'Delivery Gimmick' && (
+          <Field label="Foto Delivery Gimmick" required>
+            <div className="grid grid-cols-3 gap-3">
+              <PhotoTile label="Delivery Gimmick" required photo={form.photos.deliveryGimmick} onChange={v => setPhoto('deliveryGimmick', v)} />
+            </div>
+          </Field>
+        )}
+        {form.subType === 'Deploy Planogram' && (
+          <Field label="Foto Deploy Planogram" required>
+            <div className="grid grid-cols-3 gap-3">
+              <PhotoTile label="Deploy Planogram" required photo={form.photos.deployPlanogram} onChange={v => setPhoto('deployPlanogram', v)} />
+            </div>
+          </Field>
+        )}
       </Section>
 
       {gpsFar && (
