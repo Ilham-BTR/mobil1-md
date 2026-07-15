@@ -1191,7 +1191,7 @@ const formatSize = (bytes) => {
 // PHOTO TILE
 // ============================================================
 
-const PhotoTile = ({ label, photo, onChange, required }) => {
+const PhotoTile = ({ label, photo, onChange, required, example }) => {
   const inputRef = useRef(null);
 
   const handleSelect = async (e) => {
@@ -1270,6 +1270,12 @@ const PhotoTile = ({ label, photo, onChange, required }) => {
         )}
       </button>
       <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={handleSelect} className="hidden" />
+      {example && (
+        <a href={example} target="_blank" rel="noreferrer" className="block mt-1.5" title="Ketuk untuk lihat contoh besar">
+          <div className="text-[9px] uppercase tracking-wider text-zinc-600 mb-0.5">Contoh foto</div>
+          <img src={example} alt={`Contoh ${label}`} loading="lazy" className="w-full h-16 object-cover rounded-lg border border-zinc-800 opacity-75 hover:opacity-100 transition" />
+        </a>
+      )}
       {hasPhoto && photo.status !== 'compressing' && (
         <button type="button" onClick={handleClear} className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-zinc-800/50 hover:bg-rose-600 border border-zinc-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition z-10">
           <X className="w-3 h-3 text-zinc-100" />
@@ -3092,8 +3098,8 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
 
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Dokumentasi POSM</div>
         <div className="grid grid-cols-3 gap-3">
-          <PhotoTile label="Spanduk Biru" photo={form.photos.spandukBefore} onChange={v => setPhoto('spandukBefore', v)} />
-          <PhotoTile label="Spanduk Putih" photo={form.photos.spandukPutih} onChange={v => setPhoto('spandukPutih', v)} />
+          <PhotoTile label="Spanduk Biru" example="/contoh/spanduk-biru.jpg" photo={form.photos.spandukBefore} onChange={v => setPhoto('spandukBefore', v)} />
+          <PhotoTile label="Spanduk Putih" example="/contoh/spanduk-putih.jpg" photo={form.photos.spandukPutih} onChange={v => setPhoto('spandukPutih', v)} />
           <PhotoTile label="Poster Biru" photo={form.photos.posterBefore} onChange={v => setPhoto('posterBefore', v)} />
           <PhotoTile label="Poster Putih" photo={form.photos.posterPutih} onChange={v => setPhoto('posterPutih', v)} />
         </div>
