@@ -1193,6 +1193,7 @@ const formatSize = (bytes) => {
 
 const PhotoTile = ({ label, photo, onChange, required, example }) => {
   const inputRef = useRef(null);
+  const [showExample, setShowExample] = useState(false);
 
   const handleSelect = async (e) => {
     const file = e.target.files?.[0];
@@ -1231,7 +1232,7 @@ const PhotoTile = ({ label, photo, onChange, required, example }) => {
       </div>
       <button
         type="button"
-        onClick={() => inputRef.current?.click()}
+        onClick={() => { if (example && !hasPhoto) setShowExample(true); else inputRef.current?.click(); }}
         className={`relative w-full aspect-square rounded-xl border-2 overflow-hidden transition ${
           hasPhoto ? 'border-emerald-600/40 border-solid' : 'border-zinc-800 border-dashed bg-zinc-950 hover:border-red-600/40 hover:bg-red-600/5'
         }`}
@@ -1270,11 +1271,20 @@ const PhotoTile = ({ label, photo, onChange, required, example }) => {
         )}
       </button>
       <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={handleSelect} className="hidden" />
-      {example && (
-        <a href={example} target="_blank" rel="noreferrer" className="block mt-1.5" title="Ketuk untuk lihat contoh besar">
-          <div className="text-[9px] uppercase tracking-wider text-zinc-600 mb-0.5">Contoh foto</div>
-          <img src={example} alt={`Contoh ${label}`} loading="lazy" className="w-full h-16 object-cover rounded-lg border border-zinc-800 opacity-75 hover:opacity-100 transition" />
-        </a>
+      {example && !hasPhoto && (
+        <p className="text-[9px] text-zinc-600 mt-1 text-center">Ketuk untuk lihat contoh</p>
+      )}
+      {showExample && (
+        <div className="fixed inset-0 z-[2000] bg-black/90 flex flex-col items-center justify-center p-4" onClick={() => setShowExample(false)}>
+          <div className="text-white text-sm font-semibold mb-3">Contoh Foto: {label}</div>
+          <img src={example} alt={`Contoh ${label}`} className="max-w-full max-h-[65vh] object-contain rounded-lg" onClick={e => e.stopPropagation()} />
+          <div className="flex gap-2.5 mt-5" onClick={e => e.stopPropagation()}>
+            <button type="button" onClick={() => setShowExample(false)}
+              className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-medium border border-zinc-700 transition">Tutup</button>
+            <button type="button" onClick={() => { setShowExample(false); inputRef.current?.click(); }}
+              className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold flex items-center gap-2 transition"><Camera className="w-4 h-4" />Ambil Foto</button>
+          </div>
+        </div>
       )}
       {hasPhoto && photo.status !== 'compressing' && (
         <button type="button" onClick={handleClear} className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-zinc-800/50 hover:bg-rose-600 border border-zinc-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition z-10">
