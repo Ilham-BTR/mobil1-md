@@ -27,7 +27,8 @@ select
   (
     (v.photo_tampak_depan     is not null)::int + (v.photo_in             is not null)::int +
     (v.photo_out              is not null)::int + (v.photo_spanduk_before is not null)::int +
-    (v.photo_spanduk_after    is not null)::int + (v.photo_poster_before  is not null)::int +
+    (v.photo_spanduk_putih    is not null)::int + (v.photo_spanduk_after  is not null)::int +
+    (v.photo_poster_before    is not null)::int + (v.photo_poster_putih   is not null)::int +
     (v.photo_poster_after     is not null)::int + (v.photo_delivery_gimmick is not null)::int +
     (v.photo_deploy_planogram is not null)::int
   )                                          as jumlah_foto,

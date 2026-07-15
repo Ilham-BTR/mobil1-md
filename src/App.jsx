@@ -519,9 +519,11 @@ const PHOTO_LABELS = {
   photo_in:              'Foto In',
   photo_out:             'Foto Out',
   photo_spanduk_before:  'Spanduk Biru',
-  photo_spanduk_after:   'Spanduk Putih',
+  photo_spanduk_putih:   'Spanduk Putih',
+  photo_spanduk_after:   'Spanduk After',
   photo_poster_before:   'Poster Biru',
-  photo_poster_after:    'Poster Putih',
+  photo_poster_putih:    'Poster Putih',
+  photo_poster_after:    'Poster After',
   photo_delivery_gimmick:'Delivery Gimmick',
   photo_deploy_planogram:'Deploy Planogram',
 };
@@ -2737,7 +2739,7 @@ function MDDashboard({ currentMD, visits, bengkels, kotas }) {
 
 function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmitted, onNeedAbsen }) {
   const DRAFT_KEY = `visitDraft:${currentMD.id}`;
-  const emptyPhotos = { tampakDepan: null, in: null, out: null, spandukBefore: null, spandukAfter: null, posterBefore: null, posterAfter: null, deliveryGimmick: null, deployPlanogram: null };
+  const emptyPhotos = { tampakDepan: null, in: null, out: null, spandukBefore: null, spandukPutih: null, spandukAfter: null, posterBefore: null, posterPutih: null, posterAfter: null, deliveryGimmick: null, deployPlanogram: null };
   const makeDefaultForm = () => ({
     regionId: currentMD.region_id || '',
     kotaId: '',
@@ -3086,8 +3088,10 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Dokumentasi POSM</div>
         <div className="grid grid-cols-3 gap-3">
           <PhotoTile label="Tampak Depan" required photo={form.photos.tampakDepan} onChange={v => setPhoto('tampakDepan', v)} />
-          <PhotoTile label="Spanduk Putih" photo={form.photos.spandukAfter} onChange={v => setPhoto('spandukAfter', v)} />
-          <PhotoTile label="Poster Putih" photo={form.photos.posterAfter} onChange={v => setPhoto('posterAfter', v)} />
+          <PhotoTile label="Spanduk Biru" photo={form.photos.spandukBefore} onChange={v => setPhoto('spandukBefore', v)} />
+          <PhotoTile label="Spanduk Putih" photo={form.photos.spandukPutih} onChange={v => setPhoto('spandukPutih', v)} />
+          <PhotoTile label="Poster Biru" photo={form.photos.posterBefore} onChange={v => setPhoto('posterBefore', v)} />
+          <PhotoTile label="Poster Putih" photo={form.photos.posterPutih} onChange={v => setPhoto('posterPutih', v)} />
         </div>
 
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Saat Pulang</div>
