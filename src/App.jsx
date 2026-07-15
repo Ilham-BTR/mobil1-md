@@ -3085,9 +3085,13 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
           <PhotoTile label="Foto In" required photo={form.photos.in} onChange={v => setPhoto('in', v)} />
         </div>
 
-        <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Dokumentasi POSM</div>
+        <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Tampak Depan Bengkel</div>
         <div className="grid grid-cols-3 gap-3">
           <PhotoTile label="Tampak Depan" required photo={form.photos.tampakDepan} onChange={v => setPhoto('tampakDepan', v)} />
+        </div>
+
+        <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Dokumentasi POSM</div>
+        <div className="grid grid-cols-3 gap-3">
           <PhotoTile label="Spanduk Biru" photo={form.photos.spandukBefore} onChange={v => setPhoto('spandukBefore', v)} />
           <PhotoTile label="Spanduk Putih" photo={form.photos.spandukPutih} onChange={v => setPhoto('spandukPutih', v)} />
           <PhotoTile label="Poster Biru" photo={form.photos.posterBefore} onChange={v => setPhoto('posterBefore', v)} />
