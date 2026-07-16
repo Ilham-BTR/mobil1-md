@@ -3113,7 +3113,7 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
         <div className="grid grid-cols-3 gap-3">
           <PhotoTile label="Spanduk Biru" example="/contoh/spanduk-biru.jpg" photo={form.photos.spandukBefore} onChange={v => setPhoto('spandukBefore', v)} />
           <PhotoTile label="Spanduk Putih" example="/contoh/spanduk-putih.jpg" photo={form.photos.spandukPutih} onChange={v => setPhoto('spandukPutih', v)} />
-          <PhotoTile label="Poster Biru" photo={form.photos.posterBefore} onChange={v => setPhoto('posterBefore', v)} />
+          <PhotoTile label="Poster Biru" example="/contoh/poster-biru.jpg" photo={form.photos.posterBefore} onChange={v => setPhoto('posterBefore', v)} />
           <PhotoTile label="Poster Putih" example="/contoh/poster-putih.jpg" photo={form.photos.posterPutih} onChange={v => setPhoto('posterPutih', v)} />
         </div>
 
