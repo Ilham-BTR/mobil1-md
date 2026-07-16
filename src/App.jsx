@@ -1232,7 +1232,7 @@ const PhotoTile = ({ label, photo, onChange, required, example }) => {
       </div>
       <button
         type="button"
-        onClick={() => { if (example && !hasPhoto) setShowExample(true); else inputRef.current?.click(); }}
+        onClick={() => { if (!hasPhoto) setShowExample(true); else inputRef.current?.click(); }}
         className={`relative w-full aspect-square rounded-xl border-2 overflow-hidden transition ${
           hasPhoto ? 'border-emerald-600/40 border-solid' : 'border-zinc-800 border-dashed bg-zinc-950 hover:border-red-600/40 hover:bg-red-600/5'
         }`}
@@ -1271,14 +1271,16 @@ const PhotoTile = ({ label, photo, onChange, required, example }) => {
         )}
       </button>
       <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={handleSelect} className="hidden" />
-      {example && !hasPhoto && (
-        <p className="text-[9px] text-zinc-600 mt-1 text-center">Ketuk untuk lihat contoh</p>
+      {!hasPhoto && (
+        <p className="text-[9px] text-zinc-600 mt-1 text-center">{example ? 'Ketuk untuk lihat contoh' : 'Ketuk untuk mulai'}</p>
       )}
       {showExample && (
         <div className="fixed inset-0 z-[2000] bg-black/90 flex flex-col items-center justify-center p-4" onClick={() => setShowExample(false)}>
-          <div className="text-white text-sm font-semibold mb-1">Contoh Foto: {label}</div>
+          <div className="text-white text-sm font-semibold mb-1">{example ? 'Contoh Foto' : 'Panduan Foto'}: {label}</div>
           <p className="text-amber-300 text-xs mb-3 text-center px-4 max-w-md">Pastikan foto terlihat jelas, POSM terpasang di mana</p>
-          <img src={example} alt={`Contoh ${label}`} className="max-w-full max-h-[62vh] object-contain rounded-lg" onClick={e => e.stopPropagation()} />
+          {example && (
+            <img src={example} alt={`Contoh ${label}`} className="max-w-full max-h-[62vh] object-contain rounded-lg" onClick={e => e.stopPropagation()} />
+          )}
           <div className="flex gap-2.5 mt-5" onClick={e => e.stopPropagation()}>
             <button type="button" onClick={() => setShowExample(false)}
               className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-medium border border-zinc-700 transition">Tutup</button>
