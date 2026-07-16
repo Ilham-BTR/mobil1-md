@@ -1276,8 +1276,9 @@ const PhotoTile = ({ label, photo, onChange, required, example }) => {
       )}
       {showExample && (
         <div className="fixed inset-0 z-[2000] bg-black/90 flex flex-col items-center justify-center p-4" onClick={() => setShowExample(false)}>
-          <div className="text-white text-sm font-semibold mb-3">Contoh Foto: {label}</div>
-          <img src={example} alt={`Contoh ${label}`} className="max-w-full max-h-[65vh] object-contain rounded-lg" onClick={e => e.stopPropagation()} />
+          <div className="text-white text-sm font-semibold mb-1">Contoh Foto: {label}</div>
+          <p className="text-amber-300 text-xs mb-3 text-center px-4 max-w-md">Pastikan foto terlihat jelas, POSM terpasang di mana</p>
+          <img src={example} alt={`Contoh ${label}`} className="max-w-full max-h-[62vh] object-contain rounded-lg" onClick={e => e.stopPropagation()} />
           <div className="flex gap-2.5 mt-5" onClick={e => e.stopPropagation()}>
             <button type="button" onClick={() => setShowExample(false)}
               className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-medium border border-zinc-700 transition">Tutup</button>
