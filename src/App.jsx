@@ -3119,7 +3119,7 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
 
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Saat Pulang</div>
         <div className="grid grid-cols-3 gap-3">
-          <PhotoTile label="Foto Out" required photo={form.photos.out} onChange={v => setPhoto('out', v)} />
+          <PhotoTile label="Foto Out" required hint="Pastikan foto terlihat shopsign / nama bengkel" photo={form.photos.out} onChange={v => setPhoto('out', v)} />
         </div>
       </Section>
 
