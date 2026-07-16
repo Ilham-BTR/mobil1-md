@@ -1191,7 +1191,7 @@ const formatSize = (bytes) => {
 // PHOTO TILE
 // ============================================================
 
-const PhotoTile = ({ label, photo, onChange, required, example }) => {
+const PhotoTile = ({ label, photo, onChange, required, example, hint }) => {
   const inputRef = useRef(null);
   const [showExample, setShowExample] = useState(false);
 
@@ -1277,7 +1277,7 @@ const PhotoTile = ({ label, photo, onChange, required, example }) => {
       {showExample && (
         <div className="fixed inset-0 z-[2000] bg-black/90 flex flex-col items-center justify-center p-4" onClick={() => setShowExample(false)}>
           <div className="text-white text-sm font-semibold mb-1">{example ? 'Contoh Foto' : 'Panduan Foto'}: {label}</div>
-          <p className="text-amber-300 text-xs mb-3 text-center px-4 max-w-md">Pastikan foto terlihat jelas, POSM terpasang di mana</p>
+          <p className="text-amber-300 text-xs mb-3 text-center px-4 max-w-md">{hint || 'Pastikan foto terlihat jelas, POSM terpasang di mana'}</p>
           {example && (
             <img src={example} alt={`Contoh ${label}`} className="max-w-full max-h-[62vh] object-contain rounded-lg" onClick={e => e.stopPropagation()} />
           )}
@@ -3101,7 +3101,7 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
       <Section title="Dokumentasi Foto" subtitle={`${photoCount} / ${PHOTO_KEYS.length} foto`} icon={Camera}>
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Saat Tiba</div>
         <div className="grid grid-cols-3 gap-3">
-          <PhotoTile label="Foto In" required example="/contoh/foto-in.jpg" photo={form.photos.in} onChange={v => setPhoto('in', v)} />
+          <PhotoTile label="Foto In" required example="/contoh/foto-in.jpg" hint="Pastikan foto terlihat shopsign / nama bengkel" photo={form.photos.in} onChange={v => setPhoto('in', v)} />
         </div>
 
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Tampak Depan Bengkel</div>
