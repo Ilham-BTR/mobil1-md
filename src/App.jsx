@@ -184,8 +184,9 @@ const visitToCSVRow = (v, ctx) => {
     visit_lng: v.visit_lng ?? '',
     photo_count: photoCount,
     // Link tiap foto (URL Supabase Storage di produksi). Header = label rapi.
-    ...Object.fromEntries(PHOTO_KEYS.map(k => [
-      'link_' + k.replace(/^photo_/, ''),   // mis. link_tampak_depan, link_in, ...
+    // Skip kolom legacy "after"; "before" di-rename jadi *_biru.
+    ...Object.fromEntries(PHOTO_KEYS.filter(k => !EXPORT_PHOTO_SKIP.has(k)).map(k => [
+      EXPORT_PHOTO_HEADER[k] || ('link_' + k.replace(/^photo_/, '')),   // mis. link_tampak_depan, link_spanduk_biru, ...
       typeof v[k] === 'string' && v[k].startsWith('http') ? v[k] : (v[k] ? '(foto lokal/idb)' : ''),
     ])),
     created_at: v.created_at || '',
@@ -528,6 +529,13 @@ const PHOTO_LABELS = {
   photo_deploy_planogram:'Deploy Planogram',
 };
 const PHOTO_KEYS = Object.keys(PHOTO_LABELS);
+// Export Excel: kolom foto legacy "after" (Spanduk/Poster) sudah tak dipakai -> sembunyikan.
+const EXPORT_PHOTO_SKIP = new Set(['photo_spanduk_after', 'photo_poster_after']);
+// Header link foto: "before" sekarang = varian Biru -> beri nama yang jelas.
+const EXPORT_PHOTO_HEADER = {
+  photo_spanduk_before: 'link_spanduk_biru',
+  photo_poster_before:  'link_poster_biru',
+};
 // Kolom DB foto -> UI key (uploadOneVisitPhoto butuh UI key, mis. 'tampakDepan')
 const PHOTO_COL_TO_UIKEY = Object.fromEntries(
   Object.entries(VISIT_PHOTO_MAP).map(([uiKey, m]) => [m.col, uiKey])
