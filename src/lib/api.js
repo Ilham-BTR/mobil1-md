@@ -699,9 +699,14 @@ export async function deleteVisit(visitId) {
     console.warn('Hapus foto Storage gagal (lanjut hapus row):', e);
   }
 
-  // 2. Hapus row visit (RLS: admin/bp boleh delete)
-  const { error } = await supabase.from('visits').delete().eq('id', visitId);
+  // 2. Hapus row visit (RLS: hanya super_admin boleh delete)
+  //    .select() -> verifikasi row benar-benar terhapus. Kalau RLS memblok,
+  //    delete mengembalikan 0 baris TANPA error (sukses palsu) -> kita jadikan error.
+  const { data, error } = await supabase.from('visits').delete().eq('id', visitId).select('id');
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error('Visit tidak terhapus (0 baris). Pastikan login sebagai super admin — hanya super admin yang boleh menghapus.');
+  }
 }
 
 // ============================================================
@@ -778,8 +783,11 @@ export async function deleteAttendance(id) {
     persistMock();
     return;
   }
-  const { error } = await supabase.from('attendances').delete().eq('id', id);
+  const { data, error } = await supabase.from('attendances').delete().eq('id', id).select('id');
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error('Absen tidak terhapus (0 baris). Pastikan login sebagai super admin — hanya super admin yang boleh menghapus.');
+  }
 }
 
 // Rekap absen semua MD (admin) untuk 1 tanggal — view attendance_details.
