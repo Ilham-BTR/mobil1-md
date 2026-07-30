@@ -1596,8 +1596,8 @@ function PasskeyManagerModal({ onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[2000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[2000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <Fingerprint className="w-5 h-5 text-red-400" />
@@ -2340,8 +2340,8 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin, regions = [] }) {
       )}
 
       {detail && (
-        <div className="fixed inset-0 z-40 bg-black/80 flex items-end sm:items-center justify-center sm:p-4" onClick={() => setDetail(null)}>
-          <div className="bg-zinc-950 border border-zinc-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-40 bg-black/80 flex items-end sm:items-center justify-center sm:p-4">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between gap-3 p-4 border-b border-zinc-800 sticky top-0 bg-zinc-950">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -4603,7 +4603,7 @@ function BengkelImportModal({ kotas, regions, bengkels, onClose, onImported }) {
   const invalidCount = validated.length - validCount;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/80 backdrop-blur-sm p-4 overflow-y-auto" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/80 backdrop-blur-sm p-4 overflow-y-auto">
       <div className="w-full max-w-4xl my-8 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between sticky top-0 bg-zinc-900 z-10">
           <div className="flex items-center gap-3">
@@ -4992,7 +4992,7 @@ function MasterImportModal({ section, ctx, onClose, onImported }) {
   const invalidCount = validated.length - validCount;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/80 backdrop-blur-sm p-4 overflow-y-auto" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/80 backdrop-blur-sm p-4 overflow-y-auto">
       <div className="w-full max-w-3xl my-8 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between sticky top-0 bg-zinc-900 z-10">
           <div className="flex items-center gap-3">
@@ -5161,7 +5161,7 @@ function MdDetailModal({ md, regionName, onClose }) {
     ['Dibuat', md.created_at ? new Date(md.created_at).toLocaleString('id-ID') : '—'],
   ];
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm p-4 animate-fade-in" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm p-4 animate-fade-in">
       <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-pop-in" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between gap-3">
           <h2 className="font-display font-bold text-lg text-zinc-100">Detail Akun MD</h2>
@@ -5209,11 +5209,6 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
     setFormClosing(true);
     setTimeout(() => { setEditingBengkelId(null); setEditingMDId(null); setAddOpen(false); setFormClosing(false); }, 180);
   };
-  // Backdrop close HANYA kalau press & lepas dua-duanya di backdrop (bukan drag dari dalam
-  // form — mis. geser pin peta / seleksi teks yang lepas di luar card -> jangan ikut nutup).
-  const backdropDown = useRef(false);
-  const onBackdropMouseDown = e => { backdropDown.current = e.target === e.currentTarget; };
-  const onBackdropClick = e => { if (e.target === e.currentTarget && backdropDown.current) closeForm(); };
   const [pageSize, setPageSize] = useState(25);  // 10/25/50/100 atau 'all'
   const [page, setPage] = useState(1);
   const [filterRegion, setFilterRegion] = useState(''); // filter list bengkel
@@ -5436,8 +5431,8 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
               )}
               {(editingBengkel || addOpen) && (
                 <div className={`fixed inset-0 z-[1500] bg-black/70 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto ${formClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
-                  onMouseDown={onBackdropMouseDown} onClick={onBackdropClick}>
-                  <div className={`w-full max-w-2xl my-auto ${formClosing ? 'animate-pop-out' : 'animate-pop-in'}`} onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
+                >
+                  <div className={`w-full max-w-2xl my-auto ${formClosing ? 'animate-pop-out' : 'animate-pop-in'}`}>
                     {editingBengkel ? (
                       <BengkelForm key={editingBengkel.id} kotas={kotas} regions={regions} bengkels={bengkels}
                         initial={editingBengkel} onSave={handleUpdateBengkel} onCancel={closeForm} />
@@ -5498,8 +5493,8 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
               )}
               {(editingMD || addOpen) && (
                 <div className={`fixed inset-0 z-[1500] bg-black/70 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto ${formClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
-                  onMouseDown={onBackdropMouseDown} onClick={onBackdropClick}>
-                  <div className={`w-full max-w-2xl my-auto ${formClosing ? 'animate-pop-out' : 'animate-pop-in'}`} onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
+                >
+                  <div className={`w-full max-w-2xl my-auto ${formClosing ? 'animate-pop-out' : 'animate-pop-in'}`}>
                     {editingMD ? (
                       <MDForm key={editingMD.id} regions={regions} initial={editingMD} onSave={handleUpdateMD} onCancel={closeForm} />
                     ) : (
