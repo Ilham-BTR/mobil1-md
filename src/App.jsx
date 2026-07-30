@@ -3941,8 +3941,18 @@ function FitToVisits({ points }) {
   return null;
 }
 
+// Icon marker lokasi bengkel — kotak abu-abu, dibedakan dari titik visit (bulat warna MD)
+const BENGKEL_ICON = L.divIcon({
+  className: 'coverage-bengkel',
+  html: `<div style="width:10px;height:10px;border-radius:2px;background:#94a3b8;border:1.5px solid #e2e8f0;opacity:0.9;box-shadow:0 0 4px rgba(0,0,0,0.4);"></div>`,
+  iconSize: [10, 10],
+  iconAnchor: [5, 5],
+});
+const BENGKEL_CAP = 2000; // batas render biar peta tak freeze
+
 function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOpenVisit }) {
   const [filters, setFilters] = useState({ mdId: 'all', regionId: 'all', distributorId: 'all', month: 'all', dari: '', sampai: '' });
+  const [showBengkels, setShowBengkels] = useState(false);
 
   // Index Map (O(1)) — hindari .find per-visit (O(n*m)) yang bikin HP freeze.
   const bengkelById = useMemo(() => new Map(bengkels.map(b => [b.id, b])), [bengkels]);
@@ -3990,13 +4000,30 @@ function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOp
     return [...map.values()];
   }, [filtered]);
 
+  // Lokasi bengkel dari DB (kolom lat/lng). Respect filter Region. Cap biar tak freeze.
+  const bengkelMarkers = useMemo(() => {
+    if (!showBengkels) return [];
+    let list = bengkels.filter(b => b.lat != null && b.lng != null);
+    if (filters.regionId !== 'all') list = list.filter(b => kotaById.get(b.kota_id)?.region_id === filters.regionId);
+    return list;
+  }, [showBengkels, bengkels, filters.regionId, kotaById]);
+  const bengkelShown = bengkelMarkers.slice(0, BENGKEL_CAP);
+
   return (
     <div>
       <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
         <div>
           <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display">Coverage Map</h2>
-          <p className="text-sm text-zinc-500 mt-1">{filtered.length} titik visit di {grouped.length} lokasi unik</p>
+          <p className="text-sm text-zinc-500 mt-1">
+            {filtered.length} titik visit di {grouped.length} lokasi unik
+            {showBengkels && <> · <span className="text-sky-400">{bengkelMarkers.length} lokasi bengkel</span>{bengkelMarkers.length > BENGKEL_CAP && ` (tampil ${BENGKEL_CAP}, filter Region untuk lihat semua)`}</>}
+          </p>
         </div>
+        <button type="button" onClick={() => setShowBengkels(v => !v)}
+          className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg border transition ${showBengkels ? 'border-sky-500/50 bg-sky-500/10 text-sky-300' : 'border-zinc-800 hover:border-zinc-700 text-zinc-300'}`}>
+          <span className="w-2.5 h-2.5 rounded-[3px] shrink-0" style={{ background: showBengkels ? '#94a3b8' : 'transparent', border: '1.5px solid #94a3b8' }} />
+          {showBengkels ? 'Sembunyikan lokasi bengkel' : 'Tampilkan lokasi bengkel'}
+        </button>
       </div>
 
       {/* Filter bar */}
@@ -4084,6 +4111,17 @@ function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOp
                   </Marker>
                 );
               })}
+              {bengkelShown.map(b => (
+                <Marker key={'bengkel-' + b.id} position={[b.lat, b.lng]} icon={BENGKEL_ICON}>
+                  <Popup maxWidth={240}>
+                    <div className="text-xs space-y-0.5">
+                      <div className="font-mono text-[9px] text-zinc-500">{b.code}</div>
+                      <div className="text-xs text-zinc-100">{b.name}</div>
+                      <div className="text-[10px] text-sky-500 mt-1">Lokasi bengkel · {b.lat.toFixed(5)}, {b.lng.toFixed(5)}</div>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
               <FitToVisits points={points} />
             </MapContainer>
           )}
