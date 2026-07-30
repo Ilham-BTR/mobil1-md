@@ -5209,6 +5209,11 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
     setFormClosing(true);
     setTimeout(() => { setEditingBengkelId(null); setEditingMDId(null); setAddOpen(false); setFormClosing(false); }, 180);
   };
+  // Backdrop close HANYA kalau press & lepas dua-duanya di backdrop (bukan drag dari dalam
+  // form — mis. geser pin peta / seleksi teks yang lepas di luar card -> jangan ikut nutup).
+  const backdropDown = useRef(false);
+  const onBackdropMouseDown = e => { backdropDown.current = e.target === e.currentTarget; };
+  const onBackdropClick = e => { if (e.target === e.currentTarget && backdropDown.current) closeForm(); };
   const [pageSize, setPageSize] = useState(25);  // 10/25/50/100 atau 'all'
   const [page, setPage] = useState(1);
   const [filterRegion, setFilterRegion] = useState(''); // filter list bengkel
@@ -5431,8 +5436,8 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
               )}
               {(editingBengkel || addOpen) && (
                 <div className={`fixed inset-0 z-[1500] bg-black/70 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto ${formClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
-                  onClick={closeForm}>
-                  <div className={`w-full max-w-2xl my-auto ${formClosing ? 'animate-pop-out' : 'animate-pop-in'}`} onClick={e => e.stopPropagation()}>
+                  onMouseDown={onBackdropMouseDown} onClick={onBackdropClick}>
+                  <div className={`w-full max-w-2xl my-auto ${formClosing ? 'animate-pop-out' : 'animate-pop-in'}`} onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
                     {editingBengkel ? (
                       <BengkelForm key={editingBengkel.id} kotas={kotas} regions={regions} bengkels={bengkels}
                         initial={editingBengkel} onSave={handleUpdateBengkel} onCancel={closeForm} />
@@ -5493,8 +5498,8 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
               )}
               {(editingMD || addOpen) && (
                 <div className={`fixed inset-0 z-[1500] bg-black/70 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto ${formClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
-                  onClick={closeForm}>
-                  <div className={`w-full max-w-2xl my-auto ${formClosing ? 'animate-pop-out' : 'animate-pop-in'}`} onClick={e => e.stopPropagation()}>
+                  onMouseDown={onBackdropMouseDown} onClick={onBackdropClick}>
+                  <div className={`w-full max-w-2xl my-auto ${formClosing ? 'animate-pop-out' : 'animate-pop-in'}`} onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
                     {editingMD ? (
                       <MDForm key={editingMD.id} regions={regions} initial={editingMD} onSave={handleUpdateMD} onCancel={closeForm} />
                     ) : (
