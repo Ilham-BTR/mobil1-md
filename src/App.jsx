@@ -3944,9 +3944,9 @@ function FitToVisits({ points }) {
 // Icon marker lokasi bengkel — kotak abu-abu, dibedakan dari titik visit (bulat warna MD)
 const BENGKEL_ICON = L.divIcon({
   className: 'coverage-bengkel',
-  html: `<div style="width:10px;height:10px;border-radius:2px;background:#94a3b8;border:1.5px solid #e2e8f0;opacity:0.9;box-shadow:0 0 4px rgba(0,0,0,0.4);"></div>`,
-  iconSize: [10, 10],
-  iconAnchor: [5, 5],
+  html: `<div style="width:11px;height:11px;border-radius:50%;background:#0a0a0a;border:1.5px solid #f4f4f5;opacity:0.95;box-shadow:0 0 4px rgba(0,0,0,0.6);"></div>`,
+  iconSize: [11, 11],
+  iconAnchor: [5.5, 5.5],
 });
 const BENGKEL_CAP = 2000; // batas render biar peta tak freeze
 
@@ -4021,7 +4021,7 @@ function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOp
         </div>
         <button type="button" onClick={() => setShowBengkels(v => !v)}
           className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg border transition ${showBengkels ? 'border-sky-500/50 bg-sky-500/10 text-sky-300' : 'border-zinc-800 hover:border-zinc-700 text-zinc-300'}`}>
-          <span className="w-2.5 h-2.5 rounded-[3px] shrink-0" style={{ background: showBengkels ? '#94a3b8' : 'transparent', border: '1.5px solid #94a3b8' }} />
+          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: showBengkels ? '#0a0a0a' : 'transparent', border: '1.5px solid #f4f4f5' }} />
           {showBengkels ? 'Sembunyikan lokasi bengkel' : 'Tampilkan lokasi bengkel'}
         </button>
       </div>
