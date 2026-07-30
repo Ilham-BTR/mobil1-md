@@ -4139,13 +4139,23 @@ function BengkelForm({ kotas, regions, bengkels = [], onSave, initial, onCancel 
 
   const handlePick = (lat, lng) => setForm(f => ({ ...f, lat, lng }));
 
+  // Kota disimpan di dalam field name (konvensi data lama: "Nama - Kota").
+  // Bengkel baru: auto-tambah " - {Kota}" ke nama; guard agar tak dobel kalau sudah diketik.
+  const kotaNameSel = kotas.find(k => k.id === form.kota_id)?.name || '';
+  const composedName = (() => {
+    const base = form.name.trim();
+    if (isEdit || !kotaNameSel || !base) return base;
+    const suffix = ` - ${kotaNameSel}`;
+    return base.toLowerCase().endsWith(suffix.toLowerCase()) ? base : base + suffix;
+  })();
+
   const handleSave = async () => {
     if (!canSave) return;
     setSaving(true);
     try {
       await onSave({
         code: form.code.trim().toUpperCase(),
-        name: form.name.trim(),
+        name: composedName,
         kota_id: form.kota_id,
         address: form.address.trim() || null,
         lat: form.lat,
@@ -4187,6 +4197,11 @@ function BengkelForm({ kotas, regions, bengkels = [], onSave, initial, onCancel 
         </Field>
         <Field label="Nama Bengkel" required>
           <Input placeholder="Bengkel ..." value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+          {!isEdit && form.name.trim() && (
+            kotaNameSel
+              ? <p className="text-[11px] text-emerald-400/90 mt-1">Tersimpan: <span className="font-medium">{composedName}</span></p>
+              : <p className="text-[11px] text-zinc-500 mt-1">Pilih kota → otomatis jadi "{form.name.trim()} - Kota"</p>
+          )}
         </Field>
       </div>
       <div className="grid grid-cols-2 gap-3 mb-3">
