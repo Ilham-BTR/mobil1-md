@@ -3237,7 +3237,7 @@ function VisitHistory({ visits, bengkels, kotas, distributors }) {
   const [subType, setSubType] = useState('all');
   const [dari, setDari] = useState('');
   const [sampai, setSampai] = useState('');
-  const [visibleCount, setVisibleCount] = useState(50); // batasi render biar HP tak freeze
+  const [visibleCount, setVisibleCount] = useState(10); // batasi render biar HP tak freeze (per 10)
   const bengkelById = useMemo(() => new Map(bengkels.map(b => [b.id, b])), [bengkels]);
   const kotaById = useMemo(() => new Map(kotas.map(k => [k.id, k])), [kotas]);
   const distById = useMemo(() => new Map(distributors.map(d => [d.id, d])), [distributors]);
@@ -3245,7 +3245,7 @@ function VisitHistory({ visits, bengkels, kotas, distributors }) {
   const findKota = (id) => kotaById.get(id);
   const findDist = (id) => distById.get(id);
 
-  useEffect(() => { setVisibleCount(50); }, [search, month, status, subType, dari, sampai]);
+  useEffect(() => { setVisibleCount(10); }, [search, month, status, subType, dari, sampai]);
   const availableMonths = useMemo(() => [...new Set(visits.map(v => v.visit_date.slice(0, 7)))].sort().reverse(), [visits]);
   const filtered = visits.filter(v => {
     if (dari || sampai) {
@@ -3318,9 +3318,9 @@ function VisitHistory({ visits, bengkels, kotas, distributors }) {
         );
       })}
       {filtered.length > visibleCount && (
-        <button onClick={() => setVisibleCount(c => c + 100)}
+        <button onClick={() => setVisibleCount(c => c + 10)}
           className="w-full py-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-sm text-zinc-300 transition">
-          Tampilkan lebih banyak · {filtered.length - visibleCount} lagi (dari {filtered.length})
+          Tampilkan 10 lagi · {filtered.length - visibleCount} tersisa (dari {filtered.length})
         </button>
       )}
       </div>
