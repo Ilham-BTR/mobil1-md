@@ -2559,16 +2559,25 @@ function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
   const [kotas, setKotas] = useState([]);
   const [distributors, setDistributors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [bengkelsLoading, setBengkelsLoading] = useState(true);
 
   useEffect(() => {
+    // Bengkel se-region MD bisa ribuan & paling lama ditarik. Lepas ke latar supaya
+    // menu Absen & History langsung bisa dipakai; dropdown bengkel di form aktif
+    // begitu datanya sampai (lihat hint "Memuat bengkel…").
+    setBengkelsLoading(true);
+    api.fetchBengkels(currentMD.region_id || null)  // hanya bengkel region MD -> hemat memori HP
+      .then(b => setBengkels(b))
+      .catch(err => console.error(err))
+      .finally(() => setBengkelsLoading(false));
+
     Promise.all([
       api.fetchVisits({ mdId: currentMD.id }),
-      api.fetchBengkels(currentMD.region_id || null),  // hanya bengkel region MD -> hemat memori HP
       api.fetchRegions(),
       api.fetchKotas(),
       api.fetchDistributors(),
-    ]).then(([v, b, r, k, d]) => {
-      setVisits(v); setBengkels(b); setRegions(r); setKotas(k); setDistributors(d); setLoading(false);
+    ]).then(([v, r, k, d]) => {
+      setVisits(v); setRegions(r); setKotas(k); setDistributors(d); setLoading(false);
     }).catch(err => { console.error(err); setLoading(false); });
   }, [currentMD.id, refreshKey]);
 
@@ -2605,7 +2614,7 @@ function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
       </div>
 
       {tab === 'absen' && <AbsenTab currentMD={currentMD} />}
-      {tab === 'new' && <VisitForm currentMD={currentMD} bengkels={bengkels} regions={regions} kotas={kotas} distributors={distributors} onSubmitted={() => { reloadVisits(); setTab('history'); }} onNeedAbsen={() => setTab('absen')} />}
+      {tab === 'new' && <VisitForm currentMD={currentMD} bengkels={bengkels} bengkelsLoading={bengkelsLoading} regions={regions} kotas={kotas} distributors={distributors} onSubmitted={() => { reloadVisits(); setTab('history'); }} onNeedAbsen={() => setTab('absen')} />}
       {tab === 'progress' && <MDDashboard currentMD={currentMD} visits={visits} bengkels={bengkels} kotas={kotas} />}
       {tab === 'history' && <VisitHistory visits={visits} bengkels={bengkels} kotas={kotas} distributors={distributors} />}
       <WhatsAppCS name={currentMD.full_name} />
@@ -2764,7 +2773,7 @@ function MDDashboard({ currentMD, visits, bengkels, kotas }) {
   );
 }
 
-function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmitted, onNeedAbsen }) {
+function VisitForm({ currentMD, bengkels, bengkelsLoading, regions, kotas, distributors, onSubmitted, onNeedAbsen }) {
   const DRAFT_KEY = `visitDraft:${currentMD.id}`;
   const emptyPhotos = { tampakDepan: null, in: null, out: null, spandukBefore: null, spandukPutih: null, spandukAfter: null, posterBefore: null, posterPutih: null, posterAfter: null, deliveryGimmick: null, deployPlanogram: null };
   const makeDefaultForm = () => ({
@@ -3057,11 +3066,16 @@ function VisitForm({ currentMD, bengkels, regions, kotas, distributors, onSubmit
             value={form.bengkelId}
             onChange={(val) => setForm({ ...form, bengkelId: val })}
             options={filteredBengkels.map(b => ({ value: b.id, label: `${b.code} - ${b.name}` }))}
-            placeholder="Pilih bengkel…"
-            disabled={!form.kotaId}
-            emptyText="Belum ada bengkel di kota ini"
+            placeholder={bengkelsLoading ? 'Memuat bengkel…' : 'Pilih bengkel…'}
+            disabled={!form.kotaId || bengkelsLoading}
+            emptyText={bengkelsLoading ? 'Memuat bengkel…' : 'Belum ada bengkel di kota ini'}
           />
-          {form.kotaId && filteredBengkels.length === 0 && (
+          {bengkelsLoading ? (
+            <p className="text-[11px] text-sky-400 mt-1.5 flex items-center gap-1.5">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Memuat data bengkel…
+            </p>
+          ) : form.kotaId && filteredBengkels.length === 0 && (
             <p className="text-[11px] text-amber-400 mt-1.5 flex items-center gap-1.5">
               <AlertCircle className="w-3 h-3" />
               Belum ada bengkel terdaftar di kota ini.
@@ -3428,18 +3442,27 @@ function AdminView({ profile }) {
   const [kotas, setKotas] = useState([]);
   const [distributors, setDistributors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [bengkelsLoading, setBengkelsLoading] = useState(true);
   const [detailVisitId, setDetailVisitId] = useState(null);
 
   // silent=true → refresh data tanpa memunculkan layar Loading (cegah remount &
   // pindah section di Master Data setiap habis update).
   const loadAll = (silent = false) => {
     if (!silent) setLoading(true);
+    // Bengkel (~ribuan) paling berat & lama ditarik. Lepas ke latar supaya tab
+    // langsung bisa dibuka; angka yang bergantung bengkel menyusul sesaat kemudian.
+    setBengkelsLoading(true);
+    api.fetchBengkels()
+      .then(b => setBengkels(b))
+      .catch(err => console.error(err))
+      .finally(() => setBengkelsLoading(false));
+
     Promise.all([
-      api.fetchVisits(), api.fetchAccounts(), api.fetchBengkels(),
+      api.fetchVisits(), api.fetchAccounts(),
       api.fetchRegions(), api.fetchKotas(), api.fetchDistributors(),
-    ]).then(([v, acc, b, r, k, d]) => {
+    ]).then(([v, acc, r, k, d]) => {
       setVisits(v); setAccounts(acc); setMds(acc.filter(a => a.role === 'md'));
-      setBengkels(b); setRegions(r); setKotas(k); setDistributors(d);
+      setRegions(r); setKotas(k); setDistributors(d);
       setLoading(false);
     }).catch(err => { console.error(err); setLoading(false); });
   };
