@@ -28,3 +28,8 @@ dist-ssr
 ops/backup/backup.config.json
 ops/backup/dumps/
 ops/backup/backup.log
+
+# graphify: versioned graph output, tapi abaikan state lokal-mesin
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+graphify-out/cache/
