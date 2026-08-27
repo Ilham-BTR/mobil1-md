@@ -1,16 +1,16 @@
 # Graph Report - Mobil1  (2026-08-27)
 
 ## Corpus Check
-- 58 files · ~234,562 words
+- 58 files · ~234,764 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 542 nodes · 743 edges · 51 communities (46 shown, 5 thin omitted)
+- 544 nodes · 745 edges · 51 communities (45 shown, 6 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 9 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `9c9ddef0`
+- Built from commit: `03ab8e78`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -49,6 +49,7 @@
 - Run-SQL Script
 - Migration 0005 Distributors
 - Profiles Policy 0009
+- vite.config.js
 - measure.mjs
 - visit_list
 - master.js
@@ -85,11 +86,11 @@
 - **Region-Kota-Bengkel-Visit Data Hierarchy** — prd_entity_regions, prd_entity_bengkels, prd_entity_distributors, prd_entity_visits [EXTRACTED 1.00]
 - **Presigned Photo Upload Pipeline** — readme_lib_storage, prd_edge_function_get_upload_url, readme_s3_object_storage, prd_backblaze_b2 [EXTRACTED 1.00]
 
-## Communities (51 total, 5 thin omitted)
+## Communities (51 total, 6 thin omitted)
 
 ### Community 0 - "visits.js"
 Cohesion: 0.07
-Nodes (38): StoredImage(), checkIn(), checkOut(), deleteAttendance(), fetchAttendances(), fetchAttendancesByMonth(), fetchAttendancesByRange(), fetchTodayAttendance() (+30 more)
+Nodes (37): StoredImage(), checkIn(), checkOut(), deleteAttendance(), fetchAttendances(), fetchAttendancesByMonth(), fetchAttendancesByRange(), fetchTodayAttendance() (+29 more)
 
 ### Community 1 - "UI Components & Forms"
 Cohesion: 0.04
@@ -212,13 +213,13 @@ Cohesion: 0.25
 Nodes (7): bengkels, distributors, kotas, profiles, regions, visits, visit_list
 
 ### Community 50 - "master.js"
-Cohesion: 0.14
-Nodes (26): fetchAllPaged(), addMaster(), bengkelCacheKey(), bulkAddBengkels(), bulkAddMaster(), bulkCreateMDs(), bustMasterCache(), cachedMaster() (+18 more)
+Cohesion: 0.13
+Nodes (27): addMaster(), bengkelCacheKey(), bulkAddBengkels(), bulkAddMaster(), bulkCreateMDs(), bustMasterCache(), cachedMaster(), deleteMaster() (+19 more)
 
 ## Knowledge Gaps
-- **143 isolated node(s):** `__dirname`, `cfgPath`, `cfg`, `logFile`, `supabase` (+138 more)
+- **144 isolated node(s):** `__dirname`, `cfgPath`, `cfg`, `logFile`, `supabase` (+139 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -230,9 +231,9 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `Supabase (Postgres + Auth)` connect `Product Docs & Specs` to `Photo Upload Pipeline`?**
   _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **What connects `__dirname`, `cfgPath`, `cfg` to the rest of the system?**
-  _143 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _144 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `visits.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.07078039927404718 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07138535995160314 - nodes in this community are weakly interconnected._
 - **Should `UI Components & Forms` be split into smaller, more focused modules?**
   _Cohesion score 0.03571428571428571 - nodes in this community are weakly interconnected._
 - **Should `Product Docs & Specs` be split into smaller, more focused modules?**

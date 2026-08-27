@@ -5832,6 +5832,29 @@ export default function App() {
   const [welcome, setWelcome] = useState(false); // popup ringkasan saat MD baru login
   const [passkeyOpen, setPasskeyOpen] = useState(false);
 
+  // Deteksi bundle baru -> reload paksa. Tab lama yang nyangkut berhari-hari
+  // tetap jalanin kode lama (termasuk pola boros egress yang sudah diperbaiki);
+  // cek version.json (murah, ~40 byte) saat tab kembali fokus + tiap 15 menit.
+  useEffect(() => {
+    if (!import.meta.env.PROD) return;
+    let reloading = false;
+    const check = async () => {
+      try {
+        const res = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
+        if (!res.ok) return;
+        const { build } = await res.json();
+        if (build && build !== __BUILD_ID__ && !reloading) {
+          reloading = true;
+          window.location.reload();
+        }
+      } catch { /* offline dsb — coba lagi nanti */ }
+    };
+    const onVis = () => { if (document.visibilityState === 'visible') check(); };
+    document.addEventListener('visibilitychange', onVis);
+    const iv = setInterval(check, 15 * 60 * 1000);
+    return () => { document.removeEventListener('visibilitychange', onVis); clearInterval(iv); };
+  }, []);
+
   useEffect(() => {
     api.getCurrentProfile().then(p => {
       setProfile(p);

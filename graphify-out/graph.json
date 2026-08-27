@@ -253,6 +253,18 @@
       "source_location": "L36"
     },
     {
+      "id": "src_lib_api_helpers_fetchallpaged",
+      "label": "fetchAllPaged()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "visits.js",
+      "file_type": "code",
+      "norm_label": "fetchallpaged()",
+      "source_file": "src/lib/api/_helpers.js",
+      "source_location": "L5"
+    },
+    {
       "id": "src_lib_api_mock_loadmockdata",
       "label": "loadMockData()",
       "_callable": true,
@@ -299,30 +311,6 @@
       "norm_label": "countphotos()",
       "source_file": "src/lib/api/visits.js",
       "source_location": "L17"
-    },
-    {
-      "id": "src_lib_api_visits_createvisit",
-      "label": "createVisit()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "visits.js",
-      "file_type": "code",
-      "norm_label": "createvisit()",
-      "source_file": "src/lib/api/visits.js",
-      "source_location": "L132"
-    },
-    {
-      "id": "src_lib_api_visits_deletevisit",
-      "label": "deleteVisit()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "visits.js",
-      "file_type": "code",
-      "norm_label": "deletevisit()",
-      "source_file": "src/lib/api/visits.js",
-      "source_location": "L209"
     },
     {
       "id": "src_lib_api_visits_fetchvisitfull",
@@ -1573,6 +1561,18 @@
       "source_location": "L159"
     },
     {
+      "id": "vite_config_generatebundle",
+      "label": "generateBundle()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 46,
+      "community_name": "vite.config.js",
+      "file_type": "code",
+      "norm_label": "generatebundle()",
+      "source_file": "vite.config.js",
+      "source_location": "L17"
+    },
+    {
       "id": "ops_egress_measure_fmt",
       "label": "fmt()",
       "_callable": true,
@@ -1595,18 +1595,6 @@
       "norm_label": "paged()",
       "source_file": "ops/egress/measure.mjs",
       "source_location": "L31"
-    },
-    {
-      "id": "src_lib_api_helpers_fetchallpaged",
-      "label": "fetchAllPaged()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 50,
-      "community_name": "master.js",
-      "file_type": "code",
-      "norm_label": "fetchallpaged()",
-      "source_file": "src/lib/api/_helpers.js",
-      "source_location": "L5"
     },
     {
       "id": "src_lib_api_master_addmaster",
@@ -1873,6 +1861,30 @@
       "source_location": "L45"
     },
     {
+      "id": "src_lib_api_visits_createvisit",
+      "label": "createVisit()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "master.js",
+      "file_type": "code",
+      "norm_label": "createvisit()",
+      "source_file": "src/lib/api/visits.js",
+      "source_location": "L132"
+    },
+    {
+      "id": "src_lib_api_visits_deletevisit",
+      "label": "deleteVisit()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "master.js",
+      "file_type": "code",
+      "norm_label": "deletevisit()",
+      "source_file": "src/lib/api/visits.js",
+      "source_location": "L209"
+    },
+    {
       "id": "src_lib_kvcache_kvdel",
       "label": "kvDel()",
       "_callable": true,
@@ -2072,6 +2084,17 @@
       "file_type": "code",
       "norm_label": "auth.js",
       "source_file": "src/lib/api/auth.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_lib_api_helpers",
+      "label": "_helpers.js",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "visits.js",
+      "file_type": "code",
+      "norm_label": "_helpers.js",
+      "source_file": "src/lib/api/_helpers.js",
       "source_location": "L1"
     },
     {
@@ -4400,11 +4423,22 @@
       "label": "vite.config.js",
       "_origin": "ast",
       "community": 46,
-      "community_name": "Vite Config",
+      "community_name": "vite.config.js",
       "file_type": "code",
       "norm_label": "vite.config.js",
       "source_file": "vite.config.js",
       "source_location": "L1"
+    },
+    {
+      "id": "vite_config_build_id",
+      "label": "BUILD_ID",
+      "_origin": "ast",
+      "community": 46,
+      "community_name": "vite.config.js",
+      "file_type": "code",
+      "norm_label": "build_id",
+      "source_file": "vite.config.js",
+      "source_location": "L7"
     },
     {
       "id": "xlsx_xlsx",
@@ -4834,17 +4868,6 @@
       "norm_label": "@vitejs/plugin-react",
       "source_file": "package.json",
       "source_location": "L25"
-    },
-    {
-      "id": "src_lib_api_helpers",
-      "label": "_helpers.js",
-      "_origin": "ast",
-      "community": 50,
-      "community_name": "master.js",
-      "file_type": "code",
-      "norm_label": "_helpers.js",
-      "source_file": "src/lib/api/_helpers.js",
-      "source_location": "L1"
     },
     {
       "id": "src_lib_api_master",
@@ -12926,6 +12949,28 @@
       "weight": 1.0
     },
     {
+      "source": "vite_config",
+      "target": "vite_config_generatebundle",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "vite.config.js",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "vite_config",
+      "target": "vite_config_build_id",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "vite.config.js",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
       "source": "src_lib_api_master",
       "target": "src_lib_kvcache",
       "relation": "dynamic_import",
@@ -14806,5 +14851,5 @@
       "source_file": "README.md"
     }
   ],
-  "built_at_commit": "9c9ddef0df5075f635cfebc4055544b627f73b24"
+  "built_at_commit": "03ab8e780a59394dfdf7df7552ec32d349c454de"
 }
