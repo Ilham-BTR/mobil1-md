@@ -1,21 +1,21 @@
-# Graph Report - Mobil1  (2026-08-26)
+# Graph Report - Mobil1  (2026-08-27)
 
 ## Corpus Check
-- 55 files · ~231,954 words
+- 57 files · ~233,376 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 507 nodes · 687 edges · 48 communities (43 shown, 5 thin omitted)
+- 529 nodes · 709 edges · 50 communities (45 shown, 5 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 9 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e1e562a4`
+- Built from commit: `b7c2a8af`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- API & Data Layer
+- master.js
 - UI Components & Forms
 - Product Docs & Specs
 - DB Schema setup_fresh
@@ -49,6 +49,8 @@
 - Run-SQL Script
 - Migration 0005 Distributors
 - Profiles Policy 0009
+- measure.mjs
+- visit_list
 
 ## God Nodes (most connected - your core abstractions)
 1. `persistMock()` - 19 edges
@@ -82,11 +84,11 @@
 - **Region-Kota-Bengkel-Visit Data Hierarchy** — prd_entity_regions, prd_entity_bengkels, prd_entity_distributors, prd_entity_visits [EXTRACTED 1.00]
 - **Presigned Photo Upload Pipeline** — readme_lib_storage, prd_edge_function_get_upload_url, readme_s3_object_storage, prd_backblaze_b2 [EXTRACTED 1.00]
 
-## Communities (48 total, 5 thin omitted)
+## Communities (50 total, 5 thin omitted)
 
-### Community 0 - "API & Data Layer"
+### Community 0 - "master.js"
 Cohesion: 0.06
-Nodes (46): StoredImage(), checkIn(), checkOut(), deleteAttendance(), fetchAttendances(), fetchAttendancesByMonth(), fetchAttendancesByRange(), fetchTodayAttendance() (+38 more)
+Nodes (49): StoredImage(), checkIn(), checkOut(), deleteAttendance(), fetchAttendances(), fetchAttendancesByMonth(), fetchAttendancesByRange(), fetchTodayAttendance() (+41 more)
 
 ### Community 1 - "UI Components & Forms"
 Cohesion: 0.04
@@ -200,24 +202,32 @@ Nodes (4): BengkelImportModal(), downloadBengkelTemplate(), normalizeColumn(), v
 Cohesion: 0.67
 Nodes (3): AdminView(), MDView(), useTabBackButton()
 
+### Community 48 - "measure.mjs"
+Cohesion: 0.20
+Nodes (7): cfg, __dirname, H, month, QUERIES, results, totalGz
+
+### Community 49 - "visit_list"
+Cohesion: 0.25
+Nodes (7): bengkels, distributors, kotas, profiles, regions, visits, visit_list
+
 ## Knowledge Gaps
-- **135 isolated node(s):** `__dirname`, `cfgPath`, `cfg`, `logFile`, `supabase` (+130 more)
+- **143 isolated node(s):** `__dirname`, `cfgPath`, `cfg`, `logFile`, `supabase` (+138 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `MOCK_MODE` connect `API & Data Layer` to `UI Components & Forms`?**
+- **Why does `MOCK_MODE` connect `master.js` to `UI Components & Forms`?**
   _High betweenness centrality (0.010) - this node is a cross-community bridge._
 - **Why does `dependencies` connect `Frontend Dependencies` to `Build Tooling`?**
-  _High betweenness centrality (0.005) - this node is a cross-community bridge._
+  _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **Why does `Supabase (Postgres + Auth)` connect `Product Docs & Specs` to `Photo Upload Pipeline`?**
   _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **What connects `__dirname`, `cfgPath`, `cfg` to the rest of the system?**
-  _135 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `API & Data Layer` be split into smaller, more focused modules?**
-  _Cohesion score 0.06237424547283702 - nodes in this community are weakly interconnected._
+  _143 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `master.js` be split into smaller, more focused modules?**
+  _Cohesion score 0.058018018018018015 - nodes in this community are weakly interconnected._
 - **Should `UI Components & Forms` be split into smaller, more focused modules?**
   _Cohesion score 0.03571428571428571 - nodes in this community are weakly interconnected._
 - **Should `Product Docs & Specs` be split into smaller, more focused modules?**

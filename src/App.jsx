@@ -98,7 +98,18 @@ function setColDateFormat(XLSX, ws, header, fmt) {
 async function exportVisitsXlsx(visits, ctx, filename) {
   if (!visits || visits.length === 0) return;
   const XLSX = await import('xlsx');
-  const rows = visits.map(v => visitToCSVRow(v, ctx));
+  // Daftar visit kini LEAN (tanpa URL foto, hemat egress) -> tempel kolom foto
+  // hanya saat export: tarik id+11 kolom foto untuk baris yang di-export.
+  let toExport = visits;
+  if (!visits.some(v => PHOTO_KEYS.some(k => v[k]))) {
+    try {
+      const photoMap = await api.fetchVisitPhotosMap(visits.map(v => v.id));
+      toExport = visits.map(v => ({ ...v, ...(photoMap.get(v.id) || {}) }));
+    } catch (e) {
+      console.warn('Gagal tarik foto untuk export (kolom link foto kosong):', e?.message);
+    }
+  }
+  const rows = toExport.map(v => visitToCSVRow(v, ctx));
   const ws = XLSX.utils.json_to_sheet(rows, { cellDates: true });
   setColDateFormat(XLSX, ws, 'tanggal', 'dd/mm/yyyy');
   setColDateFormat(XLSX, ws, 'waktu_submit', 'dd/mm/yyyy hh:mm');
@@ -160,7 +171,7 @@ const visitToCSVRow = (v, ctx) => {
   const r = k ? ctx.regions.find(x => x.id === k.region_id) : null;
   const d = ctx.distributors.find(x => x.id === v.distributor_id) || null;
   const md = ctx.mds.find(x => x.id === v.md_id);
-  const photoCount = PHOTO_KEYS.filter(key => v[key]).length;
+  const photoCount = v.photo_count ?? PHOTO_KEYS.filter(key => v[key]).length;
   return {
     visit_id: v.id,
     tanggal: excelDateSerial(v.visit_date),
@@ -548,7 +559,22 @@ const KPI_ICON_COLOR = {
   blue: 'text-blue-500', amber: 'text-amber-500', rose: 'text-rose-500',
 };
 
-function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDeleted, canEdit = false, onUpdated, bengkels = [], distributors = [] }) {
+function VisitDetailModal({ visit: visitProp, bengkel, kota, distributor, md, onClose, onDeleted, canEdit = false, onUpdated, bengkels = [], distributors = [] }) {
+  // Daftar visit kini LEAN (tanpa URL foto, hemat egress) -> tarik baris lengkap
+  // (visit_details) sekali saat modal dibuka. visitProp tetap dipakai sebagai
+  // tampilan awal supaya header/field muncul instan.
+  const [fullVisit, setFullVisit] = useState(null);
+  useEffect(() => {
+    let on = true;
+    setFullVisit(null);
+    api.fetchVisitFull(visitProp.id)
+      .then(v => { if (on && v) setFullVisit(v); })
+      .catch(err => console.warn('Gagal tarik detail visit:', err?.message));
+    return () => { on = false; };
+  }, [visitProp.id]);
+  const visit = fullVisit || visitProp;
+  // Foto masih dalam perjalanan? (baris lean tak bawa URL foto)
+  const photosLoading = !fullVisit && !PHOTO_KEYS.some(k => visitProp[k]) && (visitProp.photo_count ?? 0) > 0;
   const [lightboxIdx, setLightboxIdx] = useState(null);
   useBackDismiss(true, onClose);                                  // back -> tutup modal detail
   useBackDismiss(lightboxIdx != null, () => setLightboxIdx(null)); // back -> tutup foto fullscreen dulu
@@ -864,7 +890,11 @@ function VisitDetailModal({ visit, bengkel, kota, distributor, md, onClose, onDe
               {canEdit && <span className="normal-case tracking-normal font-normal text-zinc-600">· tap "Ganti" untuk perbaiki foto</span>}
             </div>
             {canEdit && <input ref={replaceFileRef} type="file" accept="image/*" className="hidden" onChange={onReplaceFile} />}
-            {availablePhotos.length === 0 ? (
+            {photosLoading ? (
+              <div className="text-center text-sm text-zinc-500 py-8 bg-zinc-950 border border-zinc-800 rounded-xl flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />Memuat foto…
+              </div>
+            ) : availablePhotos.length === 0 ? (
               <div className="text-center text-sm text-zinc-500 py-8 bg-zinc-950 border border-zinc-800 rounded-xl">Tidak ada foto</div>
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
@@ -3298,7 +3328,7 @@ function VisitHistory({ visits, bengkels, kotas, distributors }) {
         const b = findBengkel(v.bengkel_id);
         const k = b ? findKota(b.kota_id) : null;
         const d = findDist(v.distributor_id);
-        const photoCount = PHOTO_KEYS.filter(key => v[key]).length;
+        const photoCount = v.photo_count ?? PHOTO_KEYS.filter(key => v[key]).length;
         return (
           <div key={v.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition">
             <div className="flex items-start justify-between gap-3 mb-2">
@@ -3674,7 +3704,7 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
             const k = b ? findKota(b.kota_id) : null;
             const r = k ? findRegion(k.region_id) : null;
             const md = findMD(v.md_id);
-            const photoCount = PHOTO_KEYS.filter(key => v[key]).length;
+            const photoCount = v.photo_count ?? PHOTO_KEYS.filter(key => v[key]).length;
             return (
               <button key={v.id} onClick={() => onOpenVisit(v.id)}
                 className="w-full text-left bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg px-3 py-2 transition group flex items-center gap-3">
@@ -3926,7 +3956,7 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
             {recentVisits.map(v => {
               const b = bengkels.find(x => x.id === v.bengkel_id);
               const md = mds.find(m => m.id === v.md_id);
-              const photoCount = PHOTO_KEYS.filter(key => v[key]).length;
+              const photoCount = v.photo_count ?? PHOTO_KEYS.filter(key => v[key]).length;
               return (
                 <button key={v.id} onClick={() => onOpenVisit?.(v.id)}
                   className="w-full text-left flex items-center gap-3 p-3 rounded-lg bg-zinc-950 border border-zinc-800 hover:border-zinc-700 transition group">

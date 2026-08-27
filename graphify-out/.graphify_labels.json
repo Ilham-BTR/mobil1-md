@@ -1,5 +1,5 @@
 {
-  "0": "API & Data Layer",
+  "0": "master.js",
   "1": "UI Components & Forms",
   "2": "Product Docs & Specs",
   "3": "DB Schema setup_fresh",
@@ -46,5 +46,7 @@
   "44": "Tailwind Config",
   "45": "TailwindCSS Dep",
   "46": "Vite Config",
-  "47": "XLSX Library"
+  "47": "XLSX Library",
+  "48": "measure.mjs",
+  "49": "visit_list"
 }
