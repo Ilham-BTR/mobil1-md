@@ -1,0 +1,47 @@
+{
+  "rest:visit_list": {
+    "gzPerRequest": 123821,
+    "rows": 4717,
+    "measuredAt": "2026-08-27T10:16:31.258Z"
+  },
+  "rest:visit_details": {
+    "gzPerRequest": 169792,
+    "rows": 4717,
+    "measuredAt": "2026-08-27T10:16:31.258Z"
+  },
+  "rest:bengkels": {
+    "gzPerRequest": 82936,
+    "rows": 4241,
+    "measuredAt": "2026-08-27T10:16:31.258Z"
+  },
+  "rest:profiles": {
+    "gzPerRequest": 2431,
+    "rows": 32,
+    "measuredAt": "2026-08-27T10:16:31.258Z"
+  },
+  "rest:kotas": {
+    "gzPerRequest": 5953,
+    "rows": 180,
+    "measuredAt": "2026-08-27T10:16:31.258Z"
+  },
+  "rest:distributors": {
+    "gzPerRequest": 999,
+    "rows": 14,
+    "measuredAt": "2026-08-27T10:16:31.258Z"
+  },
+  "rest:regions": {
+    "gzPerRequest": 290,
+    "rows": 6,
+    "measuredAt": "2026-08-27T10:16:31.258Z"
+  },
+  "rest:attendance_details": {
+    "gzPerRequest": 39293,
+    "rows": 358,
+    "measuredAt": "2026-08-27T10:16:31.258Z"
+  },
+  "rest:tl_regions": {
+    "gzPerRequest": 315,
+    "rows": 6,
+    "measuredAt": "2026-08-27T10:16:31.258Z"
+  }
+}
