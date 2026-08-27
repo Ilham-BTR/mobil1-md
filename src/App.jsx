@@ -2596,7 +2596,7 @@ function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
     // menu Absen & History langsung bisa dipakai; dropdown bengkel di form aktif
     // begitu datanya sampai (lihat hint "Memuat bengkel…").
     setBengkelsLoading(true);
-    api.fetchBengkels(currentMD.region_id || null)  // hanya bengkel region MD -> hemat memori HP
+    api.fetchBengkelsCached(currentMD.region_id || null)  // hanya bengkel region MD (cache IDB + delta -> hemat egress & memori HP)
       .then(b => setBengkels(b))
       .catch(err => console.error(err))
       .finally(() => setBengkelsLoading(false));
@@ -3502,7 +3502,7 @@ function AdminView({ profile }) {
     // Bengkel (~ribuan) paling berat & lama ditarik. Lepas ke latar supaya tab
     // langsung bisa dibuka; angka yang bergantung bengkel menyusul sesaat kemudian.
     setBengkelsLoading(true);
-    api.fetchBengkels()
+    api.fetchBengkelsCached()
       .then(b => setBengkels(b))
       .catch(err => console.error(err))
       .finally(() => setBengkelsLoading(false));
@@ -3555,7 +3555,7 @@ function AdminView({ profile }) {
     try {
       if (sec === 'bengkels') {
         setBengkelsLoading(true);
-        try { setBengkels(await api.fetchBengkels()); } finally { setBengkelsLoading(false); }
+        try { setBengkels(await api.fetchBengkelsCached(null, { force: true })); } finally { setBengkelsLoading(false); }
       } else if (sec === 'mds') {
         const acc = await api.fetchAccounts();
         setAccounts(acc); setMds(acc.filter(a => a.role === 'md'));

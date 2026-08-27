@@ -48,6 +48,57 @@ export async function fetchBengkels(regionId = null) {
   );
 }
 
+// ---- Cache bengkels (egress): IndexedDB + delta-sync by updated_at ----------
+// Bengkels = query terberat kedua (terukur 405KB gz / 2.6MB raw utk semua,
+// ~72KB gz per-region MD) dan ditarik TIAP login. Cache di IDB; load berikutnya
+// cukup delta (updated_at > lastSync) -> ~1KB. Full refresh paksa saat mutasi
+// master bengkel (delete tak terdeteksi delta) & saat cache > 7 hari.
+const BENGKEL_CACHE_TTL_MS = 7 * 24 * 3600 * 1000;
+const bengkelCacheKey = (regionId) => 'bengkels:' + (regionId || 'all');
+
+export async function fetchBengkelsCached(regionId = null, { force = false } = {}) {
+  if (MOCK_MODE) return fetchBengkels(regionId);
+  const key = bengkelCacheKey(regionId);
+  const { kvGet, kvSet } = await import('../kvCache');
+  const cached = !force ? await kvGet(key) : null;
+  const fresh = cached && Array.isArray(cached.rows) && cached.lastSync
+    && (Date.now() - (cached.savedAt || 0) < BENGKEL_CACHE_TTL_MS);
+
+  if (!fresh) {
+    const rows = await fetchBengkels(regionId);
+    let lastSync = null;
+    for (const b of rows) if (b.updated_at && (!lastSync || b.updated_at > lastSync)) lastSync = b.updated_at;
+    kvSet(key, { rows, lastSync, savedAt: Date.now() });
+    return rows;
+  }
+
+  // Delta: hanya bengkel yang berubah sejak lastSync (select nested sama persis).
+  try {
+    const build = regionId
+      ? () => supabase.from('bengkels')
+          .select('*, kota:kotas!inner(*, region:regions!region_id(*))')
+          .eq('kota.region_id', regionId)
+          .gt('updated_at', cached.lastSync)
+      : () => supabase.from('bengkels')
+          .select('*, kota:kotas(*, region:regions!region_id(*))')
+          .gt('updated_at', cached.lastSync);
+    const delta = await fetchAllPaged(build);
+    if (!delta.length) return cached.rows;
+    const map = new Map(cached.rows.map(b => [b.id, b]));
+    let lastSync = cached.lastSync;
+    for (const b of delta) {
+      map.set(b.id, b);
+      if (b.updated_at && b.updated_at > lastSync) lastSync = b.updated_at;
+    }
+    const rows = [...map.values()].sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+    kvSet(key, { rows, lastSync, savedAt: cached.savedAt });
+    return rows;
+  } catch (e) {
+    console.warn('Delta bengkels gagal, fallback full fetch:', e?.message);
+    return fetchBengkels(regionId);
+  }
+}
+
 // Semua akun (untuk kelola di Master Data) — RLS: admin/super lihat semua, TL region-nya, MD miliknya.
 export async function fetchAccounts() {
   if (MOCK_MODE) {

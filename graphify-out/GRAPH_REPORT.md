@@ -1,16 +1,16 @@
 # Graph Report - Mobil1  (2026-08-27)
 
 ## Corpus Check
-- 57 files · ~233,882 words
+- 58 files · ~234,383 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 530 nodes · 712 edges · 50 communities (45 shown, 5 thin omitted)
+- 537 nodes · 726 edges · 51 communities (46 shown, 5 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 9 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `861e8f5a`
+- Built from commit: `71950e0c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -51,6 +51,7 @@
 - Profiles Policy 0009
 - measure.mjs
 - visit_list
+- kvCache.js
 
 ## God Nodes (most connected - your core abstractions)
 1. `persistMock()` - 19 edges
@@ -61,8 +62,8 @@
 6. `mockAtt()` - 9 edges
 7. `fmtAbsenTime()` - 7 edges
 8. `AdminAbsenTab()` - 7 edges
-9. `uploadAttendancePhoto()` - 7 edges
-10. `MOCK_MODE` - 7 edges
+9. `fetchAllPaged()` - 7 edges
+10. `uploadAttendancePhoto()` - 7 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Cloudflare R2 Storage` --semantically_similar_to--> `Backblaze B2 Photo Storage`  [INFERRED] [semantically similar]
@@ -84,11 +85,11 @@
 - **Region-Kota-Bengkel-Visit Data Hierarchy** — prd_entity_regions, prd_entity_bengkels, prd_entity_distributors, prd_entity_visits [EXTRACTED 1.00]
 - **Presigned Photo Upload Pipeline** — readme_lib_storage, prd_edge_function_get_upload_url, readme_s3_object_storage, prd_backblaze_b2 [EXTRACTED 1.00]
 
-## Communities (50 total, 5 thin omitted)
+## Communities (51 total, 5 thin omitted)
 
 ### Community 0 - "master.js"
 Cohesion: 0.06
-Nodes (50): StoredImage(), checkIn(), checkOut(), deleteAttendance(), fetchAttendances(), fetchAttendancesByMonth(), fetchAttendancesByRange(), fetchTodayAttendance() (+42 more)
+Nodes (52): StoredImage(), checkIn(), checkOut(), deleteAttendance(), fetchAttendances(), fetchAttendancesByMonth(), fetchAttendancesByRange(), fetchTodayAttendance() (+44 more)
 
 ### Community 1 - "UI Components & Forms"
 Cohesion: 0.04
@@ -210,6 +211,10 @@ Nodes (7): cfg, __dirname, H, month, QUERIES, results, totalGz
 Cohesion: 0.25
 Nodes (7): bengkels, distributors, kotas, profiles, regions, visits, visit_list
 
+### Community 50 - "kvCache.js"
+Cohesion: 0.70
+Nodes (4): kvDel(), kvGet(), kvSet(), openKv()
+
 ## Knowledge Gaps
 - **143 isolated node(s):** `__dirname`, `cfgPath`, `cfg`, `logFile`, `supabase` (+138 more)
   These have ≤1 connection - possible missing edges or undocumented components.
@@ -219,7 +224,7 @@ Nodes (7): bengkels, distributors, kotas, profiles, regions, visits, visit_list
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `MOCK_MODE` connect `master.js` to `UI Components & Forms`?**
-  _High betweenness centrality (0.010) - this node is a cross-community bridge._
+  _High betweenness centrality (0.011) - this node is a cross-community bridge._
 - **Why does `dependencies` connect `Frontend Dependencies` to `Build Tooling`?**
   _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **Why does `Supabase (Postgres + Auth)` connect `Product Docs & Specs` to `Photo Upload Pipeline`?**
@@ -227,7 +232,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **What connects `__dirname`, `cfgPath`, `cfg` to the rest of the system?**
   _143 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `master.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.05754385964912281 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05627705627705628 - nodes in this community are weakly interconnected._
 - **Should `UI Components & Forms` be split into smaller, more focused modules?**
   _Cohesion score 0.03571428571428571 - nodes in this community are weakly interconnected._
 - **Should `Product Docs & Specs` be split into smaller, more focused modules?**

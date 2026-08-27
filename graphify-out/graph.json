@@ -274,7 +274,19 @@
       "file_type": "code",
       "norm_label": "addmaster()",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L93"
+      "source_location": "L144"
+    },
+    {
+      "id": "src_lib_api_master_bengkelcachekey",
+      "label": "bengkelCacheKey()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "master.js",
+      "file_type": "code",
+      "norm_label": "bengkelcachekey()",
+      "source_file": "src/lib/api/master.js",
+      "source_location": "L57"
     },
     {
       "id": "src_lib_api_master_bulkaddbengkels",
@@ -286,7 +298,7 @@
       "file_type": "code",
       "norm_label": "bulkaddbengkels()",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L115"
+      "source_location": "L166"
     },
     {
       "id": "src_lib_api_master_bulkaddmaster",
@@ -298,7 +310,7 @@
       "file_type": "code",
       "norm_label": "bulkaddmaster()",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L171"
+      "source_location": "L222"
     },
     {
       "id": "src_lib_api_master_bulkcreatemds",
@@ -310,7 +322,7 @@
       "file_type": "code",
       "norm_label": "bulkcreatemds()",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L212"
+      "source_location": "L263"
     },
     {
       "id": "src_lib_api_master_deletemaster",
@@ -322,7 +334,7 @@
       "file_type": "code",
       "norm_label": "deletemaster()",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L303"
+      "source_location": "L354"
     },
     {
       "id": "src_lib_api_master_deletemd",
@@ -334,7 +346,7 @@
       "file_type": "code",
       "norm_label": "deletemd()",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L253"
+      "source_location": "L304"
     },
     {
       "id": "src_lib_api_master_fetchaccounts",
@@ -346,7 +358,7 @@
       "file_type": "code",
       "norm_label": "fetchaccounts()",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L52"
+      "source_location": "L103"
     },
     {
       "id": "src_lib_api_master_fetchbengkels",
@@ -359,6 +371,18 @@
       "norm_label": "fetchbengkels()",
       "source_file": "src/lib/api/master.js",
       "source_location": "L30"
+    },
+    {
+      "id": "src_lib_api_master_fetchbengkelscached",
+      "label": "fetchBengkelsCached()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "master.js",
+      "file_type": "code",
+      "norm_label": "fetchbengkelscached()",
+      "source_file": "src/lib/api/master.js",
+      "source_location": "L59"
     },
     {
       "id": "src_lib_api_master_fetchdistributors",
@@ -406,7 +430,7 @@
       "file_type": "code",
       "norm_label": "resetmdpassword()",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L273"
+      "source_location": "L324"
     },
     {
       "id": "src_lib_api_master_settlregions",
@@ -418,7 +442,7 @@
       "file_type": "code",
       "norm_label": "settlregions()",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L79"
+      "source_location": "L130"
     },
     {
       "id": "src_lib_api_master_updatemaster",
@@ -430,7 +454,7 @@
       "file_type": "code",
       "norm_label": "updatemaster()",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L289"
+      "source_location": "L340"
     },
     {
       "id": "src_lib_api_mock_loadmockdata",
@@ -1787,6 +1811,54 @@
       "norm_label": "paged()",
       "source_file": "ops/egress/measure.mjs",
       "source_location": "L31"
+    },
+    {
+      "id": "src_lib_kvcache_kvdel",
+      "label": "kvDel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "kvCache.js",
+      "file_type": "code",
+      "norm_label": "kvdel()",
+      "source_file": "src/lib/kvCache.js",
+      "source_location": "L42"
+    },
+    {
+      "id": "src_lib_kvcache_kvget",
+      "label": "kvGet()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "kvCache.js",
+      "file_type": "code",
+      "norm_label": "kvget()",
+      "source_file": "src/lib/kvCache.js",
+      "source_location": "L18"
+    },
+    {
+      "id": "src_lib_kvcache_kvset",
+      "label": "kvSet()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "kvCache.js",
+      "file_type": "code",
+      "norm_label": "kvset()",
+      "source_file": "src/lib/kvCache.js",
+      "source_location": "L30"
+    },
+    {
+      "id": "src_lib_kvcache_openkv",
+      "label": "openKv()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "kvCache.js",
+      "file_type": "code",
+      "norm_label": "openkv()",
+      "source_file": "src/lib/kvCache.js",
+      "source_location": "L9"
     },
     {
       "id": "ops_import_import_ardiansyah_col",
@@ -4726,6 +4798,17 @@
       "source_location": "L25"
     },
     {
+      "id": "src_lib_kvcache",
+      "label": "kvCache.js",
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "kvCache.js",
+      "file_type": "code",
+      "norm_label": "kvcache.js",
+      "source_file": "src/lib/kvCache.js",
+      "source_location": "L1"
+    },
+    {
       "id": "package_dependencies",
       "label": "dependencies",
       "_origin": "ast",
@@ -7169,7 +7252,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L98",
+      "source_location": "L149",
       "weight": 1.0
     },
     {
@@ -7181,7 +7264,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L135",
+      "source_location": "L186",
       "weight": 1.0
     },
     {
@@ -7193,7 +7276,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L180",
+      "source_location": "L231",
       "weight": 1.0
     },
     {
@@ -7205,7 +7288,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L235",
+      "source_location": "L286",
       "weight": 1.0
     },
     {
@@ -7217,7 +7300,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L306",
+      "source_location": "L357",
       "weight": 1.0
     },
     {
@@ -7229,7 +7312,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L257",
+      "source_location": "L308",
       "weight": 1.0
     },
     {
@@ -7245,6 +7328,42 @@
       "weight": 1.0
     },
     {
+      "source": "src_lib_api_master_fetchbengkelscached",
+      "target": "src_lib_api_master_fetchbengkels",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/lib/api/master.js",
+      "source_location": "L60",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_api_master_fetchbengkelscached",
+      "target": "src_lib_api_master_bengkelcachekey",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/lib/api/master.js",
+      "source_location": "L61",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_api_master_fetchbengkelscached",
+      "target": "src_lib_api_helpers_fetchallpaged",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/lib/api/master.js",
+      "source_location": "L85",
+      "weight": 1.0
+    },
+    {
       "source": "src_lib_api_master_resetmdpassword",
       "target": "src_lib_api_mock_persistmock",
       "relation": "calls",
@@ -7253,7 +7372,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L278",
+      "source_location": "L329",
       "weight": 1.0
     },
     {
@@ -7265,7 +7384,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L83",
+      "source_location": "L134",
       "weight": 1.0
     },
     {
@@ -7277,7 +7396,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L295",
+      "source_location": "L346",
       "weight": 1.0
     },
     {
@@ -7410,6 +7529,42 @@
       "context": "call",
       "source_file": "src/lib/api/visits.js",
       "source_location": "L78",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_kvcache_kvdel",
+      "target": "src_lib_kvcache_openkv",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/lib/kvCache.js",
+      "source_location": "L44",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_kvcache_kvget",
+      "target": "src_lib_kvcache_openkv",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/lib/kvCache.js",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_kvcache_kvset",
+      "target": "src_lib_kvcache_openkv",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/lib/kvCache.js",
+      "source_location": "L32",
       "weight": 1.0
     },
     {
@@ -7626,6 +7781,19 @@
       "context": "export",
       "source_file": "src/lib/api/index.js",
       "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_api_master_fetchbengkelscached",
+      "target": "src_lib_kvcache",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "deferred": true,
+      "source_file": "src/lib/api/master.js",
+      "source_location": "L62",
       "weight": 1.0
     },
     {
@@ -11037,13 +11205,24 @@
     },
     {
       "source": "src_lib_api_master",
-      "target": "src_lib_api_master_bulkaddbengkels",
+      "target": "src_lib_api_master_fetchaccounts",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/lib/api/master.js",
-      "source_location": "L115",
+      "source_location": "L103",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_api_master",
+      "target": "src_lib_api_master_settlregions",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/lib/api/master.js",
+      "source_location": "L130",
       "weight": 1.0
     },
     {
@@ -11059,13 +11238,24 @@
     },
     {
       "source": "src_lib_api_master",
-      "target": "src_lib_api_master_bulkaddmaster",
+      "target": "src_lib_api_master_addmaster",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/lib/api/master.js",
-      "source_location": "L171",
+      "source_location": "L144",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_api_master",
+      "target": "src_lib_api_master_bulkaddbengkels",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/lib/api/master.js",
+      "source_location": "L166",
       "weight": 1.0
     },
     {
@@ -11081,46 +11271,24 @@
     },
     {
       "source": "src_lib_api_master",
+      "target": "src_lib_api_master_bulkaddmaster",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/lib/api/master.js",
+      "source_location": "L222",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_api_master",
       "target": "src_lib_api_master_bulkcreatemds",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/lib/api/master.js",
-      "source_location": "L212",
-      "weight": 1.0
-    },
-    {
-      "source": "src_lib_api_master",
-      "target": "src_lib_api_master_deletemd",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/lib/api/master.js",
-      "source_location": "L253",
-      "weight": 1.0
-    },
-    {
-      "source": "src_lib_api_master",
-      "target": "src_lib_api_master_resetmdpassword",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/lib/api/master.js",
-      "source_location": "L273",
-      "weight": 1.0
-    },
-    {
-      "source": "src_lib_api_master",
-      "target": "src_lib_api_master_updatemaster",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/lib/api/master.js",
-      "source_location": "L289",
+      "source_location": "L263",
       "weight": 1.0
     },
     {
@@ -11136,24 +11304,68 @@
     },
     {
       "source": "src_lib_api_master",
+      "target": "src_lib_api_master_deletemd",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/lib/api/master.js",
+      "source_location": "L304",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_api_master",
+      "target": "src_lib_api_master_resetmdpassword",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/lib/api/master.js",
+      "source_location": "L324",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_api_master",
+      "target": "src_lib_api_master_updatemaster",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/lib/api/master.js",
+      "source_location": "L340",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_api_master",
       "target": "src_lib_api_master_deletemaster",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/lib/api/master.js",
-      "source_location": "L303",
+      "source_location": "L354",
       "weight": 1.0
     },
     {
       "source": "src_lib_api_master",
-      "target": "src_lib_api_master_fetchaccounts",
+      "target": "src_lib_api_master_bengkelcachekey",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/lib/api/master.js",
-      "source_location": "L52",
+      "source_location": "L57",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_api_master",
+      "target": "src_lib_api_master_fetchbengkelscached",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/lib/api/master.js",
+      "source_location": "L59",
       "weight": 1.0
     },
     {
@@ -11165,28 +11377,6 @@
       "confidence_score": 1.0,
       "source_file": "src/lib/api/master.js",
       "source_location": "L7",
-      "weight": 1.0
-    },
-    {
-      "source": "src_lib_api_master",
-      "target": "src_lib_api_master_settlregions",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/lib/api/master.js",
-      "source_location": "L79",
-      "weight": 1.0
-    },
-    {
-      "source": "src_lib_api_master",
-      "target": "src_lib_api_master_addmaster",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/lib/api/master.js",
-      "source_location": "L93",
       "weight": 1.0
     },
     {
@@ -11341,6 +11531,50 @@
       "confidence_score": 1.0,
       "source_file": "src/lib/api/visits.js",
       "source_location": "L88",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_kvcache",
+      "target": "src_lib_kvcache_kvget",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/lib/kvCache.js",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_kvcache",
+      "target": "src_lib_kvcache_kvset",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/lib/kvCache.js",
+      "source_location": "L30",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_kvcache",
+      "target": "src_lib_kvcache_kvdel",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/lib/kvCache.js",
+      "source_location": "L42",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_kvcache",
+      "target": "src_lib_kvcache_openkv",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/lib/kvCache.js",
+      "source_location": "L9",
       "weight": 1.0
     },
     {
@@ -12431,6 +12665,15 @@
       "source_file": "vercel.json",
       "source_location": "L3",
       "weight": 1.0
+    },
+    {
+      "source": "src_lib_api_master",
+      "target": "src_lib_kvcache",
+      "relation": "dynamic_import",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/lib/api/master.js"
     },
     {
       "source": "supabase_migrations_0001_schema_get_user_role",
@@ -14304,5 +14547,5 @@
       "source_file": "README.md"
     }
   ],
-  "built_at_commit": "861e8f5aeb172685f53475d2744a88be2f007a28"
+  "built_at_commit": "71950e0cdf1ed57503b5720f206ab94d83e988e6"
 }
