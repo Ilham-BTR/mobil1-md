@@ -290,7 +290,8 @@ export async function updateMaster(table, id, patch) {
   if (MOCK_MODE) {
     const idx = MOCK_DATA[table].findIndex(x => x.id === id);
     if (idx === -1) throw new Error('Item tidak ditemukan');
-    MOCK_DATA[table][idx] = { ...MOCK_DATA[table][idx], ...patch };
+    // updated_at ikut di-set (produksi via trigger) -> delta-sync jalan di mock juga
+    MOCK_DATA[table][idx] = { ...MOCK_DATA[table][idx], ...patch, updated_at: new Date().toISOString() };
     persistMock();
     return MOCK_DATA[table][idx];
   }

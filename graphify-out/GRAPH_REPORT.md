@@ -1,16 +1,16 @@
 # Graph Report - Mobil1  (2026-08-27)
 
 ## Corpus Check
-- 57 files · ~233,376 words
+- 57 files · ~233,882 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 529 nodes · 709 edges · 50 communities (45 shown, 5 thin omitted)
+- 530 nodes · 712 edges · 50 communities (45 shown, 5 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 9 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b7c2a8af`
+- Built from commit: `861e8f5a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -88,7 +88,7 @@
 
 ### Community 0 - "master.js"
 Cohesion: 0.06
-Nodes (49): StoredImage(), checkIn(), checkOut(), deleteAttendance(), fetchAttendances(), fetchAttendancesByMonth(), fetchAttendancesByRange(), fetchTodayAttendance() (+41 more)
+Nodes (50): StoredImage(), checkIn(), checkOut(), deleteAttendance(), fetchAttendances(), fetchAttendancesByMonth(), fetchAttendancesByRange(), fetchTodayAttendance() (+42 more)
 
 ### Community 1 - "UI Components & Forms"
 Cohesion: 0.04
@@ -227,7 +227,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **What connects `__dirname`, `cfgPath`, `cfg` to the rest of the system?**
   _143 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `master.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.058018018018018015 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05754385964912281 - nodes in this community are weakly interconnected._
 - **Should `UI Components & Forms` be split into smaller, more focused modules?**
   _Cohesion score 0.03571428571428571 - nodes in this community are weakly interconnected._
 - **Should `Product Docs & Specs` be split into smaller, more focused modules?**

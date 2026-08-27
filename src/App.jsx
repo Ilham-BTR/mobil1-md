@@ -2607,13 +2607,33 @@ function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
       api.fetchKotas(),
       api.fetchDistributors(),
     ]).then(([v, r, k, d]) => {
+      bumpSync(v);
       setVisits(v); setRegions(r); setKotas(k); setDistributors(d); setLoading(false);
     }).catch(err => { console.error(err); setLoading(false); });
   }, [currentMD.id, refreshKey]);
 
+  // Delta-sync (egress): setelah submit, tarik hanya baris updated_at > lastSync
+  // lalu merge — bukan seluruh riwayat visit MD.
+  const lastSyncRef = useRef(null);
+  const bumpSync = (rows) => {
+    for (const v of rows) {
+      if (v.updated_at && (!lastSyncRef.current || v.updated_at > lastSyncRef.current)) lastSyncRef.current = v.updated_at;
+    }
+  };
   const reloadVisits = async () => {
-    const v = await api.fetchVisits({ mdId: currentMD.id });
-    setVisits(v);
+    if (!lastSyncRef.current) {
+      const v = await api.fetchVisits({ mdId: currentMD.id });
+      bumpSync(v); setVisits(v);
+      return;
+    }
+    const delta = await api.fetchVisitsDelta({ mdId: currentMD.id, since: lastSyncRef.current });
+    if (!delta.length) return;
+    bumpSync(delta);
+    setVisits(prev => {
+      const map = new Map(prev.map(v => [v.id, v]));
+      delta.forEach(v => map.set(v.id, v));
+      return [...map.values()].sort((a, b) => b.visit_date.localeCompare(a.visit_date));
+    });
   };
 
   if (loading) return <Loading />;
@@ -3491,6 +3511,7 @@ function AdminView({ profile }) {
       api.fetchVisits(), api.fetchAccounts(),
       api.fetchRegions(), api.fetchKotas(), api.fetchDistributors(),
     ]).then(([v, acc, r, k, d]) => {
+      bumpSync(v);
       setVisits(v); setAccounts(acc); setMds(acc.filter(a => a.role === 'md'));
       setRegions(r); setKotas(k); setDistributors(d);
       setLoading(false);
@@ -3498,6 +3519,52 @@ function AdminView({ profile }) {
   };
 
   useEffect(() => { loadAll(); }, []);
+
+  // ---- Delta-sync visits (egress): jangan tarik ulang ~600KB tiap perubahan.
+  // lastSync = updated_at terbesar yang sudah dimiliki; refresh cukup tarik
+  // baris updated_at > lastSync lalu merge. Trigger updated_at ada di DB.
+  const lastSyncRef = useRef(null);
+  const bumpSync = (rows) => {
+    for (const v of rows) {
+      if (v.updated_at && (!lastSyncRef.current || v.updated_at > lastSyncRef.current)) lastSyncRef.current = v.updated_at;
+    }
+  };
+  const refreshVisitsDelta = async () => {
+    if (!lastSyncRef.current) return loadAll(true);
+    try {
+      const delta = await api.fetchVisitsDelta({ since: lastSyncRef.current });
+      if (!delta.length) return;
+      bumpSync(delta);
+      setVisits(prev => {
+        const map = new Map(prev.map(v => [v.id, v]));
+        delta.forEach(v => map.set(v.id, v));
+        return [...map.values()].sort((a, b) => b.visit_date.localeCompare(a.visit_date));
+      });
+    } catch (err) { console.error('Delta visits gagal:', err); }
+  };
+  // Tab kembali fokus -> tarik delta saja (murah), bukan reload penuh.
+  useEffect(() => {
+    const onVis = () => { if (document.visibilityState === 'visible') refreshVisitsDelta(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
+  // Mutasi master: refetch HANYA bagian yang berubah (bukan loadAll yang ikut
+  // menarik ulang seluruh visits + bengkels).
+  const reloadMaster = async (sec) => {
+    try {
+      if (sec === 'bengkels') {
+        setBengkelsLoading(true);
+        try { setBengkels(await api.fetchBengkels()); } finally { setBengkelsLoading(false); }
+      } else if (sec === 'mds') {
+        const acc = await api.fetchAccounts();
+        setAccounts(acc); setMds(acc.filter(a => a.role === 'md'));
+      } else if (sec === 'regions') setRegions(await api.fetchRegions());
+      else if (sec === 'kotas') setKotas(await api.fetchKotas());
+      else if (sec === 'distributors') setDistributors(await api.fetchDistributors());
+      else loadAll(true); // section tak dikenal -> perilaku lama
+    } catch (err) { console.error('Reload master gagal:', err); }
+  };
 
   if (loading) return <Loading />;
 
@@ -3549,7 +3616,7 @@ function AdminView({ profile }) {
       {tab === 'visits' && <VisitsTab visits={sVisits} mds={activeMds} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} onOpenVisit={openDetail} />}
       {tab === 'absen' && <AdminAbsenTab mds={activeMds} allowedMdIds={allowedMdIds} isSuperAdmin={isSuperAdmin} regions={regions} />}
       {tab === 'coverage' && <CoverageTab visits={sVisits} mds={activeMds} bengkels={bengkels} kotas={kotas} regions={regions} distributors={distributors} onOpenVisit={openDetail} />}
-      {tab === 'master' && <MasterTab regions={regions} kotas={kotas} distributors={distributors} bengkels={bengkels} mds={sMds} accounts={sAccounts} onChange={() => loadAll(true)} isSuperAdmin={isSuperAdmin} canManageMaster={canManageMaster} />}
+      {tab === 'master' && <MasterTab regions={regions} kotas={kotas} distributors={distributors} bengkels={bengkels} mds={sMds} accounts={sAccounts} onChange={reloadMaster} isSuperAdmin={isSuperAdmin} canManageMaster={canManageMaster} />}
 
       {detailVisit && (
         <VisitDetailModal
@@ -3559,9 +3626,9 @@ function AdminView({ profile }) {
           distributor={detailDistributor}
           md={detailMD}
           onClose={() => setDetailVisitId(null)}
-          onDeleted={isSuperAdmin ? () => { setDetailVisitId(null); loadAll(); } : undefined}
+          onDeleted={isSuperAdmin ? (id) => { setDetailVisitId(null); setVisits(prev => prev.filter(v => v.id !== id)); } : undefined}
           canEdit={isSuperAdmin}
-          onUpdated={() => loadAll()}
+          onUpdated={() => refreshVisitsDelta()}
           bengkels={bengkels}
           distributors={distributors}
         />
@@ -5330,7 +5397,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
         : { name: newItem.trim() };
 
       await api.addMaster(section, payload);
-      await onChange();
+      await onChange(section);
       setNewItem('');
     } catch (err) {
       alert('Gagal: ' + err.message);
@@ -5339,13 +5406,13 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
 
   const handleAddBengkel = async (payload) => {
     await api.addMaster('bengkels', payload);
-    await onChange();
+    await onChange('bengkels');
   };
 
   const handleAddMD = async (payload) => {
     const r = await api.bulkCreateMDs([payload]);
     if (r.errors?.length) throw new Error(r.errors[0].message);
-    await onChange();
+    await onChange('mds');
   };
 
   const handleUpdateMD = async (patch) => {
@@ -5354,13 +5421,13 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
     // Sinkronkan region TL (dikosongkan kalau role bukan TL)
     await api.setTlRegions(editingMDId, rest.role === 'tl' ? region_ids : []);
     if (password) await api.resetMdPassword(editingMDId, password);  // update auth + login_password
-    await onChange();
+    await onChange('mds');
     setEditingMDId(null);
   };
 
   const handleUpdateBengkel = async (payload) => {
     await api.updateMaster('bengkels', editingBengkelId, payload);
-    await onChange();
+    await onChange('bengkels');
     setEditingBengkelId(null);
   };
 
@@ -5368,7 +5435,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
     if (!confirm('Hapus item ini?')) return;
     try {
       await api.deleteMaster(section, id);
-      await onChange();
+      await onChange(section);
     } catch (err) {
       alert('Gagal: ' + err.message);
     }
@@ -5391,7 +5458,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
     }
     setBulkDeleting(false);
     setSelectedIds(new Set());
-    await onChange();
+    await onChange(section);
     if (errors.length) alert(`${ids.length - errors.length} terhapus, ${errors.length} gagal.\nContoh: ${errors[0]}`);
   };
 
@@ -5426,7 +5493,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
     if (!confirm(`Hapus akun MD "${name}"? Tidak bisa dibatalkan.\n(Akan gagal jika MD masih punya visit tercatat.)`)) return;
     try {
       await api.deleteMd(id);
-      await onChange();
+      await onChange('mds');
     } catch (err) {
       alert('Gagal hapus akun: ' + err.message);
     }
@@ -5440,7 +5507,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
       (nowActive ? '' : '\nData (visit/absen) akun ini akan disembunyikan dari Dashboard, Ranking, Visits, Absen & Coverage.'))) return;
     try {
       await api.updateMaster('profiles', item.id, { active: nowActive });
-      await onChange();
+      await onChange('mds');
     } catch (err) {
       alert('Gagal ubah status: ' + err.message);
     }
@@ -5719,7 +5786,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
           regions={regions}
           bengkels={bengkels}
           onClose={() => setImportOpen(false)}
-          onImported={onChange}
+          onImported={() => onChange('bengkels')}
         />
       )}
 
@@ -5728,7 +5795,7 @@ function MasterTab({ regions, kotas, distributors, bengkels, mds, accounts = [],
           section={section}
           ctx={{ regions, kotas, distributors, mds }}
           onClose={() => setMasterImportOpen(false)}
-          onImported={onChange}
+          onImported={() => onChange(section)}
         />
       )}
 

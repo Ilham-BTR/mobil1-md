@@ -57,6 +57,32 @@ export async function fetchVisits({ mdId, month } = {}) {
 }
 
 /**
+ * Delta visit sejak `since` (ISO updated_at terakhir yang dimiliki client).
+ * Dipakai merge incremental — jangan tarik ulang seluruh daftar (egress).
+ * Mengembalikan baris LEAN (visit_list) yang berubah/baru saja.
+ */
+export async function fetchVisitsDelta({ since, mdId } = {}) {
+  if (MOCK_MODE) {
+    let v = MOCK_DATA.visits.filter(x => since && x.updated_at && x.updated_at > since);
+    if (mdId) v = v.filter(x => x.md_id === mdId);
+    return v.map(x => ({ ...x, photo_count: countPhotos(x) }));
+  }
+  const build = (view) => () => {
+    let q = supabase.from(view).select('*')
+      .gt('updated_at', since)
+      .order('updated_at', { ascending: true });
+    if (mdId) q = q.eq('md_id', mdId);
+    return q;
+  };
+  try {
+    return await fetchAllPaged(build('visit_list'));
+  } catch (e) {
+    const rows = await fetchAllPaged(build('visit_details'));
+    return rows.map(x => ({ ...x, photo_count: countPhotos(x) }));
+  }
+}
+
+/**
  * 1 visit LENGKAP (termasuk URL foto) — dipanggil saat modal detail dibuka.
  */
 export async function fetchVisitFull(visitId) {
@@ -131,7 +157,8 @@ export async function createVisit(args) {
   const canBackfill = args.backfillBengkelCoords && args.lat != null && args.lng != null;
 
   if (MOCK_MODE) {
-    MOCK_DATA.visits.unshift({ ...payload, created_at: new Date().toISOString() });
+    const nowIso = new Date().toISOString();
+    MOCK_DATA.visits.unshift({ ...payload, created_at: nowIso, updated_at: nowIso });
     let bengkelBackfilled = false;
     if (canBackfill) {
       const b = MOCK_DATA.bengkels.find(x => x.id === args.bengkelId);
