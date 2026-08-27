@@ -1,21 +1,21 @@
 # Graph Report - Mobil1  (2026-08-27)
 
 ## Corpus Check
-- 58 files · ~234,383 words
+- 58 files · ~234,562 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 537 nodes · 726 edges · 51 communities (46 shown, 5 thin omitted)
+- 542 nodes · 743 edges · 51 communities (46 shown, 5 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 9 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `71950e0c`
+- Built from commit: `9c9ddef0`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- master.js
+- visits.js
 - UI Components & Forms
 - Product Docs & Specs
 - DB Schema setup_fresh
@@ -51,7 +51,7 @@
 - Profiles Policy 0009
 - measure.mjs
 - visit_list
-- kvCache.js
+- master.js
 
 ## God Nodes (most connected - your core abstractions)
 1. `persistMock()` - 19 edges
@@ -87,9 +87,9 @@
 
 ## Communities (51 total, 5 thin omitted)
 
-### Community 0 - "master.js"
-Cohesion: 0.06
-Nodes (52): StoredImage(), checkIn(), checkOut(), deleteAttendance(), fetchAttendances(), fetchAttendancesByMonth(), fetchAttendancesByRange(), fetchTodayAttendance() (+44 more)
+### Community 0 - "visits.js"
+Cohesion: 0.07
+Nodes (38): StoredImage(), checkIn(), checkOut(), deleteAttendance(), fetchAttendances(), fetchAttendancesByMonth(), fetchAttendancesByRange(), fetchTodayAttendance() (+30 more)
 
 ### Community 1 - "UI Components & Forms"
 Cohesion: 0.04
@@ -211,9 +211,9 @@ Nodes (7): cfg, __dirname, H, month, QUERIES, results, totalGz
 Cohesion: 0.25
 Nodes (7): bengkels, distributors, kotas, profiles, regions, visits, visit_list
 
-### Community 50 - "kvCache.js"
-Cohesion: 0.70
-Nodes (4): kvDel(), kvGet(), kvSet(), openKv()
+### Community 50 - "master.js"
+Cohesion: 0.14
+Nodes (26): fetchAllPaged(), addMaster(), bengkelCacheKey(), bulkAddBengkels(), bulkAddMaster(), bulkCreateMDs(), bustMasterCache(), cachedMaster() (+18 more)
 
 ## Knowledge Gaps
 - **143 isolated node(s):** `__dirname`, `cfgPath`, `cfg`, `logFile`, `supabase` (+138 more)
@@ -223,16 +223,16 @@ Nodes (4): kvDel(), kvGet(), kvSet(), openKv()
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `MOCK_MODE` connect `master.js` to `UI Components & Forms`?**
-  _High betweenness centrality (0.011) - this node is a cross-community bridge._
+- **Why does `MOCK_MODE` connect `visits.js` to `UI Components & Forms`, `master.js`?**
+  _High betweenness centrality (0.012) - this node is a cross-community bridge._
 - **Why does `dependencies` connect `Frontend Dependencies` to `Build Tooling`?**
   _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **Why does `Supabase (Postgres + Auth)` connect `Product Docs & Specs` to `Photo Upload Pipeline`?**
   _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **What connects `__dirname`, `cfgPath`, `cfg` to the rest of the system?**
   _143 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `master.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.05627705627705628 - nodes in this community are weakly interconnected._
+- **Should `visits.js` be split into smaller, more focused modules?**
+  _Cohesion score 0.07078039927404718 - nodes in this community are weakly interconnected._
 - **Should `UI Components & Forms` be split into smaller, more focused modules?**
   _Cohesion score 0.03571428571428571 - nodes in this community are weakly interconnected._
 - **Should `Product Docs & Specs` be split into smaller, more focused modules?**

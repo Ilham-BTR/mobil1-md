@@ -4,25 +4,65 @@ import { supabase, MOCK_MODE } from '../supabase';
 import { MOCK_DATA, persistMock } from './_mock';
 import { fetchAllPaged } from './_helpers';
 
+// ---- Cache master kecil (egress): localStorage TTL 24 jam -------------------
+// regions/kotas/distributors jarang berubah (terukur ~7KB gz per load total).
+// Di-bust otomatis saat admin mutasi tabel terkait (lihat bustMasterCache).
+const MASTER_TTL_MS = 24 * 3600 * 1000;
+const masterKey = (table) => `mobil1_master_${table}_v1`;
+
+function readMasterCache(table) {
+  try {
+    const raw = localStorage.getItem(masterKey(table));
+    if (!raw) return null;
+    const { rows, savedAt } = JSON.parse(raw);
+    if (!Array.isArray(rows) || Date.now() - savedAt > MASTER_TTL_MS) return null;
+    return rows;
+  } catch { return null; }
+}
+function writeMasterCache(table, rows) {
+  try { localStorage.setItem(masterKey(table), JSON.stringify({ rows, savedAt: Date.now() })); } catch { /* quota */ }
+}
+export function bustMasterCache(table) {
+  try {
+    if (table) localStorage.removeItem(masterKey(table));
+    else ['regions', 'kotas', 'distributors'].forEach(t => localStorage.removeItem(masterKey(t)));
+  } catch { /* no-op */ }
+}
+
+async function cachedMaster(table, fetcher) {
+  if (MOCK_MODE) return fetcher();
+  const hit = readMasterCache(table);
+  if (hit) return hit;
+  const rows = await fetcher();
+  writeMasterCache(table, rows);
+  return rows;
+}
+
 export async function fetchRegions() {
-  if (MOCK_MODE) return [...MOCK_DATA.regions];
-  const { data, error } = await supabase.from('regions').select('*').order('name');
-  if (error) throw error;
-  return data;
+  return cachedMaster('regions', async () => {
+    if (MOCK_MODE) return [...MOCK_DATA.regions];
+    const { data, error } = await supabase.from('regions').select('*').order('name');
+    if (error) throw error;
+    return data;
+  });
 }
 
 export async function fetchKotas() {
-  if (MOCK_MODE) return [...MOCK_DATA.kotas];
-  const { data, error } = await supabase.from('kotas').select('*, region:regions!region_id(*)').order('name');
-  if (error) throw error;
-  return data;
+  return cachedMaster('kotas', async () => {
+    if (MOCK_MODE) return [...MOCK_DATA.kotas];
+    const { data, error } = await supabase.from('kotas').select('*, region:regions!region_id(*)').order('name');
+    if (error) throw error;
+    return data;
+  });
 }
 
 export async function fetchDistributors() {
-  if (MOCK_MODE) return [...MOCK_DATA.distributors];
-  const { data, error } = await supabase.from('distributors').select('*, region:regions!region_id(*)').order('name');
-  if (error) throw error;
-  return data;
+  return cachedMaster('distributors', async () => {
+    if (MOCK_MODE) return [...MOCK_DATA.distributors];
+    const { data, error } = await supabase.from('distributors').select('*, region:regions!region_id(*)').order('name');
+    if (error) throw error;
+    return data;
+  });
 }
 
 // regionId (opsional): batasi ke bengkel di region itu saja. Dipakai MD supaya
@@ -142,6 +182,7 @@ export async function setTlRegions(tlId, regionIds) {
 }
 
 export async function addMaster(table, payload) {
+  bustMasterCache(table);
   if (MOCK_MODE) {
     const id = 'new_' + Date.now();
     const item = { id, ...payload };
@@ -220,6 +261,7 @@ export async function bulkAddBengkels(rows, onProgress) {
  * @returns {Promise<{inserted:number, errors:Array<{row:number,message:string}>}>}
  */
 export async function bulkAddMaster(table, rows, onProgress) {
+  bustMasterCache(table);
   const BATCH = 100;
   const result = { inserted: 0, errors: [] };
 
@@ -338,6 +380,7 @@ export async function resetMdPassword(userId, password) {
 }
 
 export async function updateMaster(table, id, patch) {
+  bustMasterCache(table);
   if (MOCK_MODE) {
     const idx = MOCK_DATA[table].findIndex(x => x.id === id);
     if (idx === -1) throw new Error('Item tidak ditemukan');
@@ -352,6 +395,7 @@ export async function updateMaster(table, id, patch) {
 }
 
 export async function deleteMaster(table, id) {
+  bustMasterCache(table);
   if (MOCK_MODE) {
     MOCK_DATA[table] = MOCK_DATA[table].filter(x => x.id !== id);
     persistMock();
