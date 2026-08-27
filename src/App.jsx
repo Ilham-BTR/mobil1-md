@@ -2664,7 +2664,7 @@ function MDView({ currentMD, refreshKey, welcome, onWelcomeClose }) {
       </div>
 
       {tab === 'absen' && <AbsenTab currentMD={currentMD} />}
-      {tab === 'new' && <VisitForm currentMD={currentMD} bengkels={bengkels} bengkelsLoading={bengkelsLoading} regions={regions} kotas={kotas} distributors={distributors} onSubmitted={() => { reloadVisits(); setTab('history'); }} onNeedAbsen={() => setTab('absen')} />}
+      {tab === 'new' && <VisitForm currentMD={currentMD} bengkels={bengkels} bengkelsLoading={bengkelsLoading} regions={regions} kotas={kotas} distributors={distributors} onSubmitted={() => { reloadVisits(); setTab('history'); }} onNeedAbsen={() => setTab('absen')} onBengkelCoords={(id, lat, lng) => setBengkels(prev => prev.map(b => b.id === id ? { ...b, lat, lng } : b))} />}
       {tab === 'progress' && <MDDashboard currentMD={currentMD} visits={visits} bengkels={bengkels} kotas={kotas} />}
       {tab === 'history' && <VisitHistory visits={visits} bengkels={bengkels} kotas={kotas} distributors={distributors} />}
       <WhatsAppCS name={currentMD.full_name} />
@@ -2823,7 +2823,7 @@ function MDDashboard({ currentMD, visits, bengkels, kotas }) {
   );
 }
 
-function VisitForm({ currentMD, bengkels, bengkelsLoading, regions, kotas, distributors, onSubmitted, onNeedAbsen }) {
+function VisitForm({ currentMD, bengkels, bengkelsLoading, regions, kotas, distributors, onSubmitted, onNeedAbsen, onBengkelCoords }) {
   const DRAFT_KEY = `visitDraft:${currentMD.id}`;
   const emptyPhotos = { tampakDepan: null, in: null, out: null, spandukBefore: null, spandukPutih: null, spandukAfter: null, posterBefore: null, posterPutih: null, posterAfter: null, deliveryGimmick: null, deployPlanogram: null };
   const makeDefaultForm = () => ({
@@ -3014,6 +3014,11 @@ function VisitForm({ currentMD, bengkels, bengkelsLoading, regions, kotas, distr
       });
 
       try { localStorage.removeItem(DRAFT_KEY); } catch { /* noop */ }
+      // Koordinat bengkel baru saja di-backfill dari GPS visit ini -> update
+      // state sesi supaya visit BERIKUTNYA di bengkel yang sama langsung kena
+      // geofence (tanpa ini, submit ke-2 dari jauh lolos karena state masih
+      // "bengkel tanpa koordinat" sampai login berikutnya).
+      if (bengkelBackfilled) onBengkelCoords?.(form.bengkelId, lat, lng);
       setDraftRestored(false);
       setSubmitted(true);
       setBackfilled(bengkelBackfilled);
