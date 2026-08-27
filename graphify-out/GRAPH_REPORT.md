@@ -1,16 +1,16 @@
 # Graph Report - Mobil1  (2026-08-27)
 
 ## Corpus Check
-- 58 files · ~234,764 words
+- 60 files · ~235,588 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 544 nodes · 745 edges · 51 communities (45 shown, 6 thin omitted)
+- 554 nodes · 757 edges · 52 communities (45 shown, 7 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 9 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `03ab8e78`
+- Built from commit: `54fd23e5`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -53,6 +53,7 @@
 - measure.mjs
 - visit_list
 - master.js
+- 0018_egress_log.sql
 
 ## God Nodes (most connected - your core abstractions)
 1. `persistMock()` - 19 edges
@@ -86,11 +87,11 @@
 - **Region-Kota-Bengkel-Visit Data Hierarchy** — prd_entity_regions, prd_entity_bengkels, prd_entity_distributors, prd_entity_visits [EXTRACTED 1.00]
 - **Presigned Photo Upload Pipeline** — readme_lib_storage, prd_edge_function_get_upload_url, readme_s3_object_storage, prd_backblaze_b2 [EXTRACTED 1.00]
 
-## Communities (51 total, 6 thin omitted)
+## Communities (52 total, 7 thin omitted)
 
 ### Community 0 - "visits.js"
-Cohesion: 0.07
-Nodes (37): StoredImage(), checkIn(), checkOut(), deleteAttendance(), fetchAttendances(), fetchAttendancesByMonth(), fetchAttendancesByRange(), fetchTodayAttendance() (+29 more)
+Cohesion: 0.06
+Nodes (42): StoredImage(), checkIn(), checkOut(), deleteAttendance(), fetchAttendances(), fetchAttendancesByMonth(), fetchAttendancesByRange(), fetchTodayAttendance() (+34 more)
 
 ### Community 1 - "UI Components & Forms"
 Cohesion: 0.04
@@ -205,21 +206,21 @@ Cohesion: 0.67
 Nodes (3): AdminView(), MDView(), useTabBackButton()
 
 ### Community 48 - "measure.mjs"
-Cohesion: 0.20
-Nodes (7): cfg, __dirname, H, month, QUERIES, results, totalGz
+Cohesion: 0.17
+Nodes (8): cfg, __dirname, H, month, QUERIES, results, sizeMap, totalGz
 
 ### Community 49 - "visit_list"
 Cohesion: 0.25
 Nodes (7): bengkels, distributors, kotas, profiles, regions, visits, visit_list
 
 ### Community 50 - "master.js"
-Cohesion: 0.13
-Nodes (27): addMaster(), bengkelCacheKey(), bulkAddBengkels(), bulkAddMaster(), bulkCreateMDs(), bustMasterCache(), cachedMaster(), deleteMaster() (+19 more)
+Cohesion: 0.14
+Nodes (26): fetchAllPaged(), addMaster(), bengkelCacheKey(), bulkAddBengkels(), bulkAddMaster(), bulkCreateMDs(), bustMasterCache(), cachedMaster() (+18 more)
 
 ## Knowledge Gaps
-- **144 isolated node(s):** `__dirname`, `cfgPath`, `cfg`, `logFile`, `supabase` (+139 more)
+- **147 isolated node(s):** `__dirname`, `cfgPath`, `cfg`, `logFile`, `supabase` (+142 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **7 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -231,9 +232,9 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `Supabase (Postgres + Auth)` connect `Product Docs & Specs` to `Photo Upload Pipeline`?**
   _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **What connects `__dirname`, `cfgPath`, `cfg` to the rest of the system?**
-  _144 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _147 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `visits.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.07138535995160314 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06400409626216078 - nodes in this community are weakly interconnected._
 - **Should `UI Components & Forms` be split into smaller, more focused modules?**
   _Cohesion score 0.03571428571428571 - nodes in this community are weakly interconnected._
 - **Should `Product Docs & Specs` be split into smaller, more focused modules?**

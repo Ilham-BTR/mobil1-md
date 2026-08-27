@@ -1,5 +1,6 @@
 // src/lib/supabase.js
 import { createClient } from '@supabase/supabase-js';
+import { countCall, attachEgressMeter } from './egressMeter';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -14,7 +15,17 @@ export const supabase = MOCK_MODE
         persistSession: true,
         autoRefreshToken: true,
       },
+      global: {
+        // Hitung tiap panggilan nyata per-endpoint (tracking egress) lalu
+        // teruskan ke fetch asli — zero perubahan perilaku request.
+        fetch: (input, init) => {
+          countCall(typeof input === 'string' ? input : input?.url || '');
+          return fetch(input, init);
+        },
+      },
     });
+
+if (!MOCK_MODE) attachEgressMeter(supabase);
 
 if (MOCK_MODE) {
   console.warn(

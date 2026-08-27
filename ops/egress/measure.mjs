@@ -15,7 +15,7 @@
 // Egress Supabase dihitung dari byte TERKOMPRES di kabel (PostgREST gzip),
 // jadi kolom "gzip" adalah angka yang paling mendekati tagihan.
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,6 +26,38 @@ const BASE = cfg.supabaseUrl + '/rest/v1/';
 const KEY = cfg.serviceRoleKey;
 
 const H = { apikey: KEY, Authorization: `Bearer ${KEY}` };
+
+// ---------- MODE --live: hitung panggilan nyata (egress_log) x ukuran terukur ----------
+if (process.argv.includes('--live')) {
+  const days = 7;
+  const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+  const res = await fetch(BASE + `egress_log?select=day,endpoint,calls&day=gte.${since}&order=day.desc`, { headers: H });
+  if (!res.ok) { console.error('Gagal baca egress_log (migrasi 0018 sudah jalan?):', await res.text()); process.exit(1); }
+  const rows = await res.json();
+  let sizes = {};
+  try { sizes = JSON.parse(readFileSync(path.join(__dirname, 'sizes.json'), 'utf8')); }
+  catch { console.warn('sizes.json belum ada — jalankan pengukuran dulu (tanpa --live) agar estimasi byte akurat.'); }
+
+  const agg = new Map(); // endpoint -> calls
+  const perDay = new Map(); // day -> calls
+  for (const r of rows) {
+    agg.set(r.endpoint, (agg.get(r.endpoint) || 0) + r.calls);
+    perDay.set(r.day, (perDay.get(r.day) || 0) + r.calls);
+  }
+  const fmtB = (b) => b >= 1048576 ? (b / 1048576).toFixed(2) + ' MB' : (b / 1024).toFixed(1) + ' KB';
+  console.log(`Panggilan nyata ${days} hari terakhir (dari egress_log):\n`);
+  console.log('  calls'.padEnd(9) + 'est.egress'.padEnd(12) + 'endpoint');
+  let totalEst = 0;
+  for (const [ep, calls] of [...agg.entries()].sort((a, b) => b[1] - a[1])) {
+    const per = sizes[ep]?.gzPerRequest ?? 0;
+    const est = per * calls; totalEst += est;
+    console.log(`  ${String(calls).padEnd(7)} ${(per ? fmtB(est) : '?').padEnd(11)} ${ep}`);
+  }
+  console.log(`\n  TOTAL estimasi egress REST ${days} hari: ${fmtB(totalEst)} (~${fmtB(totalEst / days)}/hari)`);
+  console.log('  Per hari (calls):', [...perDay.entries()].map(([d, c]) => `${d}=${c}`).join('  '));
+  console.log('\n  Catatan: estimasi = calls x rata-rata gzip/request terukur; foto R2 & realtime tak termasuk.');
+  process.exit(0);
+}
 
 // GET semua halaman ala fetchAllPaged (batch 1000) — kembalikan total byte & rows.
 async function paged(pathQ, batch = 1000) {
@@ -53,7 +85,8 @@ const monthStart = month + '-01';
 
 // Query PERSIS seperti di src/lib/api/*.js
 const QUERIES = [
-  ['visits ALL (admin loadAll)',        'visit_details?select=*&order=visit_date.desc'],
+  ['visits LEAN (admin loadAll, visit_list)', 'visit_list?select=*&order=visit_date.desc'],
+  ['visits FULL (visit_details, detail/export)', 'visit_details?select=*&order=visit_date.desc'],
   ['bengkels ALL (admin loadAll)',      'bengkels?select=*,kota:kotas(*,region:regions!region_id(*))&order=code'],
   ['accounts (admin loadAll)',          'profiles?select=*&order=role&order=full_name'],
   ['kotas (loadAll)',                   'kotas?select=*,region:regions!region_id(*)&order=name'],
@@ -99,3 +132,14 @@ for (const r of results) {
 const totalGz = results.reduce((s, r) => s + r.gz, 0);
 console.log(`\n  TOTAL 1x load semua query: ${fmt(totalGz)} (gzip)`);
 console.log('  Catatan: auto-refresh/interval MENGALIKAN angka di atas per panggilan.');
+
+// Simpan ukuran gzip rata-rata PER REQUEST per endpoint (dipakai mode --live).
+// Kunci = label endpoint yang sama dengan egressMeter.js: "rest:<tabel/view>".
+const sizeMap = {};
+const tableOf = (q) => q.split('?')[0];
+for (const [label, q] of QUERIES) {
+  const r = results.find(x => x.label === label);
+  if (r) sizeMap['rest:' + tableOf(q)] = { gzPerRequest: Math.round(r.gz / Math.max(1, r.pages)), rows: r.rows, measuredAt: new Date().toISOString() };
+}
+writeFileSync(path.join(__dirname, 'sizes.json'), JSON.stringify(sizeMap, null, 2));
+console.log('  sizes.json diperbarui (dipakai: node ops/egress/measure.mjs --live).');

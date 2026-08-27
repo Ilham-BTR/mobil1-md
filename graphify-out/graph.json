@@ -253,18 +253,6 @@
       "source_location": "L36"
     },
     {
-      "id": "src_lib_api_helpers_fetchallpaged",
-      "label": "fetchAllPaged()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "visits.js",
-      "file_type": "code",
-      "norm_label": "fetchallpaged()",
-      "source_file": "src/lib/api/_helpers.js",
-      "source_location": "L5"
-    },
-    {
       "id": "src_lib_api_mock_loadmockdata",
       "label": "loadMockData()",
       "_callable": true,
@@ -313,6 +301,30 @@
       "source_location": "L17"
     },
     {
+      "id": "src_lib_api_visits_createvisit",
+      "label": "createVisit()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "visits.js",
+      "file_type": "code",
+      "norm_label": "createvisit()",
+      "source_file": "src/lib/api/visits.js",
+      "source_location": "L132"
+    },
+    {
+      "id": "src_lib_api_visits_deletevisit",
+      "label": "deleteVisit()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "visits.js",
+      "file_type": "code",
+      "norm_label": "deletevisit()",
+      "source_file": "src/lib/api/visits.js",
+      "source_location": "L209"
+    },
+    {
       "id": "src_lib_api_visits_fetchvisitfull",
       "label": "fetchVisitFull()",
       "_callable": true,
@@ -359,6 +371,42 @@
       "norm_label": "fetchvisitsdelta()",
       "source_file": "src/lib/api/visits.js",
       "source_location": "L64"
+    },
+    {
+      "id": "src_lib_egressmeter_attachegressmeter",
+      "label": "attachEgressMeter()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "visits.js",
+      "file_type": "code",
+      "norm_label": "attachegressmeter()",
+      "source_file": "src/lib/egressMeter.js",
+      "source_location": "L40"
+    },
+    {
+      "id": "src_lib_egressmeter_countcall",
+      "label": "countCall()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "visits.js",
+      "file_type": "code",
+      "norm_label": "countcall()",
+      "source_file": "src/lib/egressMeter.js",
+      "source_location": "L30"
+    },
+    {
+      "id": "src_lib_egressmeter_endpointlabel",
+      "label": "endpointLabel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "visits.js",
+      "file_type": "code",
+      "norm_label": "endpointlabel()",
+      "source_file": "src/lib/egressMeter.js",
+      "source_location": "L13"
     },
     {
       "id": "src_lib_photostore_clearphotos",
@@ -1582,7 +1630,7 @@
       "file_type": "code",
       "norm_label": "fmt()",
       "source_file": "ops/egress/measure.mjs",
-      "source_location": "L49"
+      "source_location": "L81"
     },
     {
       "id": "ops_egress_measure_paged",
@@ -1594,7 +1642,31 @@
       "file_type": "code",
       "norm_label": "paged()",
       "source_file": "ops/egress/measure.mjs",
-      "source_location": "L31"
+      "source_location": "L63"
+    },
+    {
+      "id": "ops_egress_measure_tableof",
+      "label": "tableOf()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 48,
+      "community_name": "measure.mjs",
+      "file_type": "code",
+      "norm_label": "tableof()",
+      "source_file": "ops/egress/measure.mjs",
+      "source_location": "L139"
+    },
+    {
+      "id": "src_lib_api_helpers_fetchallpaged",
+      "label": "fetchAllPaged()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "master.js",
+      "file_type": "code",
+      "norm_label": "fetchallpaged()",
+      "source_file": "src/lib/api/_helpers.js",
+      "source_location": "L5"
     },
     {
       "id": "src_lib_api_master_addmaster",
@@ -1861,30 +1933,6 @@
       "source_location": "L45"
     },
     {
-      "id": "src_lib_api_visits_createvisit",
-      "label": "createVisit()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 50,
-      "community_name": "master.js",
-      "file_type": "code",
-      "norm_label": "createvisit()",
-      "source_file": "src/lib/api/visits.js",
-      "source_location": "L132"
-    },
-    {
-      "id": "src_lib_api_visits_deletevisit",
-      "label": "deleteVisit()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 50,
-      "community_name": "master.js",
-      "file_type": "code",
-      "norm_label": "deletevisit()",
-      "source_file": "src/lib/api/visits.js",
-      "source_location": "L209"
-    },
-    {
       "id": "src_lib_kvcache_kvdel",
       "label": "kvDel()",
       "_callable": true,
@@ -2087,17 +2135,6 @@
       "source_location": "L1"
     },
     {
-      "id": "src_lib_api_helpers",
-      "label": "_helpers.js",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "visits.js",
-      "file_type": "code",
-      "norm_label": "_helpers.js",
-      "source_file": "src/lib/api/_helpers.js",
-      "source_location": "L1"
-    },
-    {
       "id": "src_lib_api_index",
       "label": "index.js",
       "_origin": "ast",
@@ -2162,6 +2199,28 @@
       "norm_label": "visit_photo_cols",
       "source_file": "src/lib/api/visits.js",
       "source_location": "L10"
+    },
+    {
+      "id": "src_lib_egressmeter",
+      "label": "egressMeter.js",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "visits.js",
+      "file_type": "code",
+      "norm_label": "egressmeter.js",
+      "source_file": "src/lib/egressMeter.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_lib_egressmeter_counts",
+      "label": "counts",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "visits.js",
+      "file_type": "code",
+      "norm_label": "counts",
+      "source_file": "src/lib/egressMeter.js",
+      "source_location": "L9"
     },
     {
       "id": "src_lib_photostore",
@@ -2282,7 +2341,7 @@
       "file_type": "code",
       "norm_label": "mock_mode",
       "source_file": "src/lib/supabase.js",
-      "source_location": "L8"
+      "source_location": "L9"
     },
     {
       "id": "src_lib_supabase_supabase",
@@ -2293,7 +2352,7 @@
       "file_type": "code",
       "norm_label": "supabase",
       "source_file": "src/lib/supabase.js",
-      "source_location": "L10"
+      "source_location": "L11"
     },
     {
       "id": "src_app",
@@ -4504,7 +4563,7 @@
       "file_type": "code",
       "norm_label": "month",
       "source_file": "ops/egress/measure.mjs",
-      "source_location": "L51"
+      "source_location": "L83"
     },
     {
       "id": "ops_egress_measure_queries",
@@ -4515,7 +4574,7 @@
       "file_type": "code",
       "norm_label": "queries",
       "source_file": "ops/egress/measure.mjs",
-      "source_location": "L55"
+      "source_location": "L87"
     },
     {
       "id": "ops_egress_measure_results",
@@ -4526,7 +4585,18 @@
       "file_type": "code",
       "norm_label": "results",
       "source_file": "ops/egress/measure.mjs",
-      "source_location": "L68"
+      "source_location": "L101"
+    },
+    {
+      "id": "ops_egress_measure_sizemap",
+      "label": "sizeMap",
+      "_origin": "ast",
+      "community": 48,
+      "community_name": "measure.mjs",
+      "file_type": "code",
+      "norm_label": "sizemap",
+      "source_file": "ops/egress/measure.mjs",
+      "source_location": "L138"
     },
     {
       "id": "ops_egress_measure_totalgz",
@@ -4537,7 +4607,7 @@
       "file_type": "code",
       "norm_label": "totalgz",
       "source_file": "ops/egress/measure.mjs",
-      "source_location": "L99"
+      "source_location": "L132"
     },
     {
       "id": "supabase_migrations_0017_visit_list_lean",
@@ -4870,6 +4940,17 @@
       "source_location": "L25"
     },
     {
+      "id": "src_lib_api_helpers",
+      "label": "_helpers.js",
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "master.js",
+      "file_type": "code",
+      "norm_label": "_helpers.js",
+      "source_file": "src/lib/api/_helpers.js",
+      "source_location": "L1"
+    },
+    {
       "id": "src_lib_api_master",
       "label": "master.js",
       "_origin": "ast",
@@ -4890,6 +4971,39 @@
       "norm_label": "kvcache.js",
       "source_file": "src/lib/kvCache.js",
       "source_location": "L1"
+    },
+    {
+      "id": "supabase_migrations_0018_egress_log",
+      "label": "0018_egress_log.sql",
+      "_origin": "ast",
+      "community": 51,
+      "community_name": "0018_egress_log.sql",
+      "file_type": "code",
+      "norm_label": "0018_egress_log.sql",
+      "source_file": "supabase/migrations/0018_egress_log.sql",
+      "source_location": null
+    },
+    {
+      "id": "supabase_migrations_0018_egress_log_egress_log",
+      "label": "egress_log",
+      "_origin": "ast",
+      "community": 51,
+      "community_name": "0018_egress_log.sql",
+      "file_type": "code",
+      "norm_label": "egress_log",
+      "source_file": "supabase/migrations/0018_egress_log.sql",
+      "source_location": "L7"
+    },
+    {
+      "id": "supabase_migrations_0018_egress_log_log_egress",
+      "label": "log_egress()",
+      "_origin": "ast",
+      "community": 51,
+      "community_name": "0018_egress_log.sql",
+      "file_type": "code",
+      "norm_label": "log_egress()",
+      "source_file": "supabase/migrations/0018_egress_log.sql",
+      "source_location": "L22"
     },
     {
       "id": "package_dependencies",
@@ -7759,6 +7873,18 @@
       "weight": 1.0
     },
     {
+      "source": "src_lib_egressmeter_countcall",
+      "target": "src_lib_egressmeter_endpointlabel",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/lib/egressMeter.js",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
       "source": "src_lib_kvcache_kvdel",
       "target": "src_lib_kvcache_openkv",
       "relation": "calls",
@@ -8600,6 +8726,30 @@
       "weight": 1.0
     },
     {
+      "source": "src_lib_supabase",
+      "target": "src_lib_egressmeter_attachegressmeter",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/lib/supabase.js",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_supabase",
+      "target": "src_lib_egressmeter_countcall",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/lib/supabase.js",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
       "source": "src_main",
       "target": "src_app_app",
       "relation": "imports",
@@ -8864,6 +9014,18 @@
       "weight": 1.0
     },
     {
+      "source": "src_lib_supabase",
+      "target": "src_lib_egressmeter",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/lib/supabase.js",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
       "source": "src_main",
       "target": "src_app",
       "relation": "imports_from",
@@ -9100,6 +9262,50 @@
     },
     {
       "source": "ops_egress_measure",
+      "target": "ops_egress_measure_results",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ops/egress/measure.mjs",
+      "source_location": "L101",
+      "weight": 1.0
+    },
+    {
+      "source": "ops_egress_measure",
+      "target": "ops_egress_measure_totalgz",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ops/egress/measure.mjs",
+      "source_location": "L132",
+      "weight": 1.0
+    },
+    {
+      "source": "ops_egress_measure",
+      "target": "ops_egress_measure_sizemap",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ops/egress/measure.mjs",
+      "source_location": "L138",
+      "weight": 1.0
+    },
+    {
+      "source": "ops_egress_measure",
+      "target": "ops_egress_measure_tableof",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ops/egress/measure.mjs",
+      "source_location": "L139",
+      "weight": 1.0
+    },
+    {
+      "source": "ops_egress_measure",
       "target": "ops_egress_measure_dirname",
       "relation": "contains",
       "_origin": "ast",
@@ -9139,7 +9345,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ops/egress/measure.mjs",
-      "source_location": "L31",
+      "source_location": "L63",
       "weight": 1.0
     },
     {
@@ -9150,7 +9356,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ops/egress/measure.mjs",
-      "source_location": "L49",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -9161,7 +9367,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ops/egress/measure.mjs",
-      "source_location": "L51",
+      "source_location": "L83",
       "weight": 1.0
     },
     {
@@ -9172,29 +9378,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ops/egress/measure.mjs",
-      "source_location": "L55",
-      "weight": 1.0
-    },
-    {
-      "source": "ops_egress_measure",
-      "target": "ops_egress_measure_results",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "ops/egress/measure.mjs",
-      "source_location": "L68",
-      "weight": 1.0
-    },
-    {
-      "source": "ops_egress_measure",
-      "target": "ops_egress_measure_totalgz",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "ops/egress/measure.mjs",
-      "source_location": "L99",
+      "source_location": "L87",
       "weight": 1.0
     },
     {
@@ -11816,6 +12000,50 @@
       "weight": 1.0
     },
     {
+      "source": "src_lib_egressmeter",
+      "target": "src_lib_egressmeter_endpointlabel",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/lib/egressMeter.js",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_egressmeter",
+      "target": "src_lib_egressmeter_countcall",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/lib/egressMeter.js",
+      "source_location": "L30",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_egressmeter",
+      "target": "src_lib_egressmeter_attachegressmeter",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/lib/egressMeter.js",
+      "source_location": "L40",
+      "weight": 1.0
+    },
+    {
+      "source": "src_lib_egressmeter",
+      "target": "src_lib_egressmeter_counts",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/lib/egressMeter.js",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
       "source": "src_lib_kvcache",
       "target": "src_lib_kvcache_kvget",
       "relation": "contains",
@@ -12054,7 +12282,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/lib/supabase.js",
-      "source_location": "L10",
+      "source_location": "L11",
       "weight": 1.0
     },
     {
@@ -12065,7 +12293,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/lib/supabase.js",
-      "source_location": "L8",
+      "source_location": "L9",
       "weight": 1.0
     },
     {
@@ -12638,6 +12866,28 @@
       "confidence_score": 1.0,
       "source_file": "supabase/migrations/0017_visit_list_lean.sql",
       "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "supabase_migrations_0018_egress_log",
+      "target": "supabase_migrations_0018_egress_log_log_egress",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/migrations/0018_egress_log.sql",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "supabase_migrations_0018_egress_log",
+      "target": "supabase_migrations_0018_egress_log_egress_log",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/migrations/0018_egress_log.sql",
+      "source_location": "L7",
       "weight": 1.0
     },
     {
@@ -14851,5 +15101,5 @@
       "source_file": "README.md"
     }
   ],
-  "built_at_commit": "03ab8e780a59394dfdf7df7552ec32d349c454de"
+  "built_at_commit": "54fd23e508f7a51cc7e1bd7c35273d8fe6d0fe2d"
 }
