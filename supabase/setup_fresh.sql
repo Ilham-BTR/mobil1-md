@@ -121,6 +121,8 @@ create index if not exists visits_date_idx on visits(visit_date desc);
 create index if not exists visits_status_idx on visits(status);
 create index if not exists visits_distributor_idx on visits(distributor_id);
 create index if not exists visits_md_date_idx on visits(md_id, visit_date desc);
+-- 1 MD maksimal 1 visit per bengkel per hari (migrasi 0019)
+create unique index if not exists visits_md_bengkel_date_uidx on visits(md_id, bengkel_id, visit_date);
 
 -- TRIGGER updated_at
 create or replace function set_updated_at()

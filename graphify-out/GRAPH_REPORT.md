@@ -1,16 +1,16 @@
 # Graph Report - Mobil1  (2026-08-31)
 
 ## Corpus Check
-- 61 files · ~243,376 words
+- 62 files · ~243,575 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 554 nodes · 757 edges · 52 communities (45 shown, 7 thin omitted)
+- 555 nodes · 757 edges · 53 communities (46 shown, 7 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 9 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `20bd06a4`
+- Built from commit: `abf69ac1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -87,7 +87,7 @@
 - **Region-Kota-Bengkel-Visit Data Hierarchy** — prd_entity_regions, prd_entity_bengkels, prd_entity_distributors, prd_entity_visits [EXTRACTED 1.00]
 - **Presigned Photo Upload Pipeline** — readme_lib_storage, prd_edge_function_get_upload_url, readme_s3_object_storage, prd_backblaze_b2 [EXTRACTED 1.00]
 
-## Communities (52 total, 7 thin omitted)
+## Communities (53 total, 7 thin omitted)
 
 ### Community 0 - "visits.js"
 Cohesion: 0.06

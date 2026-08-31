@@ -134,6 +134,24 @@ export async function createVisit(args) {
   // kalau tidak ada generate baru.
   const visitId = args.visitId || crypto.randomUUID();
 
+  // Anti-duplikat: 1 MD × 1 bengkel × 1 hari. Dicek SEBELUM upload foto
+  // (jangan buang bandwidth), dan dilindungi lagi unique index DB (23505).
+  const dupMsg = 'Visit untuk bengkel ini sudah ada hari ini — 1 bengkel maksimal 1 visit per hari.';
+  if (!MOCK_MODE) {
+    const { data: dup, error: dupErr } = await supabase
+      .from('visits')
+      .select('id')
+      .eq('md_id', args.mdId)
+      .eq('bengkel_id', args.bengkelId)
+      .eq('visit_date', args.visitDate)
+      .limit(1);
+    if (dupErr) throw dupErr;
+    if (dup && dup.length > 0) throw new Error(dupMsg);
+  } else if (MOCK_DATA.visits.some(v =>
+    v.md_id === args.mdId && v.bengkel_id === args.bengkelId && v.visit_date === args.visitDate)) {
+    throw new Error(dupMsg);
+  }
+
   // 1. Upload all photos in parallel
   const photoUrls = await uploadAllVisitPhotos(args.photos, visitId);
 
@@ -177,7 +195,10 @@ export async function createVisit(args) {
     .insert(payload)
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    if (error.code === '23505') throw new Error(dupMsg);  // kalah race dgn device lain
+    throw error;
+  }
 
   // Backfill bengkel coords (best-effort — error di sini tidak boleh gagalkan visit yang sudah saved)
   let bengkelBackfilled = false;
