@@ -37,3 +37,8 @@ graphify-out/20*/
 graphify-out/reflections/
 graphify-out/manifest.json
 graphify-out/*.sig
+
+# artefak pemulihan 31/08/2026: foto lapangan & data berisi PIC/HP tidak masuk git
+Foto-Visit-31-08-2026/
+ops/backup/restore-fix-*.json
+ops/backup/restore-visits-duplikat-*.json

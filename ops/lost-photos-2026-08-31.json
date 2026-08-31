@@ -1,0 +1,1229 @@
+{
+ "window": [
+  "2026-08-30T21:45:00Z",
+  "2026-08-31T04:25:00Z"
+ ],
+ "total": 200,
+ "byMd": {
+  "39a8018f-2122-402f-a527-9902b43f90e2": [
+   {
+    "visit": "76ae552b-89ef-441f-b4a7-65dc1362284a",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T03:16:54.676Z",
+    "key": "visits/39a8018f-2122-402f-a527-9902b43f90e2/76ae552b-89ef-441f-b4a7-65dc1362284a/foto-in.jpg"
+   },
+   {
+    "visit": "76ae552b-89ef-441f-b4a7-65dc1362284a",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T03:17:06.486Z",
+    "key": "visits/39a8018f-2122-402f-a527-9902b43f90e2/76ae552b-89ef-441f-b4a7-65dc1362284a/foto-out.jpg"
+   },
+   {
+    "visit": "76ae552b-89ef-441f-b4a7-65dc1362284a",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T03:18:21.784Z",
+    "key": "visits/39a8018f-2122-402f-a527-9902b43f90e2/76ae552b-89ef-441f-b4a7-65dc1362284a/spanduk-before.jpg"
+   },
+   {
+    "visit": "76ae552b-89ef-441f-b4a7-65dc1362284a",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T03:16:40.918Z",
+    "key": "visits/39a8018f-2122-402f-a527-9902b43f90e2/76ae552b-89ef-441f-b4a7-65dc1362284a/tampak-depan.jpg"
+   },
+   {
+    "visit": "e0940133-7967-4a4f-a33d-5256e392d28c",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T03:51:42.605Z",
+    "key": "visits/39a8018f-2122-402f-a527-9902b43f90e2/e0940133-7967-4a4f-a33d-5256e392d28c/foto-in.jpg"
+   },
+   {
+    "visit": "e0940133-7967-4a4f-a33d-5256e392d28c",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T03:51:55.190Z",
+    "key": "visits/39a8018f-2122-402f-a527-9902b43f90e2/e0940133-7967-4a4f-a33d-5256e392d28c/foto-out.jpg"
+   },
+   {
+    "visit": "e0940133-7967-4a4f-a33d-5256e392d28c",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T03:54:14.490Z",
+    "key": "visits/39a8018f-2122-402f-a527-9902b43f90e2/e0940133-7967-4a4f-a33d-5256e392d28c/spanduk-before.jpg"
+   },
+   {
+    "visit": "e0940133-7967-4a4f-a33d-5256e392d28c",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T03:52:16.283Z",
+    "key": "visits/39a8018f-2122-402f-a527-9902b43f90e2/e0940133-7967-4a4f-a33d-5256e392d28c/tampak-depan.jpg"
+   }
+  ],
+  "4a1c3747-fd8e-4c4f-863b-4960bb44b6fe": [
+   {
+    "visit": "115bf2d3-64f5-46f6-8b0e-cb668410a96c",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T03:33:09.999Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/115bf2d3-64f5-46f6-8b0e-cb668410a96c/foto-in.jpg"
+   },
+   {
+    "visit": "115bf2d3-64f5-46f6-8b0e-cb668410a96c",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T03:35:45.355Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/115bf2d3-64f5-46f6-8b0e-cb668410a96c/foto-out.jpg"
+   },
+   {
+    "visit": "115bf2d3-64f5-46f6-8b0e-cb668410a96c",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T03:34:39.951Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/115bf2d3-64f5-46f6-8b0e-cb668410a96c/poster-putih.jpg"
+   },
+   {
+    "visit": "115bf2d3-64f5-46f6-8b0e-cb668410a96c",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T03:33:49.019Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/115bf2d3-64f5-46f6-8b0e-cb668410a96c/spanduk-before.jpg"
+   },
+   {
+    "visit": "115bf2d3-64f5-46f6-8b0e-cb668410a96c",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T03:33:23.001Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/115bf2d3-64f5-46f6-8b0e-cb668410a96c/tampak-depan.jpg"
+   },
+   {
+    "visit": "2592ff7d-e2f9-488c-8ca6-82a85b40b68f",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T03:57:15.988Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/2592ff7d-e2f9-488c-8ca6-82a85b40b68f/foto-in.jpg"
+   },
+   {
+    "visit": "2592ff7d-e2f9-488c-8ca6-82a85b40b68f",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T04:01:02.275Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/2592ff7d-e2f9-488c-8ca6-82a85b40b68f/foto-out.jpg"
+   },
+   {
+    "visit": "2592ff7d-e2f9-488c-8ca6-82a85b40b68f",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T04:00:45.035Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/2592ff7d-e2f9-488c-8ca6-82a85b40b68f/poster-before.jpg"
+   },
+   {
+    "visit": "2592ff7d-e2f9-488c-8ca6-82a85b40b68f",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T03:58:42.056Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/2592ff7d-e2f9-488c-8ca6-82a85b40b68f/poster-putih.jpg"
+   },
+   {
+    "visit": "2592ff7d-e2f9-488c-8ca6-82a85b40b68f",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T03:58:08.384Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/2592ff7d-e2f9-488c-8ca6-82a85b40b68f/spanduk-before.jpg"
+   },
+   {
+    "visit": "2592ff7d-e2f9-488c-8ca6-82a85b40b68f",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T03:57:58.880Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/2592ff7d-e2f9-488c-8ca6-82a85b40b68f/tampak-depan.jpg"
+   },
+   {
+    "visit": "45285033-540b-47f5-bd53-baec64ad9b5a",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T03:44:40.136Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/45285033-540b-47f5-bd53-baec64ad9b5a/foto-in.jpg"
+   },
+   {
+    "visit": "45285033-540b-47f5-bd53-baec64ad9b5a",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T03:47:27.059Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/45285033-540b-47f5-bd53-baec64ad9b5a/foto-out.jpg"
+   },
+   {
+    "visit": "45285033-540b-47f5-bd53-baec64ad9b5a",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T03:47:01.500Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/45285033-540b-47f5-bd53-baec64ad9b5a/poster-putih.jpg"
+   },
+   {
+    "visit": "45285033-540b-47f5-bd53-baec64ad9b5a",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T03:45:14.688Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/45285033-540b-47f5-bd53-baec64ad9b5a/tampak-depan.jpg"
+   },
+   {
+    "visit": "634f124a-9365-459a-9a2d-68c8b3a58b82",
+    "photo": "deploy-planogram.jpg",
+    "at": "2026-08-31T04:04:31.354Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/634f124a-9365-459a-9a2d-68c8b3a58b82/deploy-planogram.jpg"
+   },
+   {
+    "visit": "6ebac43e-8a86-4cc8-b5e2-4db2fb35353a",
+    "photo": "deploy-planogram.jpg",
+    "at": "2026-08-31T04:05:53.193Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/6ebac43e-8a86-4cc8-b5e2-4db2fb35353a/deploy-planogram.jpg"
+   },
+   {
+    "visit": "6ebac43e-8a86-4cc8-b5e2-4db2fb35353a",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T04:07:28.985Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/6ebac43e-8a86-4cc8-b5e2-4db2fb35353a/foto-in.jpg"
+   },
+   {
+    "visit": "6ebac43e-8a86-4cc8-b5e2-4db2fb35353a",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T04:06:19.395Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/6ebac43e-8a86-4cc8-b5e2-4db2fb35353a/foto-out.jpg"
+   },
+   {
+    "visit": "6ebac43e-8a86-4cc8-b5e2-4db2fb35353a",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T04:06:44.709Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/6ebac43e-8a86-4cc8-b5e2-4db2fb35353a/poster-before.jpg"
+   },
+   {
+    "visit": "6ebac43e-8a86-4cc8-b5e2-4db2fb35353a",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T04:06:32.731Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/6ebac43e-8a86-4cc8-b5e2-4db2fb35353a/poster-putih.jpg"
+   },
+   {
+    "visit": "6ebac43e-8a86-4cc8-b5e2-4db2fb35353a",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T04:07:00.139Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/6ebac43e-8a86-4cc8-b5e2-4db2fb35353a/spanduk-before.jpg"
+   },
+   {
+    "visit": "6ebac43e-8a86-4cc8-b5e2-4db2fb35353a",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T04:07:16.259Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/6ebac43e-8a86-4cc8-b5e2-4db2fb35353a/tampak-depan.jpg"
+   },
+   {
+    "visit": "895db652-1ebd-4218-ab19-6349c0bde5bf",
+    "photo": "deploy-planogram.jpg",
+    "at": "2026-08-31T03:11:29.343Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/895db652-1ebd-4218-ab19-6349c0bde5bf/deploy-planogram.jpg"
+   },
+   {
+    "visit": "895db652-1ebd-4218-ab19-6349c0bde5bf",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T03:04:21.478Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/895db652-1ebd-4218-ab19-6349c0bde5bf/foto-in.jpg"
+   },
+   {
+    "visit": "895db652-1ebd-4218-ab19-6349c0bde5bf",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T03:11:43.847Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/895db652-1ebd-4218-ab19-6349c0bde5bf/foto-out.jpg"
+   },
+   {
+    "visit": "895db652-1ebd-4218-ab19-6349c0bde5bf",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T03:10:45.391Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/895db652-1ebd-4218-ab19-6349c0bde5bf/poster-before.jpg"
+   },
+   {
+    "visit": "895db652-1ebd-4218-ab19-6349c0bde5bf",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T03:11:14.888Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/895db652-1ebd-4218-ab19-6349c0bde5bf/poster-putih.jpg"
+   },
+   {
+    "visit": "895db652-1ebd-4218-ab19-6349c0bde5bf",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T03:09:59.024Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/895db652-1ebd-4218-ab19-6349c0bde5bf/spanduk-before.jpg"
+   },
+   {
+    "visit": "895db652-1ebd-4218-ab19-6349c0bde5bf",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T03:04:39.900Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/895db652-1ebd-4218-ab19-6349c0bde5bf/tampak-depan.jpg"
+   },
+   {
+    "visit": "c61b0bf3-d204-4fbb-bcf4-18be95c34bbc",
+    "photo": "deploy-planogram.jpg",
+    "at": "2026-08-31T02:05:09.005Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/c61b0bf3-d204-4fbb-bcf4-18be95c34bbc/deploy-planogram.jpg"
+   },
+   {
+    "visit": "c61b0bf3-d204-4fbb-bcf4-18be95c34bbc",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T01:58:37.186Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/c61b0bf3-d204-4fbb-bcf4-18be95c34bbc/foto-in.jpg"
+   },
+   {
+    "visit": "c61b0bf3-d204-4fbb-bcf4-18be95c34bbc",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T02:05:26.745Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/c61b0bf3-d204-4fbb-bcf4-18be95c34bbc/foto-out.jpg"
+   },
+   {
+    "visit": "c61b0bf3-d204-4fbb-bcf4-18be95c34bbc",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T02:04:51.058Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/c61b0bf3-d204-4fbb-bcf4-18be95c34bbc/poster-putih.jpg"
+   },
+   {
+    "visit": "c61b0bf3-d204-4fbb-bcf4-18be95c34bbc",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T01:59:44.389Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/c61b0bf3-d204-4fbb-bcf4-18be95c34bbc/spanduk-before.jpg"
+   },
+   {
+    "visit": "c61b0bf3-d204-4fbb-bcf4-18be95c34bbc",
+    "photo": "spanduk-putih.jpg",
+    "at": "2026-08-31T01:59:41.983Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/c61b0bf3-d204-4fbb-bcf4-18be95c34bbc/spanduk-putih.jpg"
+   },
+   {
+    "visit": "c61b0bf3-d204-4fbb-bcf4-18be95c34bbc",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T01:59:05.284Z",
+    "key": "visits/4a1c3747-fd8e-4c4f-863b-4960bb44b6fe/c61b0bf3-d204-4fbb-bcf4-18be95c34bbc/tampak-depan.jpg"
+   }
+  ],
+  "59cd78eb-329a-4620-9b78-d9ffb492f458": [
+   {
+    "visit": "1f1bc9da-ce8a-4ebc-a3de-358292bdc9d9",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T04:07:20.655Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/1f1bc9da-ce8a-4ebc-a3de-358292bdc9d9/foto-in.jpg"
+   },
+   {
+    "visit": "1f1bc9da-ce8a-4ebc-a3de-358292bdc9d9",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T04:07:41.442Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/1f1bc9da-ce8a-4ebc-a3de-358292bdc9d9/tampak-depan.jpg"
+   },
+   {
+    "visit": "26f57e4b-2437-44d7-94fe-a91c9bb37e72",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T01:43:56.712Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/26f57e4b-2437-44d7-94fe-a91c9bb37e72/foto-in.jpg"
+   },
+   {
+    "visit": "26f57e4b-2437-44d7-94fe-a91c9bb37e72",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T01:58:11.009Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/26f57e4b-2437-44d7-94fe-a91c9bb37e72/foto-out.jpg"
+   },
+   {
+    "visit": "26f57e4b-2437-44d7-94fe-a91c9bb37e72",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T01:57:48.061Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/26f57e4b-2437-44d7-94fe-a91c9bb37e72/poster-before.jpg"
+   },
+   {
+    "visit": "26f57e4b-2437-44d7-94fe-a91c9bb37e72",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T01:57:54.833Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/26f57e4b-2437-44d7-94fe-a91c9bb37e72/poster-putih.jpg"
+   },
+   {
+    "visit": "26f57e4b-2437-44d7-94fe-a91c9bb37e72",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T01:57:38.293Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/26f57e4b-2437-44d7-94fe-a91c9bb37e72/spanduk-before.jpg"
+   },
+   {
+    "visit": "26f57e4b-2437-44d7-94fe-a91c9bb37e72",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T01:44:10.758Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/26f57e4b-2437-44d7-94fe-a91c9bb37e72/tampak-depan.jpg"
+   },
+   {
+    "visit": "95fee528-8abf-4b1d-8e1e-cfbaff6ae8d1",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T03:17:58.305Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/95fee528-8abf-4b1d-8e1e-cfbaff6ae8d1/foto-in.jpg"
+   },
+   {
+    "visit": "95fee528-8abf-4b1d-8e1e-cfbaff6ae8d1",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T03:34:21.691Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/95fee528-8abf-4b1d-8e1e-cfbaff6ae8d1/foto-out.jpg"
+   },
+   {
+    "visit": "95fee528-8abf-4b1d-8e1e-cfbaff6ae8d1",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T03:32:36.789Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/95fee528-8abf-4b1d-8e1e-cfbaff6ae8d1/poster-before.jpg"
+   },
+   {
+    "visit": "95fee528-8abf-4b1d-8e1e-cfbaff6ae8d1",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T03:32:44.593Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/95fee528-8abf-4b1d-8e1e-cfbaff6ae8d1/poster-putih.jpg"
+   },
+   {
+    "visit": "95fee528-8abf-4b1d-8e1e-cfbaff6ae8d1",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T03:32:26.573Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/95fee528-8abf-4b1d-8e1e-cfbaff6ae8d1/spanduk-before.jpg"
+   },
+   {
+    "visit": "95fee528-8abf-4b1d-8e1e-cfbaff6ae8d1",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T03:18:11.346Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/95fee528-8abf-4b1d-8e1e-cfbaff6ae8d1/tampak-depan.jpg"
+   },
+   {
+    "visit": "d853c615-4016-426b-96c6-197bb1493818",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T02:15:55.977Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/d853c615-4016-426b-96c6-197bb1493818/foto-in.jpg"
+   },
+   {
+    "visit": "d853c615-4016-426b-96c6-197bb1493818",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T02:44:54.994Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/d853c615-4016-426b-96c6-197bb1493818/foto-out.jpg"
+   },
+   {
+    "visit": "d853c615-4016-426b-96c6-197bb1493818",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T02:44:28.675Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/d853c615-4016-426b-96c6-197bb1493818/poster-before.jpg"
+   },
+   {
+    "visit": "d853c615-4016-426b-96c6-197bb1493818",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T02:44:38.599Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/d853c615-4016-426b-96c6-197bb1493818/poster-putih.jpg"
+   },
+   {
+    "visit": "d853c615-4016-426b-96c6-197bb1493818",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T02:44:19.736Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/d853c615-4016-426b-96c6-197bb1493818/spanduk-before.jpg"
+   },
+   {
+    "visit": "d853c615-4016-426b-96c6-197bb1493818",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T02:16:23.888Z",
+    "key": "visits/59cd78eb-329a-4620-9b78-d9ffb492f458/d853c615-4016-426b-96c6-197bb1493818/tampak-depan.jpg"
+   }
+  ],
+  "6a854ec3-b9e2-40b0-a4ab-894ac18a2e52": [
+   {
+    "visit": "9e803785-02ab-4ae8-ba1a-caea1003c52f",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T02:49:55.479Z",
+    "key": "visits/6a854ec3-b9e2-40b0-a4ab-894ac18a2e52/9e803785-02ab-4ae8-ba1a-caea1003c52f/foto-in.jpg"
+   },
+   {
+    "visit": "9e803785-02ab-4ae8-ba1a-caea1003c52f",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T02:49:44.838Z",
+    "key": "visits/6a854ec3-b9e2-40b0-a4ab-894ac18a2e52/9e803785-02ab-4ae8-ba1a-caea1003c52f/foto-out.jpg"
+   },
+   {
+    "visit": "9e803785-02ab-4ae8-ba1a-caea1003c52f",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T02:51:06.869Z",
+    "key": "visits/6a854ec3-b9e2-40b0-a4ab-894ac18a2e52/9e803785-02ab-4ae8-ba1a-caea1003c52f/spanduk-before.jpg"
+   },
+   {
+    "visit": "9e803785-02ab-4ae8-ba1a-caea1003c52f",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T02:50:46.756Z",
+    "key": "visits/6a854ec3-b9e2-40b0-a4ab-894ac18a2e52/9e803785-02ab-4ae8-ba1a-caea1003c52f/tampak-depan.jpg"
+   }
+  ],
+  "7cf276a7-3865-45e9-b4c7-3e03f360aa56": [
+   {
+    "visit": "1cd9f382-87c7-47ec-b500-8d6310300bf3",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T02:34:34.672Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/1cd9f382-87c7-47ec-b500-8d6310300bf3/foto-in.jpg"
+   },
+   {
+    "visit": "1cd9f382-87c7-47ec-b500-8d6310300bf3",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T02:39:49.684Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/1cd9f382-87c7-47ec-b500-8d6310300bf3/foto-out.jpg"
+   },
+   {
+    "visit": "1cd9f382-87c7-47ec-b500-8d6310300bf3",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T02:37:36.833Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/1cd9f382-87c7-47ec-b500-8d6310300bf3/poster-before.jpg"
+   },
+   {
+    "visit": "1cd9f382-87c7-47ec-b500-8d6310300bf3",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T02:37:53.818Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/1cd9f382-87c7-47ec-b500-8d6310300bf3/poster-putih.jpg"
+   },
+   {
+    "visit": "1cd9f382-87c7-47ec-b500-8d6310300bf3",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T02:35:00.592Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/1cd9f382-87c7-47ec-b500-8d6310300bf3/spanduk-before.jpg"
+   },
+   {
+    "visit": "1cd9f382-87c7-47ec-b500-8d6310300bf3",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T02:34:47.031Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/1cd9f382-87c7-47ec-b500-8d6310300bf3/tampak-depan.jpg"
+   },
+   {
+    "visit": "24c63cb9-9b7c-4eed-ba8e-f4e4e6a3c2ac",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T01:58:50.925Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/24c63cb9-9b7c-4eed-ba8e-f4e4e6a3c2ac/foto-in.jpg"
+   },
+   {
+    "visit": "24c63cb9-9b7c-4eed-ba8e-f4e4e6a3c2ac",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T02:02:45.339Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/24c63cb9-9b7c-4eed-ba8e-f4e4e6a3c2ac/foto-out.jpg"
+   },
+   {
+    "visit": "24c63cb9-9b7c-4eed-ba8e-f4e4e6a3c2ac",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T01:59:49.330Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/24c63cb9-9b7c-4eed-ba8e-f4e4e6a3c2ac/poster-before.jpg"
+   },
+   {
+    "visit": "24c63cb9-9b7c-4eed-ba8e-f4e4e6a3c2ac",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T02:00:03.116Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/24c63cb9-9b7c-4eed-ba8e-f4e4e6a3c2ac/poster-putih.jpg"
+   },
+   {
+    "visit": "24c63cb9-9b7c-4eed-ba8e-f4e4e6a3c2ac",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T01:59:30.595Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/24c63cb9-9b7c-4eed-ba8e-f4e4e6a3c2ac/spanduk-before.jpg"
+   },
+   {
+    "visit": "24c63cb9-9b7c-4eed-ba8e-f4e4e6a3c2ac",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T01:59:11.428Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/24c63cb9-9b7c-4eed-ba8e-f4e4e6a3c2ac/tampak-depan.jpg"
+   },
+   {
+    "visit": "4ed31bd8-9c78-4a43-8c6e-fb78d19b5ef6",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T03:26:33.764Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/4ed31bd8-9c78-4a43-8c6e-fb78d19b5ef6/foto-in.jpg"
+   },
+   {
+    "visit": "4ed31bd8-9c78-4a43-8c6e-fb78d19b5ef6",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T03:29:49.747Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/4ed31bd8-9c78-4a43-8c6e-fb78d19b5ef6/foto-out.jpg"
+   },
+   {
+    "visit": "4ed31bd8-9c78-4a43-8c6e-fb78d19b5ef6",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T03:27:29.986Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/4ed31bd8-9c78-4a43-8c6e-fb78d19b5ef6/poster-before.jpg"
+   },
+   {
+    "visit": "4ed31bd8-9c78-4a43-8c6e-fb78d19b5ef6",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T03:27:42.514Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/4ed31bd8-9c78-4a43-8c6e-fb78d19b5ef6/poster-putih.jpg"
+   },
+   {
+    "visit": "4ed31bd8-9c78-4a43-8c6e-fb78d19b5ef6",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T03:28:46.670Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/4ed31bd8-9c78-4a43-8c6e-fb78d19b5ef6/spanduk-before.jpg"
+   },
+   {
+    "visit": "4ed31bd8-9c78-4a43-8c6e-fb78d19b5ef6",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T03:26:57.758Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/4ed31bd8-9c78-4a43-8c6e-fb78d19b5ef6/tampak-depan.jpg"
+   },
+   {
+    "visit": "ae8db737-b0ad-49be-8e59-cc1c370e24db",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T03:14:38.101Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/ae8db737-b0ad-49be-8e59-cc1c370e24db/foto-in.jpg"
+   },
+   {
+    "visit": "ae8db737-b0ad-49be-8e59-cc1c370e24db",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T03:20:10.588Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/ae8db737-b0ad-49be-8e59-cc1c370e24db/foto-out.jpg"
+   },
+   {
+    "visit": "ae8db737-b0ad-49be-8e59-cc1c370e24db",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T03:15:30.351Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/ae8db737-b0ad-49be-8e59-cc1c370e24db/poster-before.jpg"
+   },
+   {
+    "visit": "ae8db737-b0ad-49be-8e59-cc1c370e24db",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T03:15:44.169Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/ae8db737-b0ad-49be-8e59-cc1c370e24db/poster-putih.jpg"
+   },
+   {
+    "visit": "ae8db737-b0ad-49be-8e59-cc1c370e24db",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T03:15:10.606Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/ae8db737-b0ad-49be-8e59-cc1c370e24db/spanduk-before.jpg"
+   },
+   {
+    "visit": "ae8db737-b0ad-49be-8e59-cc1c370e24db",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T03:14:51.073Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/ae8db737-b0ad-49be-8e59-cc1c370e24db/tampak-depan.jpg"
+   },
+   {
+    "visit": "bbc18e51-d1f7-41ee-b99e-0b186f6a4c9d",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T02:22:11.645Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/bbc18e51-d1f7-41ee-b99e-0b186f6a4c9d/foto-in.jpg"
+   },
+   {
+    "visit": "bbc18e51-d1f7-41ee-b99e-0b186f6a4c9d",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T02:24:00.292Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/bbc18e51-d1f7-41ee-b99e-0b186f6a4c9d/foto-out.jpg"
+   },
+   {
+    "visit": "bbc18e51-d1f7-41ee-b99e-0b186f6a4c9d",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T02:23:00.766Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/bbc18e51-d1f7-41ee-b99e-0b186f6a4c9d/poster-before.jpg"
+   },
+   {
+    "visit": "bbc18e51-d1f7-41ee-b99e-0b186f6a4c9d",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T02:23:10.964Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/bbc18e51-d1f7-41ee-b99e-0b186f6a4c9d/poster-putih.jpg"
+   },
+   {
+    "visit": "bbc18e51-d1f7-41ee-b99e-0b186f6a4c9d",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T02:23:22.879Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/bbc18e51-d1f7-41ee-b99e-0b186f6a4c9d/spanduk-before.jpg"
+   },
+   {
+    "visit": "bbc18e51-d1f7-41ee-b99e-0b186f6a4c9d",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T02:22:32.594Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/bbc18e51-d1f7-41ee-b99e-0b186f6a4c9d/tampak-depan.jpg"
+   },
+   {
+    "visit": "e62b2467-941d-4c49-bc6c-73b2569e448c",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T03:02:03.490Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/e62b2467-941d-4c49-bc6c-73b2569e448c/foto-in.jpg"
+   },
+   {
+    "visit": "e62b2467-941d-4c49-bc6c-73b2569e448c",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T03:08:38.306Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/e62b2467-941d-4c49-bc6c-73b2569e448c/foto-out.jpg"
+   },
+   {
+    "visit": "e62b2467-941d-4c49-bc6c-73b2569e448c",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T03:06:11.019Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/e62b2467-941d-4c49-bc6c-73b2569e448c/poster-before.jpg"
+   },
+   {
+    "visit": "e62b2467-941d-4c49-bc6c-73b2569e448c",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T03:02:32.440Z",
+    "key": "visits/7cf276a7-3865-45e9-b4c7-3e03f360aa56/e62b2467-941d-4c49-bc6c-73b2569e448c/tampak-depan.jpg"
+   }
+  ],
+  "80c9570f-0bdb-4e33-a7b3-ba31fe991e23": [
+   {
+    "visit": "3c8d84ad-298b-45b3-bb4d-946bff8f3afe",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T03:23:41.019Z",
+    "key": "visits/80c9570f-0bdb-4e33-a7b3-ba31fe991e23/3c8d84ad-298b-45b3-bb4d-946bff8f3afe/foto-in.jpg"
+   },
+   {
+    "visit": "3c8d84ad-298b-45b3-bb4d-946bff8f3afe",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T03:25:37.927Z",
+    "key": "visits/80c9570f-0bdb-4e33-a7b3-ba31fe991e23/3c8d84ad-298b-45b3-bb4d-946bff8f3afe/foto-out.jpg"
+   },
+   {
+    "visit": "3c8d84ad-298b-45b3-bb4d-946bff8f3afe",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T03:25:00.174Z",
+    "key": "visits/80c9570f-0bdb-4e33-a7b3-ba31fe991e23/3c8d84ad-298b-45b3-bb4d-946bff8f3afe/poster-before.jpg"
+   },
+   {
+    "visit": "3c8d84ad-298b-45b3-bb4d-946bff8f3afe",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T03:25:13.123Z",
+    "key": "visits/80c9570f-0bdb-4e33-a7b3-ba31fe991e23/3c8d84ad-298b-45b3-bb4d-946bff8f3afe/poster-putih.jpg"
+   },
+   {
+    "visit": "3c8d84ad-298b-45b3-bb4d-946bff8f3afe",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T03:24:27.832Z",
+    "key": "visits/80c9570f-0bdb-4e33-a7b3-ba31fe991e23/3c8d84ad-298b-45b3-bb4d-946bff8f3afe/spanduk-before.jpg"
+   },
+   {
+    "visit": "3c8d84ad-298b-45b3-bb4d-946bff8f3afe",
+    "photo": "spanduk-putih.jpg",
+    "at": "2026-08-31T03:24:47.584Z",
+    "key": "visits/80c9570f-0bdb-4e33-a7b3-ba31fe991e23/3c8d84ad-298b-45b3-bb4d-946bff8f3afe/spanduk-putih.jpg"
+   },
+   {
+    "visit": "3c8d84ad-298b-45b3-bb4d-946bff8f3afe",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T03:23:54.579Z",
+    "key": "visits/80c9570f-0bdb-4e33-a7b3-ba31fe991e23/3c8d84ad-298b-45b3-bb4d-946bff8f3afe/tampak-depan.jpg"
+   }
+  ],
+  "ae8b4f69-cc22-49f9-8275-7d331f4e929e": [
+   {
+    "visit": "10a14f4e-3681-406c-8785-17994aac041f",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T04:10:46.209Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/10a14f4e-3681-406c-8785-17994aac041f/foto-in.jpg"
+   },
+   {
+    "visit": "10a14f4e-3681-406c-8785-17994aac041f",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T04:11:06.104Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/10a14f4e-3681-406c-8785-17994aac041f/foto-out.jpg"
+   },
+   {
+    "visit": "10a14f4e-3681-406c-8785-17994aac041f",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T04:09:10.047Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/10a14f4e-3681-406c-8785-17994aac041f/poster-before.jpg"
+   },
+   {
+    "visit": "10a14f4e-3681-406c-8785-17994aac041f",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T04:09:19.895Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/10a14f4e-3681-406c-8785-17994aac041f/poster-putih.jpg"
+   },
+   {
+    "visit": "1863525a-bdc7-43ca-9e99-e41818f6ef8e",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T02:55:55.212Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/1863525a-bdc7-43ca-9e99-e41818f6ef8e/foto-in.jpg"
+   },
+   {
+    "visit": "1863525a-bdc7-43ca-9e99-e41818f6ef8e",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T02:57:32.350Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/1863525a-bdc7-43ca-9e99-e41818f6ef8e/foto-out.jpg"
+   },
+   {
+    "visit": "1863525a-bdc7-43ca-9e99-e41818f6ef8e",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T02:52:10.406Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/1863525a-bdc7-43ca-9e99-e41818f6ef8e/poster-before.jpg"
+   },
+   {
+    "visit": "1863525a-bdc7-43ca-9e99-e41818f6ef8e",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T02:51:56.859Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/1863525a-bdc7-43ca-9e99-e41818f6ef8e/poster-putih.jpg"
+   },
+   {
+    "visit": "1863525a-bdc7-43ca-9e99-e41818f6ef8e",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T02:57:13.259Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/1863525a-bdc7-43ca-9e99-e41818f6ef8e/spanduk-before.jpg"
+   },
+   {
+    "visit": "1863525a-bdc7-43ca-9e99-e41818f6ef8e",
+    "photo": "spanduk-putih.jpg",
+    "at": "2026-08-31T02:52:50.746Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/1863525a-bdc7-43ca-9e99-e41818f6ef8e/spanduk-putih.jpg"
+   },
+   {
+    "visit": "1863525a-bdc7-43ca-9e99-e41818f6ef8e",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T02:47:18.627Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/1863525a-bdc7-43ca-9e99-e41818f6ef8e/tampak-depan.jpg"
+   },
+   {
+    "visit": "8ba1c92e-d372-4481-9f9f-42d3ae9a3a2f",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T03:29:28.700Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/8ba1c92e-d372-4481-9f9f-42d3ae9a3a2f/foto-in.jpg"
+   },
+   {
+    "visit": "8ba1c92e-d372-4481-9f9f-42d3ae9a3a2f",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T03:33:20.371Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/8ba1c92e-d372-4481-9f9f-42d3ae9a3a2f/foto-out.jpg"
+   },
+   {
+    "visit": "8ba1c92e-d372-4481-9f9f-42d3ae9a3a2f",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T03:20:43.095Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/8ba1c92e-d372-4481-9f9f-42d3ae9a3a2f/poster-before.jpg"
+   },
+   {
+    "visit": "8ba1c92e-d372-4481-9f9f-42d3ae9a3a2f",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T03:20:35.580Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/8ba1c92e-d372-4481-9f9f-42d3ae9a3a2f/poster-putih.jpg"
+   },
+   {
+    "visit": "8ba1c92e-d372-4481-9f9f-42d3ae9a3a2f",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T03:30:04.774Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/8ba1c92e-d372-4481-9f9f-42d3ae9a3a2f/tampak-depan.jpg"
+   },
+   {
+    "visit": "a5fe9402-8505-4efa-826a-731b38277d84",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T02:29:49.269Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/a5fe9402-8505-4efa-826a-731b38277d84/foto-in.jpg"
+   },
+   {
+    "visit": "a5fe9402-8505-4efa-826a-731b38277d84",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T02:34:26.563Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/a5fe9402-8505-4efa-826a-731b38277d84/foto-out.jpg"
+   },
+   {
+    "visit": "a5fe9402-8505-4efa-826a-731b38277d84",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T02:31:31.149Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/a5fe9402-8505-4efa-826a-731b38277d84/poster-before.jpg"
+   },
+   {
+    "visit": "a5fe9402-8505-4efa-826a-731b38277d84",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T02:31:17.805Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/a5fe9402-8505-4efa-826a-731b38277d84/poster-putih.jpg"
+   },
+   {
+    "visit": "a5fe9402-8505-4efa-826a-731b38277d84",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T02:33:07.747Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/a5fe9402-8505-4efa-826a-731b38277d84/spanduk-before.jpg"
+   },
+   {
+    "visit": "a5fe9402-8505-4efa-826a-731b38277d84",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T02:32:08.500Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/a5fe9402-8505-4efa-826a-731b38277d84/tampak-depan.jpg"
+   },
+   {
+    "visit": "ed557224-0fe3-40b4-8aa3-0d0a30211910",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T03:51:23.903Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/ed557224-0fe3-40b4-8aa3-0d0a30211910/foto-in.jpg"
+   },
+   {
+    "visit": "ed557224-0fe3-40b4-8aa3-0d0a30211910",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T03:52:03.665Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/ed557224-0fe3-40b4-8aa3-0d0a30211910/foto-out.jpg"
+   },
+   {
+    "visit": "ed557224-0fe3-40b4-8aa3-0d0a30211910",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T03:51:52.787Z",
+    "key": "visits/ae8b4f69-cc22-49f9-8275-7d331f4e929e/ed557224-0fe3-40b4-8aa3-0d0a30211910/tampak-depan.jpg"
+   }
+  ],
+  "cac11b0c-1389-4886-8e7b-ecd25dc51725": [
+   {
+    "visit": "b1c7af6a-ac4b-4750-af1f-888dccfdb2f0",
+    "photo": "deploy-planogram.jpg",
+    "at": "2026-08-31T03:55:30.749Z",
+    "key": "visits/cac11b0c-1389-4886-8e7b-ecd25dc51725/b1c7af6a-ac4b-4750-af1f-888dccfdb2f0/deploy-planogram.jpg"
+   },
+   {
+    "visit": "b1c7af6a-ac4b-4750-af1f-888dccfdb2f0",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T03:50:14.667Z",
+    "key": "visits/cac11b0c-1389-4886-8e7b-ecd25dc51725/b1c7af6a-ac4b-4750-af1f-888dccfdb2f0/foto-in.jpg"
+   },
+   {
+    "visit": "b1c7af6a-ac4b-4750-af1f-888dccfdb2f0",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T03:55:16.062Z",
+    "key": "visits/cac11b0c-1389-4886-8e7b-ecd25dc51725/b1c7af6a-ac4b-4750-af1f-888dccfdb2f0/foto-out.jpg"
+   },
+   {
+    "visit": "b1c7af6a-ac4b-4750-af1f-888dccfdb2f0",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T03:53:55.981Z",
+    "key": "visits/cac11b0c-1389-4886-8e7b-ecd25dc51725/b1c7af6a-ac4b-4750-af1f-888dccfdb2f0/poster-before.jpg"
+   },
+   {
+    "visit": "b1c7af6a-ac4b-4750-af1f-888dccfdb2f0",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T03:54:05.202Z",
+    "key": "visits/cac11b0c-1389-4886-8e7b-ecd25dc51725/b1c7af6a-ac4b-4750-af1f-888dccfdb2f0/poster-putih.jpg"
+   },
+   {
+    "visit": "b1c7af6a-ac4b-4750-af1f-888dccfdb2f0",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T03:52:06.632Z",
+    "key": "visits/cac11b0c-1389-4886-8e7b-ecd25dc51725/b1c7af6a-ac4b-4750-af1f-888dccfdb2f0/spanduk-before.jpg"
+   },
+   {
+    "visit": "b1c7af6a-ac4b-4750-af1f-888dccfdb2f0",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T03:51:09.241Z",
+    "key": "visits/cac11b0c-1389-4886-8e7b-ecd25dc51725/b1c7af6a-ac4b-4750-af1f-888dccfdb2f0/tampak-depan.jpg"
+   },
+   {
+    "visit": "dab2ed39-43f7-4c96-a245-9d2d9a412255",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T03:27:59.805Z",
+    "key": "visits/cac11b0c-1389-4886-8e7b-ecd25dc51725/dab2ed39-43f7-4c96-a245-9d2d9a412255/foto-in.jpg"
+   },
+   {
+    "visit": "dab2ed39-43f7-4c96-a245-9d2d9a412255",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T03:37:29.540Z",
+    "key": "visits/cac11b0c-1389-4886-8e7b-ecd25dc51725/dab2ed39-43f7-4c96-a245-9d2d9a412255/foto-out.jpg"
+   },
+   {
+    "visit": "dab2ed39-43f7-4c96-a245-9d2d9a412255",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T03:33:24.979Z",
+    "key": "visits/cac11b0c-1389-4886-8e7b-ecd25dc51725/dab2ed39-43f7-4c96-a245-9d2d9a412255/poster-before.jpg"
+   },
+   {
+    "visit": "dab2ed39-43f7-4c96-a245-9d2d9a412255",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T03:33:45.691Z",
+    "key": "visits/cac11b0c-1389-4886-8e7b-ecd25dc51725/dab2ed39-43f7-4c96-a245-9d2d9a412255/poster-putih.jpg"
+   },
+   {
+    "visit": "dab2ed39-43f7-4c96-a245-9d2d9a412255",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T03:31:57.898Z",
+    "key": "visits/cac11b0c-1389-4886-8e7b-ecd25dc51725/dab2ed39-43f7-4c96-a245-9d2d9a412255/spanduk-before.jpg"
+   },
+   {
+    "visit": "dab2ed39-43f7-4c96-a245-9d2d9a412255",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T03:31:00.503Z",
+    "key": "visits/cac11b0c-1389-4886-8e7b-ecd25dc51725/dab2ed39-43f7-4c96-a245-9d2d9a412255/tampak-depan.jpg"
+   }
+  ],
+  "da3770b8-32a8-4542-a4ee-f569a125c88d": [
+   {
+    "visit": "0232b8c6-668d-45a9-9fe8-b4ec5923932e",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T02:39:25.251Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/0232b8c6-668d-45a9-9fe8-b4ec5923932e/foto-in.jpg"
+   },
+   {
+    "visit": "0232b8c6-668d-45a9-9fe8-b4ec5923932e",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T02:39:37.627Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/0232b8c6-668d-45a9-9fe8-b4ec5923932e/foto-out.jpg"
+   },
+   {
+    "visit": "0232b8c6-668d-45a9-9fe8-b4ec5923932e",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T02:39:47.815Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/0232b8c6-668d-45a9-9fe8-b4ec5923932e/tampak-depan.jpg"
+   },
+   {
+    "visit": "0f562a86-6bda-4832-aca6-9cfccc45f93e",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T01:57:49.241Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/0f562a86-6bda-4832-aca6-9cfccc45f93e/foto-in.jpg"
+   },
+   {
+    "visit": "0f562a86-6bda-4832-aca6-9cfccc45f93e",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T02:01:07.401Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/0f562a86-6bda-4832-aca6-9cfccc45f93e/foto-out.jpg"
+   },
+   {
+    "visit": "0f562a86-6bda-4832-aca6-9cfccc45f93e",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T02:00:46.483Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/0f562a86-6bda-4832-aca6-9cfccc45f93e/poster-putih.jpg"
+   },
+   {
+    "visit": "0f562a86-6bda-4832-aca6-9cfccc45f93e",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T02:01:23.434Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/0f562a86-6bda-4832-aca6-9cfccc45f93e/spanduk-before.jpg"
+   },
+   {
+    "visit": "0f562a86-6bda-4832-aca6-9cfccc45f93e",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T01:57:53.714Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/0f562a86-6bda-4832-aca6-9cfccc45f93e/tampak-depan.jpg"
+   },
+   {
+    "visit": "1359853f-6085-4673-ae44-5e7431631ae7",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T01:42:53.296Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/1359853f-6085-4673-ae44-5e7431631ae7/foto-in.jpg"
+   },
+   {
+    "visit": "1359853f-6085-4673-ae44-5e7431631ae7",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T01:45:43.590Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/1359853f-6085-4673-ae44-5e7431631ae7/foto-out.jpg"
+   },
+   {
+    "visit": "1359853f-6085-4673-ae44-5e7431631ae7",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T01:45:07.657Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/1359853f-6085-4673-ae44-5e7431631ae7/poster-before.jpg"
+   },
+   {
+    "visit": "1359853f-6085-4673-ae44-5e7431631ae7",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T01:45:12.517Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/1359853f-6085-4673-ae44-5e7431631ae7/poster-putih.jpg"
+   },
+   {
+    "visit": "1359853f-6085-4673-ae44-5e7431631ae7",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T01:46:02.415Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/1359853f-6085-4673-ae44-5e7431631ae7/spanduk-before.jpg"
+   },
+   {
+    "visit": "1359853f-6085-4673-ae44-5e7431631ae7",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T01:46:19.073Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/1359853f-6085-4673-ae44-5e7431631ae7/tampak-depan.jpg"
+   },
+   {
+    "visit": "324f7d58-2b45-4967-a523-a588e6098c6d",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T01:49:41.668Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/324f7d58-2b45-4967-a523-a588e6098c6d/foto-in.jpg"
+   },
+   {
+    "visit": "324f7d58-2b45-4967-a523-a588e6098c6d",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T01:54:15.155Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/324f7d58-2b45-4967-a523-a588e6098c6d/foto-out.jpg"
+   },
+   {
+    "visit": "324f7d58-2b45-4967-a523-a588e6098c6d",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T01:52:19.082Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/324f7d58-2b45-4967-a523-a588e6098c6d/poster-before.jpg"
+   },
+   {
+    "visit": "324f7d58-2b45-4967-a523-a588e6098c6d",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T01:53:53.636Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/324f7d58-2b45-4967-a523-a588e6098c6d/poster-putih.jpg"
+   },
+   {
+    "visit": "324f7d58-2b45-4967-a523-a588e6098c6d",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T01:52:03.039Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/324f7d58-2b45-4967-a523-a588e6098c6d/spanduk-before.jpg"
+   },
+   {
+    "visit": "324f7d58-2b45-4967-a523-a588e6098c6d",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T01:54:04.915Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/324f7d58-2b45-4967-a523-a588e6098c6d/tampak-depan.jpg"
+   },
+   {
+    "visit": "32fa5601-7cc0-4bd2-9a56-99548ab78b21",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T02:05:43.153Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/32fa5601-7cc0-4bd2-9a56-99548ab78b21/foto-in.jpg"
+   },
+   {
+    "visit": "32fa5601-7cc0-4bd2-9a56-99548ab78b21",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T02:06:44.209Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/32fa5601-7cc0-4bd2-9a56-99548ab78b21/foto-out.jpg"
+   },
+   {
+    "visit": "32fa5601-7cc0-4bd2-9a56-99548ab78b21",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T02:05:50.930Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/32fa5601-7cc0-4bd2-9a56-99548ab78b21/poster-before.jpg"
+   },
+   {
+    "visit": "32fa5601-7cc0-4bd2-9a56-99548ab78b21",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T02:05:55.251Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/32fa5601-7cc0-4bd2-9a56-99548ab78b21/poster-putih.jpg"
+   },
+   {
+    "visit": "32fa5601-7cc0-4bd2-9a56-99548ab78b21",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T02:06:27.465Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/32fa5601-7cc0-4bd2-9a56-99548ab78b21/spanduk-before.jpg"
+   },
+   {
+    "visit": "32fa5601-7cc0-4bd2-9a56-99548ab78b21",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T02:06:23.001Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/32fa5601-7cc0-4bd2-9a56-99548ab78b21/tampak-depan.jpg"
+   },
+   {
+    "visit": "8e25b205-8bec-427d-833f-ed4b93db00d3",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T02:12:33.407Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/8e25b205-8bec-427d-833f-ed4b93db00d3/foto-in.jpg"
+   },
+   {
+    "visit": "8e25b205-8bec-427d-833f-ed4b93db00d3",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T02:15:11.244Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/8e25b205-8bec-427d-833f-ed4b93db00d3/foto-out.jpg"
+   },
+   {
+    "visit": "8e25b205-8bec-427d-833f-ed4b93db00d3",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T02:14:20.770Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/8e25b205-8bec-427d-833f-ed4b93db00d3/poster-before.jpg"
+   },
+   {
+    "visit": "8e25b205-8bec-427d-833f-ed4b93db00d3",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T02:14:26.241Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/8e25b205-8bec-427d-833f-ed4b93db00d3/poster-putih.jpg"
+   },
+   {
+    "visit": "8e25b205-8bec-427d-833f-ed4b93db00d3",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T02:14:31.233Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/8e25b205-8bec-427d-833f-ed4b93db00d3/spanduk-before.jpg"
+   },
+   {
+    "visit": "8e25b205-8bec-427d-833f-ed4b93db00d3",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T02:15:05.360Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/8e25b205-8bec-427d-833f-ed4b93db00d3/tampak-depan.jpg"
+   },
+   {
+    "visit": "a0514911-58a7-492c-b469-ed9cd41f6d9c",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T02:23:19.748Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/a0514911-58a7-492c-b469-ed9cd41f6d9c/foto-in.jpg"
+   },
+   {
+    "visit": "a0514911-58a7-492c-b469-ed9cd41f6d9c",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T02:25:57.196Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/a0514911-58a7-492c-b469-ed9cd41f6d9c/foto-out.jpg"
+   },
+   {
+    "visit": "a0514911-58a7-492c-b469-ed9cd41f6d9c",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T02:25:27.250Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/a0514911-58a7-492c-b469-ed9cd41f6d9c/poster-before.jpg"
+   },
+   {
+    "visit": "a0514911-58a7-492c-b469-ed9cd41f6d9c",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T02:25:30.543Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/a0514911-58a7-492c-b469-ed9cd41f6d9c/poster-putih.jpg"
+   },
+   {
+    "visit": "a0514911-58a7-492c-b469-ed9cd41f6d9c",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T02:23:34.787Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/a0514911-58a7-492c-b469-ed9cd41f6d9c/spanduk-before.jpg"
+   },
+   {
+    "visit": "a0514911-58a7-492c-b469-ed9cd41f6d9c",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T02:26:05.020Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/a0514911-58a7-492c-b469-ed9cd41f6d9c/tampak-depan.jpg"
+   },
+   {
+    "visit": "ab3f8210-3521-4bc1-9773-7b35dad8fc65",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T01:18:13.877Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/ab3f8210-3521-4bc1-9773-7b35dad8fc65/foto-in.jpg"
+   },
+   {
+    "visit": "ab3f8210-3521-4bc1-9773-7b35dad8fc65",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T01:18:30.147Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/ab3f8210-3521-4bc1-9773-7b35dad8fc65/foto-out.jpg"
+   },
+   {
+    "visit": "ab3f8210-3521-4bc1-9773-7b35dad8fc65",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T01:18:21.496Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/ab3f8210-3521-4bc1-9773-7b35dad8fc65/tampak-depan.jpg"
+   },
+   {
+    "visit": "b34af60a-a54f-4495-b79c-803262a3176d",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T02:33:05.572Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/b34af60a-a54f-4495-b79c-803262a3176d/foto-in.jpg"
+   },
+   {
+    "visit": "b34af60a-a54f-4495-b79c-803262a3176d",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T02:35:06.097Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/b34af60a-a54f-4495-b79c-803262a3176d/foto-out.jpg"
+   },
+   {
+    "visit": "b34af60a-a54f-4495-b79c-803262a3176d",
+    "photo": "poster-before.jpg",
+    "at": "2026-08-31T02:33:26.549Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/b34af60a-a54f-4495-b79c-803262a3176d/poster-before.jpg"
+   },
+   {
+    "visit": "b34af60a-a54f-4495-b79c-803262a3176d",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T02:33:17.400Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/b34af60a-a54f-4495-b79c-803262a3176d/poster-putih.jpg"
+   },
+   {
+    "visit": "b34af60a-a54f-4495-b79c-803262a3176d",
+    "photo": "spanduk-before.jpg",
+    "at": "2026-08-31T02:34:50.734Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/b34af60a-a54f-4495-b79c-803262a3176d/spanduk-before.jpg"
+   },
+   {
+    "visit": "b34af60a-a54f-4495-b79c-803262a3176d",
+    "photo": "spanduk-putih.jpg",
+    "at": "2026-08-31T02:34:56.870Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/b34af60a-a54f-4495-b79c-803262a3176d/spanduk-putih.jpg"
+   },
+   {
+    "visit": "b34af60a-a54f-4495-b79c-803262a3176d",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T02:35:31.423Z",
+    "key": "visits/da3770b8-32a8-4542-a4ee-f569a125c88d/b34af60a-a54f-4495-b79c-803262a3176d/tampak-depan.jpg"
+   }
+  ],
+  "ffc0fa70-f0ac-4d8d-af0c-f8f7e3c544a8": [
+   {
+    "visit": "534522d7-ad93-4bf6-8e8e-f77a691dc10b",
+    "photo": "foto-in.jpg",
+    "at": "2026-08-31T04:11:50.576Z",
+    "key": "visits/ffc0fa70-f0ac-4d8d-af0c-f8f7e3c544a8/534522d7-ad93-4bf6-8e8e-f77a691dc10b/foto-in.jpg"
+   },
+   {
+    "visit": "534522d7-ad93-4bf6-8e8e-f77a691dc10b",
+    "photo": "foto-out.jpg",
+    "at": "2026-08-31T04:12:29.741Z",
+    "key": "visits/ffc0fa70-f0ac-4d8d-af0c-f8f7e3c544a8/534522d7-ad93-4bf6-8e8e-f77a691dc10b/foto-out.jpg"
+   },
+   {
+    "visit": "534522d7-ad93-4bf6-8e8e-f77a691dc10b",
+    "photo": "poster-putih.jpg",
+    "at": "2026-08-31T04:12:08.372Z",
+    "key": "visits/ffc0fa70-f0ac-4d8d-af0c-f8f7e3c544a8/534522d7-ad93-4bf6-8e8e-f77a691dc10b/poster-putih.jpg"
+   },
+   {
+    "visit": "534522d7-ad93-4bf6-8e8e-f77a691dc10b",
+    "photo": "tampak-depan.jpg",
+    "at": "2026-08-31T04:11:59.540Z",
+    "key": "visits/ffc0fa70-f0ac-4d8d-af0c-f8f7e3c544a8/534522d7-ad93-4bf6-8e8e-f77a691dc10b/tampak-depan.jpg"
+   }
+  ]
+ }
+}
