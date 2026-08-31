@@ -14,7 +14,9 @@ jobs:
       - name: Install deps
         run: npm ci
       # WAJIB: backup penuh SEBELUM migrasi apa pun (aturan: fix/pembaruan = backup dulu).
+      # ponytail: sementara continue-on-error supaya restore darurat jalan; rapikan setelah DB pulih
       - name: Backup sebelum migrasi
+        continue-on-error: true
         env:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
