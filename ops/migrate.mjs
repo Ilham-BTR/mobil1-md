@@ -18,6 +18,9 @@ const BASELINE = [
   '0018_egress_log.sql',
 ];
 
+// Migrasi destruktif TIDAK PERNAH dijalankan otomatis.
+const NEVER_AUTO = new Set(['0000_reset.sql']);
+
 async function runSql(query) {
   const res = await fetch(API, {
     method: 'POST',
@@ -26,11 +29,12 @@ async function runSql(query) {
   });
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new Error(`API ${res.status}: ${JSON.stringify(body)}`);
-  return body;
+  // Management API mengembalikan array baris langsung (bukan {data: ...}).
+  return Array.isArray(body) ? body : (body?.data ?? []);
 }
 
 if (!REF || !TOKEN) {
-  console.error('Set secrets GitHub: SUPABASE_PROJECT_REF & SUPABASE_ACCESS_TOKEN');
+  console.error('Set secret GitHub: SUPABASE_ACCESS_TOKEN (project ref sudah di-hardcode di workflow)');
   process.exit(1);
 }
 
@@ -42,18 +46,16 @@ create table if not exists migrations.applied (
 );`);
 
 // 2. Nama yang sudah diterapkan
-const { data: appliedRows } = await runSql('select name from migrations.applied');
-const applied = new Set((appliedRows || []).map(r => r.name));
+let applied = new Set((await runSql('select name from migrations.applied')).map(r => r.name));
+console.log(`Tercatat sudah diterapkan: ${applied.size} migrasi.`);
 
 // 3. Baseline pertama kali: tandai migrasi lama tanpa menjalankannya
 if (applied.size === 0) {
   for (const name of BASELINE) {
     await runSql(`insert into migrations.applied(name) values ('${name}') on conflict do nothing;`);
   }
-  console.log(`Baseline: ${BASELINE.length} migrasi lama ditandai sudah diterapkan.`);
-  applied.clear();
-  const { data: again } = await runSql('select name from migrations.applied');
-  (again || []).forEach(r => applied.add(r.name));
+  applied = new Set((await runSql('select name from migrations.applied')).map(r => r.name));
+  console.log(`Baseline: ${applied.size} migrasi lama ditandai sudah diterapkan.`);
 }
 
 // 4. Jalankan file baru (urut nama), masing-masing dalam 1 transaksi
@@ -61,6 +63,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 const files = readdirSync('supabase/migrations').filter(f => f.endsWith('.sql')).sort();
 let ran = 0;
 for (const f of files) {
+  if (NEVER_AUTO.has(f)) continue;                       // jangan pernah otomatis
   if (applied.has(f)) continue;
   const sql = readFileSync(`supabase/migrations/${f}`, 'utf8');
   console.log(`Menjalankan ${f} ...`);
