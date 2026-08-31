@@ -6,3 +6,4 @@
 
 create unique index if not exists visits_md_bengkel_date_uidx
   on visits(md_id, bengkel_id, visit_date);
+-- unique index: 1 MD x 1 bengkel x 1 hari
