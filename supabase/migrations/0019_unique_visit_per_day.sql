@@ -9,3 +9,4 @@ create unique index if not exists visits_md_bengkel_date_uidx
 -- unique index: 1 MD x 1 bengkel x 1 hari
 -- rollback note
 -- trigger rebuild run
+-- trigger
