@@ -11,7 +11,22 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - run: node ops/migrate.mjs
+      - name: Install deps
+        run: npm ci
+      # WAJIB: backup penuh SEBELUM migrasi apa pun (aturan: fix/pembaruan = backup dulu).
+      - name: Backup sebelum migrasi
         env:
-          SUPABASE_PROJECT_REF: azopkafxylmhrjapnadk   # ref project mobil1-md (bukan rahasia, sudah ada di config.toml)
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          printf '{"supabaseUrl":"https://mybrstcvmobourhzkrlp.supabase.co","serviceRoleKey":"%s","keepLast":12,"backupDir":""}\n' "$SUPABASE_SERVICE_ROLE_KEY" > ops/backup/backup.config.json
+          node ops/backup/backup.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backup-sebelum-migrasi
+          path: ops/backup/dumps/*.json
+          retention-days: 90
+      - name: Jalankan migrasi baru
+        run: node ops/migrate.mjs
+        env:
+          SUPABASE_PROJECT_REF: mybrstcvmobourhzkrlp   # project PRODUKSI mobil1 (sama dgn ops/backup/backup.config.json)
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

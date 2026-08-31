@@ -49,8 +49,15 @@ create table if not exists migrations.applied (
 let applied = new Set((await runSql('select name from migrations.applied')).map(r => r.name));
 console.log(`Tercatat sudah diterapkan: ${applied.size} migrasi.`);
 
+// 2b. Deteksi schema hilang (mis. tabel ter-drop): jika `profiles` tak ada,
+//     jalankan SEMUA migrasi (kecuali 0000_reset) — jangan percaya baseline.
+const prof = await runSql(`select to_regclass('public.profiles') is not null as ok`);
+if (prof[0]?.ok === false) {
+  console.log('PERINGATAN: tabel public.profiles tidak ada — mode REBUILD, jalankan semua migrasi.');
+  applied = new Set();
+} else if (applied.size === 0) {
 // 3. Baseline pertama kali: tandai migrasi lama tanpa menjalankannya
-if (applied.size === 0) {
+
   for (const name of BASELINE) {
     await runSql(`insert into migrations.applied(name) values ('${name}') on conflict do nothing;`);
   }
@@ -69,7 +76,7 @@ for (const f of files) {
   console.log(`Menjalankan ${f} ...`);
   try {
     await runSql(`begin;\n${sql}\ncommit;`);
-    await runSql(`insert into migrations.applied(name) values ('${f}');`);
+    await runSql(`insert into migrations.applied(name) values ('${f}') on conflict do nothing;`);
     ran++;
   } catch (e) {
     console.error(`GAGAL ${f}: ${e.message}`);

@@ -5070,7 +5070,7 @@
       "file_type": "code",
       "norm_label": "files",
       "source_file": "ops/migrate.mjs",
-      "source_location": "L63"
+      "source_location": "L70"
     },
     {
       "id": "ops_migrate_never_auto",
@@ -9918,7 +9918,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ops/migrate.mjs",
-      "source_location": "L63",
+      "source_location": "L70",
       "weight": 1.0
     },
     {
@@ -15234,5 +15234,5 @@
       "source_file": "README.md"
     }
   ],
-  "built_at_commit": "c237f474dcd678ffc8a3424686d4e18d760c139a"
+  "built_at_commit": "98499cebdb5c3301fea7dd5d724495bfc3ff75d7"
 }
