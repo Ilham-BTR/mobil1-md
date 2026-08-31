@@ -6,6 +6,11 @@
 -- ============================================================
 
 -- ---------- LAPORAN VISIT ----------
+-- 2 kolom ini baru dibuat di 0016 tapi view di bawah sudah memakainya;
+-- pastikan ada dulu supaya rebuild dari nol tidak gagal.
+alter table visits add column if not exists photo_spanduk_putih text;
+alter table visits add column if not exists photo_poster_putih  text;
+
 -- DROP dulu: create-or-replace tak bisa ubah tipe kolom (tanggal date -> text)
 drop view if exists laporan_visit;
 create view laporan_visit as

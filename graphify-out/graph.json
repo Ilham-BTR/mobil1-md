@@ -2738,7 +2738,7 @@
       "file_type": "code",
       "norm_label": "laporan_absen",
       "source_file": "supabase/migrations/0015_laporan_views.sql",
-      "source_location": "L56"
+      "source_location": "L61"
     },
     {
       "id": "supabase_migrations_0015_laporan_views_laporan_visit",
@@ -2749,7 +2749,7 @@
       "file_type": "code",
       "norm_label": "laporan_visit",
       "source_file": "supabase/migrations/0015_laporan_views.sql",
-      "source_location": "L11"
+      "source_location": "L16"
     },
     {
       "id": "supabase_migrations_0015_laporan_views_sql_bengkels",
@@ -12965,7 +12965,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "supabase/migrations/0015_laporan_views.sql",
-      "source_location": "L11",
+      "source_location": "L16",
       "weight": 1.0
     },
     {
@@ -12976,7 +12976,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "supabase/migrations/0015_laporan_views.sql",
-      "source_location": "L56",
+      "source_location": "L61",
       "weight": 1.0
     },
     {
@@ -13843,7 +13843,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "supabase/migrations/0015_laporan_views.sql",
-      "source_location": "L75",
+      "source_location": "L80",
       "weight": 1.0
     },
     {
@@ -13854,7 +13854,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "supabase/migrations/0015_laporan_views.sql",
-      "source_location": "L76",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -13865,7 +13865,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "supabase/migrations/0015_laporan_views.sql",
-      "source_location": "L77",
+      "source_location": "L82",
       "weight": 1.0
     },
     {
@@ -13876,7 +13876,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "supabase/migrations/0015_laporan_views.sql",
-      "source_location": "L47",
+      "source_location": "L52",
       "weight": 1.0
     },
     {
@@ -13887,7 +13887,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "supabase/migrations/0015_laporan_views.sql",
-      "source_location": "L48",
+      "source_location": "L53",
       "weight": 1.0
     },
     {
@@ -13898,7 +13898,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "supabase/migrations/0015_laporan_views.sql",
-      "source_location": "L49",
+      "source_location": "L54",
       "weight": 1.0
     },
     {
@@ -13909,7 +13909,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "supabase/migrations/0015_laporan_views.sql",
-      "source_location": "L50",
+      "source_location": "L55",
       "weight": 1.0
     },
     {
@@ -13920,7 +13920,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "supabase/migrations/0015_laporan_views.sql",
-      "source_location": "L51",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -13931,7 +13931,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "supabase/migrations/0015_laporan_views.sql",
-      "source_location": "L52",
+      "source_location": "L57",
       "weight": 1.0
     },
     {
@@ -15234,5 +15234,5 @@
       "source_file": "README.md"
     }
   ],
-  "built_at_commit": "69b7332707d9f6ccdb57c43095acf4170b26d60e"
+  "built_at_commit": "b4e149372b0e81655839c233c793aaef90560878"
 }
