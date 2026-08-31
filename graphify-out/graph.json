@@ -1762,7 +1762,7 @@
       "file_type": "code",
       "norm_label": "deletemaster()",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L397"
+      "source_location": "L402"
     },
     {
       "id": "src_lib_api_master_deletemd",
@@ -7646,7 +7646,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L398",
+      "source_location": "L403",
       "weight": 1.0
     },
     {
@@ -7658,7 +7658,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/lib/api/master.js",
-      "source_location": "L401",
+      "source_location": "L406",
       "weight": 1.0
     },
     {
@@ -11920,7 +11920,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/lib/api/master.js",
-      "source_location": "L397",
+      "source_location": "L402",
       "weight": 1.0
     },
     {
@@ -15245,5 +15245,5 @@
       "source_file": "README.md"
     }
   ],
-  "built_at_commit": "4bdba630d187f9ef03f71396f1b21521429cda58"
+  "built_at_commit": "7a94dbef18a67567c9887e911f6108df0318ffe6"
 }

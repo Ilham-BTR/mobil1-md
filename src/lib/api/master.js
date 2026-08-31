@@ -389,7 +389,12 @@ export async function updateMaster(table, id, patch) {
     persistMock();
     return MOCK_DATA[table][idx];
   }
-  const { data, error } = await supabase.from(table).update(patch).eq('id', id).select().single();
+  const { data, error } = await supabase.from(table).update(patch).eq('id', id).select();
+  // .single() di atas 0 baris menghasilkan error "Cannot coerce..." yang membingungkan.
+  // Deteksi eksplisit: baris sudah tidak ada (umumnya data lama di list yang belum di-refresh).
+  if (!error && (!data || data.length === 0)) {
+    throw new Error('Item tidak ditemukan di database — refresh halaman lalu ulangi (data di daftar mungkin sudah usang).');
+  }
   if (error) throw error;
   return data;
 }
@@ -401,6 +406,9 @@ export async function deleteMaster(table, id) {
     persistMock();
     return;
   }
-  const { error } = await supabase.from(table).delete().eq('id', id);
-  if (error) throw error;
+  const { data, error } = await supabase.from(table).delete().eq('id', id).select('id');
+  // 0 baris terhapus = RLS memblok / item sudah hilang — jangan dianggap sukses.
+  if (!error && (!data || data.length === 0)) {
+    throw new Error('Item tidak terhapus (0 baris). Kemungkinan item sudah tidak ada — refresh halaman.');
+  }
 }
