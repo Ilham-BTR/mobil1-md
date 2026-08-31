@@ -1,5 +1,5 @@
 {
-  "0": "visits.js",
+  "0": "_mock.js",
   "1": "UI Components & Forms",
   "2": "Product Docs & Specs",
   "3": "DB Schema setup_fresh",
@@ -51,5 +51,6 @@
   "49": "visit_list",
   "50": "master.js",
   "51": "0018_egress_log.sql",
-  "52": "0019_unique_visit_per_day.sql"
+  "52": "0019_unique_visit_per_day.sql",
+  "53": "migrate.mjs"
 }

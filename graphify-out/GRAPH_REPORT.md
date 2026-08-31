@@ -1,21 +1,21 @@
 # Graph Report - Mobil1  (2026-08-31)
 
 ## Corpus Check
-- 62 files · ~243,575 words
+- 63 files · ~243,953 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 555 nodes · 757 edges · 53 communities (46 shown, 7 thin omitted)
+- 560 nodes · 761 edges · 54 communities (47 shown, 7 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 9 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `abf69ac1`
+- Built from commit: `7d07cc68`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- visits.js
+- _mock.js
 - UI Components & Forms
 - Product Docs & Specs
 - DB Schema setup_fresh
@@ -54,6 +54,7 @@
 - visit_list
 - master.js
 - 0018_egress_log.sql
+- migrate.mjs
 
 ## God Nodes (most connected - your core abstractions)
 1. `persistMock()` - 19 edges
@@ -87,11 +88,11 @@
 - **Region-Kota-Bengkel-Visit Data Hierarchy** — prd_entity_regions, prd_entity_bengkels, prd_entity_distributors, prd_entity_visits [EXTRACTED 1.00]
 - **Presigned Photo Upload Pipeline** — readme_lib_storage, prd_edge_function_get_upload_url, readme_s3_object_storage, prd_backblaze_b2 [EXTRACTED 1.00]
 
-## Communities (53 total, 7 thin omitted)
+## Communities (54 total, 7 thin omitted)
 
-### Community 0 - "visits.js"
-Cohesion: 0.06
-Nodes (42): StoredImage(), checkIn(), checkOut(), deleteAttendance(), fetchAttendances(), fetchAttendancesByMonth(), fetchAttendancesByRange(), fetchTodayAttendance() (+34 more)
+### Community 0 - "_mock.js"
+Cohesion: 0.07
+Nodes (35): StoredImage(), checkIn(), checkOut(), deleteAttendance(), fetchAttendances(), fetchAttendancesByMonth(), fetchAttendancesByRange(), fetchTodayAttendance() (+27 more)
 
 ### Community 1 - "UI Components & Forms"
 Cohesion: 0.04
@@ -214,27 +215,31 @@ Cohesion: 0.25
 Nodes (7): bengkels, distributors, kotas, profiles, regions, visits, visit_list
 
 ### Community 50 - "master.js"
-Cohesion: 0.14
-Nodes (26): fetchAllPaged(), addMaster(), bengkelCacheKey(), bulkAddBengkels(), bulkAddMaster(), bulkCreateMDs(), bustMasterCache(), cachedMaster() (+18 more)
+Cohesion: 0.10
+Nodes (33): fetchAllPaged(), addMaster(), bengkelCacheKey(), bulkAddBengkels(), bulkAddMaster(), bulkCreateMDs(), bustMasterCache(), cachedMaster() (+25 more)
+
+### Community 53 - "migrate.mjs"
+Cohesion: 0.40
+Nodes (3): applied, BASELINE, files
 
 ## Knowledge Gaps
-- **147 isolated node(s):** `__dirname`, `cfgPath`, `cfg`, `logFile`, `supabase` (+142 more)
+- **150 isolated node(s):** `__dirname`, `cfgPath`, `cfg`, `logFile`, `supabase` (+145 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **7 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `MOCK_MODE` connect `visits.js` to `UI Components & Forms`, `master.js`?**
+- **Why does `MOCK_MODE` connect `_mock.js` to `UI Components & Forms`, `master.js`?**
   _High betweenness centrality (0.012) - this node is a cross-community bridge._
 - **Why does `dependencies` connect `Frontend Dependencies` to `Build Tooling`?**
   _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **Why does `Supabase (Postgres + Auth)` connect `Product Docs & Specs` to `Photo Upload Pipeline`?**
   _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **What connects `__dirname`, `cfgPath`, `cfg` to the rest of the system?**
-  _147 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `visits.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.06400409626216078 - nodes in this community are weakly interconnected._
+  _150 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `_mock.js` be split into smaller, more focused modules?**
+  _Cohesion score 0.07058001397624039 - nodes in this community are weakly interconnected._
 - **Should `UI Components & Forms` be split into smaller, more focused modules?**
   _Cohesion score 0.03571428571428571 - nodes in this community are weakly interconnected._
 - **Should `Product Docs & Specs` be split into smaller, more focused modules?**
