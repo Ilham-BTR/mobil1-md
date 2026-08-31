@@ -49,7 +49,15 @@ async function dumpTable(name) {
   const batch = 1000;
   for (let from = 0; ; from += batch) {
     const { data, error } = await supabase.from(name).select('*').range(from, from + batch - 1);
-    if (error) throw new Error(`Tabel ${name}: ${error.message}`);
+    if (error) {
+      // Tabel belum ada (mis. DB lagi rusak/baru di-reset) -> lewati dgn peringatan,
+      // jangan gagalkan backup keseluruhan (auth.users & tabel lain tetap terselamatkan).
+      if (/does not exist|Could not find the table|schema cache/i.test(error.message)) {
+        console.warn(`  PERINGATAN: tabel ${name} tidak ada — dilewati.`);
+        return [];
+      }
+      throw new Error(`Tabel ${name}: ${error.message}`);
+    }
     rows.push(...data);
     if (data.length < batch) break;
   }
