@@ -46,12 +46,14 @@ const RED_PIN_ICON  = makePinIcon('#dc2626', true);
 const BLUE_PIN_ICON = makePinIcon('#3b82f6', true);
 
 // Tile peta. Kalau VITE_MAPBOX_TOKEN diisi → Mapbox "streets" (terang & detail);
-// kalau belum → fallback ke CARTO versi TERANG (gratis, tanpa key).
+// kalau belum → fallback ke tile OSM standar (gratis, tanpa key).
+// CARTO basemaps tidak dipakai lagi: sekarang wajib API key (muncul
+// watermark "API KEY REQUIRED" di peta).
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 const TILE_URL = MAPBOX_TOKEN
   ? `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`
-  : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-const TILE_ATTR = MAPBOX_TOKEN ? '&copy; Mapbox &copy; OpenStreetMap' : '&copy; CARTO &copy; OSM';
+  : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TILE_ATTR = MAPBOX_TOKEN ? '&copy; Mapbox &copy; OpenStreetMap' : '&copy; OpenStreetMap contributors';
 
 // Kunci scroll body pakai COUNTER, bukan simpan/restore nilai lama. Pola lama
 // (const prev = body.style.overflow) bocor kalau modal bertumpuk: modal terakhir
