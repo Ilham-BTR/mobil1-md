@@ -5084,6 +5084,17 @@
       "source_location": "L22"
     },
     {
+      "id": "supabase_migrations_0020_repair_tracking",
+      "label": "0020_repair_tracking.sql",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "0020_repair_tracking.sql",
+      "file_type": "code",
+      "norm_label": "0020_repair_tracking.sql",
+      "source_file": "supabase/migrations/0020_repair_tracking.sql",
+      "source_location": null
+    },
+    {
       "id": "package_dependencies",
       "label": "dependencies",
       "_origin": "ast",
@@ -15234,5 +15245,5 @@
       "source_file": "README.md"
     }
   ],
-  "built_at_commit": "b4e149372b0e81655839c233c793aaef90560878"
+  "built_at_commit": "4bdba630d187f9ef03f71396f1b21521429cda58"
 }

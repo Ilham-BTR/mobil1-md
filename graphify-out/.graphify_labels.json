@@ -52,5 +52,6 @@
   "50": "master.js",
   "51": "0018_egress_log.sql",
   "52": "0019_unique_visit_per_day.sql",
-  "53": "migrate.mjs"
+  "53": "migrate.mjs",
+  "54": "0020_repair_tracking.sql"
 }
