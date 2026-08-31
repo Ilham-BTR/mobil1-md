@@ -1,4 +1,4 @@
--- 0019: 1 MD maksimal 1 visit per bengkel per hari (auto-migration).
+-- 0019: 1 MD maksimal 1 visit per bengkel per hari.
 -- Catatan: kalau sudah ada data duplikat lama, CREATE UNIQUE INDEX gagal.
 -- Cek dulu (jalankan manual di SQL Editor sebelum migrasi ini):
 --   select md_id, bengkel_id, visit_date, count(*)
