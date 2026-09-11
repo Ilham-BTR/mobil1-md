@@ -1269,7 +1269,9 @@ const PhotoTile = ({ label, photo, onChange, required, example, hint }) => {
 
   return (
     <div className="relative group">
-      <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5 font-medium">
+      {/* min-h tetap 2 baris: label panjang (mis. "Poster Brand Campaign & Product")
+          tak mendorong tile turun, jadi tile di satu grid rata atas-bawah */}
+      <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5 font-medium min-h-[24px] leading-tight">
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </div>
       <button
@@ -1314,7 +1316,7 @@ const PhotoTile = ({ label, photo, onChange, required, example, hint }) => {
       </button>
       <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={handleSelect} className="hidden" />
       {!hasPhoto && (
-        <p className="text-[9px] text-zinc-600 mt-1 text-center">{example ? 'Ketuk untuk lihat contoh' : 'Ketuk untuk mulai'}</p>
+        <p className="text-[9px] text-zinc-600 mt-1 text-center min-h-[13px]">{example ? 'Ketuk untuk lihat contoh' : 'Ketuk untuk mulai'}</p>
       )}
       {showExample && (
         <div className="fixed inset-0 z-[2000] bg-black/90 flex flex-col items-center justify-center p-4" onClick={() => setShowExample(false)}>
@@ -3181,12 +3183,12 @@ function VisitForm({ currentMD, bengkels, bengkelsLoading, regions, kotas, distr
 
       <Section title="Dokumentasi Foto" subtitle={`${photoCount} / ${PHOTO_KEYS.length} foto`} icon={Camera}>
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Saat Tiba</div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <PhotoTile label="Foto In" required example="/contoh/foto-in.jpg" hint="Pastikan foto terlihat shopsign / nama bengkel" photo={form.photos.in} onChange={v => setPhoto('in', v)} />
         </div>
 
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Tampak Depan Bengkel</div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <PhotoTile label="Tampak Depan" required example="/contoh/tampak-depan.jpg" photo={form.photos.tampakDepan} onChange={v => setPhoto('tampakDepan', v)} />
         </div>
 
@@ -3209,7 +3211,7 @@ function VisitForm({ currentMD, bengkels, bengkelsLoading, regions, kotas, distr
         </div>
 
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Saat Pulang</div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <PhotoTile label="Foto Out" required hint="Pastikan foto terlihat shopsign / nama bengkel" photo={form.photos.out} onChange={v => setPhoto('out', v)} />
         </div>
       </Section>
