@@ -3190,12 +3190,20 @@ function VisitForm({ currentMD, bengkels, bengkelsLoading, regions, kotas, distr
           <PhotoTile label="Tampak Depan" required example="/contoh/tampak-depan.jpg" photo={form.photos.tampakDepan} onChange={v => setPhoto('tampakDepan', v)} />
         </div>
 
-        <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Dokumentasi POSM</div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Dokumentasi POSM — Spanduk</div>
+        <div className="grid grid-cols-2 gap-3">
           <PhotoTile label="Spanduk Biru" example="/contoh/spanduk-biru.jpg" photo={form.photos.spandukBefore} onChange={v => setPhoto('spandukBefore', v)} />
           <PhotoTile label="Spanduk Putih" example="/contoh/spanduk-putih.jpg" photo={form.photos.spandukPutih} onChange={v => setPhoto('spandukPutih', v)} />
+        </div>
+
+        <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Dokumentasi POSM — Poster</div>
+        <div className="grid grid-cols-2 gap-3">
           <PhotoTile label="Poster Biru" example="/contoh/poster-biru.jpg" photo={form.photos.posterBefore} onChange={v => setPhoto('posterBefore', v)} />
           <PhotoTile label="Poster Putih" example="/contoh/poster-putih.jpg" photo={form.photos.posterPutih} onChange={v => setPhoto('posterPutih', v)} />
+        </div>
+
+        <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Dokumentasi POSM — Poster NCP & Brand Campaign</div>
+        <div className="grid grid-cols-2 gap-3">
           <PhotoTile label="Poster NCP" example="/contoh/poster-putih.jpg" photo={form.photos.posterNcp} onChange={v => setPhoto('posterNcp', v)} />
           <PhotoTile label="Poster Brand Campaign & Product" example="/contoh/poster-biru.jpg" photo={form.photos.posterBcp} onChange={v => setPhoto('posterBcp', v)} />
         </div>
