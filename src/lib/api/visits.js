@@ -11,6 +11,7 @@ export const VISIT_PHOTO_COLS = [
   'photo_tampak_depan', 'photo_in', 'photo_out',
   'photo_spanduk_before', 'photo_spanduk_putih', 'photo_spanduk_after',
   'photo_poster_before', 'photo_poster_putih', 'photo_poster_after',
+  'photo_poster_ncp', 'photo_poster_bcp',
   'photo_delivery_gimmick', 'photo_deploy_planogram',
 ];
 

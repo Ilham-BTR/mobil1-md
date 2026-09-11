@@ -102,6 +102,8 @@ export const VISIT_PHOTO_MAP = {
   posterBefore:   { col: 'photo_poster_before',    path: 'poster-before' },
   posterPutih:    { col: 'photo_poster_putih',     path: 'poster-putih' },
   posterAfter:    { col: 'photo_poster_after',     path: 'poster-after' },
+  posterNcp:      { col: 'photo_poster_ncp',       path: 'poster-ncp' },
+  posterBcp:      { col: 'photo_poster_bcp',       path: 'poster-bcp' },
   deliveryGimmick:{ col: 'photo_delivery_gimmick', path: 'delivery-gimmick' },
   deployPlanogram:{ col: 'photo_deploy_planogram', path: 'deploy-planogram' },
 };

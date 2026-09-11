@@ -1,16 +1,16 @@
-# Graph Report - Mobil1  (2026-09-01)
+# Graph Report - Mobil1  (2026-09-11)
 
 ## Corpus Check
-- 67 files · ~246,976 words
+- 68 files · ~247,571 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 577 nodes · 777 edges · 57 communities (50 shown, 7 thin omitted)
+- 587 nodes · 798 edges · 57 communities (50 shown, 7 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 11 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `eae77b7f`
+- Built from commit: `6e26771c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -20,8 +20,8 @@
 - master.js
 - Fresh Setup Schema
 - Seed Generator Scripts
-- package.json
 - dependencies
+- laporan_visit
 - import-ardiansyah.mjs
 - import-visits.mjs
 - 0001_schema.sql
@@ -99,11 +99,11 @@ Nodes (24): RFC-4180, ALL_SUBTYPES, App(), BENGKEL_ICON, BLUE_PIN_ICON, COLUMN_A
 
 ### Community 1 - "visits.js"
 Cohesion: 0.06
-Nodes (43): StoredImage(), checkIn(), checkOut(), deleteAttendance(), fetchAttendances(), fetchAttendancesByMonth(), fetchAttendancesByRange(), fetchTodayAttendance() (+35 more)
+Nodes (42): StoredImage(), checkIn(), checkOut(), deleteAttendance(), fetchAttendances(), fetchAttendancesByMonth(), fetchAttendancesByRange(), fetchTodayAttendance() (+34 more)
 
 ### Community 2 - "master.js"
 Cohesion: 0.14
-Nodes (25): addMaster(), bengkelCacheKey(), bulkAddBengkels(), bulkAddMaster(), bulkCreateMDs(), bustMasterCache(), cachedMaster(), deleteMaster() (+17 more)
+Nodes (26): fetchAllPaged(), addMaster(), bengkelCacheKey(), bulkAddBengkels(), bulkAddMaster(), bulkCreateMDs(), bustMasterCache(), cachedMaster() (+18 more)
 
 ### Community 3 - "Fresh Setup Schema"
 Cohesion: 0.12
@@ -113,13 +113,13 @@ Nodes (21): public.handle_new_user, bengkels, bengkels_set_updated_at, distribut
 Cohesion: 0.08
 Nodes (24): bengkelChunks, bengkels, bengkelsCsv, codeSeen, distributors, distributorsCsv, distSeen, ensureKota() (+16 more)
 
-### Community 5 - "package.json"
-Cohesion: 0.09
-Nodes (21): autoprefixer, devDependencies, autoprefixer, postcss, tailwindcss, vite, @vitejs/plugin-basic-ssl, @vitejs/plugin-react (+13 more)
+### Community 5 - "dependencies"
+Cohesion: 0.05
+Nodes (42): autoprefixer, browser-image-compression, leaflet, lucide-react, dependencies, browser-image-compression, leaflet, lucide-react (+34 more)
 
-### Community 6 - "dependencies"
-Cohesion: 0.10
-Nodes (21): browser-image-compression, leaflet, lucide-react, dependencies, browser-image-compression, leaflet, lucide-react, react (+13 more)
+### Community 6 - "laporan_visit"
+Cohesion: 0.47
+Nodes (9): laporan_visit, bengkels, distributors, kotas, profiles, regions, visits, visit_details (+1 more)
 
 ### Community 7 - "import-ardiansyah.mjs"
 Cohesion: 0.11
@@ -243,8 +243,6 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `MOCK_MODE` connect `visits.js` to `App.jsx`, `master.js`?**
   _High betweenness centrality (0.011) - this node is a cross-community bridge._
-- **Why does `dependencies` connect `dependencies` to `package.json`?**
-  _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **Why does `Supabase (Postgres + Auth)` connect `Mobil1 POSM Tracker` to `Backblaze B2 Photo Storage`?**
   _High betweenness centrality (0.003) - this node is a cross-community bridge._
 - **What connects `__dirname`, `cfgPath`, `cfg` to the rest of the system?**
@@ -252,6 +250,8 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `App.jsx` be split into smaller, more focused modules?**
   _Cohesion score 0.03571428571428571 - nodes in this community are weakly interconnected._
 - **Should `visits.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.0625 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06400409626216078 - nodes in this community are weakly interconnected._
 - **Should `master.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.14285714285714285 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.135632183908046 - nodes in this community are weakly interconnected._
+- **Should `Fresh Setup Schema` be split into smaller, more focused modules?**
+  _Cohesion score 0.11954022988505747 - nodes in this community are weakly interconnected._

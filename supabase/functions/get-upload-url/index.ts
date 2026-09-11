@@ -44,6 +44,8 @@ const ALLOWED_PHOTO_KEYS = [
   "poster-before",
   "poster-putih",
   "poster-after",
+  "poster-ncp",
+  "poster-bcp",
   "delivery-gimmick",
   "deploy-planogram",
 ];

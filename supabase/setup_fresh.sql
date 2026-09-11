@@ -110,6 +110,8 @@ create table if not exists visits (
   photo_spanduk_after text,
   photo_poster_before text,
   photo_poster_after text,
+  photo_poster_ncp text,       -- migrasi 0021
+  photo_poster_bcp text,       -- Poster Brand Campaign & Product (migrasi 0021)
   photo_delivery_gimmick text,
   photo_deploy_planogram text,
   created_at timestamptz default now(),

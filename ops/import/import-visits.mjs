@@ -10,7 +10,7 @@ const DO_INSERT = process.argv.includes('--insert');
 const FILE = process.argv.find(a => a.startsWith('--file='))?.slice(7) || 'C:/Users/Ilham_PC/Downloads/Template_Import_Visit.xlsx';
 
 const STATUS_OK = ['Pemasangan', 'Revisit'];
-const URLCOLS = { url_tampak_depan:'photo_tampak_depan', url_foto_in:'photo_in', url_foto_out:'photo_out', url_spanduk_before:'photo_spanduk_before', url_spanduk_putih:'photo_spanduk_putih', url_spanduk_after:'photo_spanduk_after', url_poster_before:'photo_poster_before', url_poster_putih:'photo_poster_putih', url_poster_after:'photo_poster_after', url_delivery_gimmick:'photo_delivery_gimmick', url_deploy_planogram:'photo_deploy_planogram' };
+const URLCOLS = { url_tampak_depan:'photo_tampak_depan', url_foto_in:'photo_in', url_foto_out:'photo_out', url_spanduk_before:'photo_spanduk_before', url_spanduk_putih:'photo_spanduk_putih', url_spanduk_after:'photo_spanduk_after', url_poster_before:'photo_poster_before', url_poster_putih:'photo_poster_putih', url_poster_after:'photo_poster_after', url_poster_ncp:'photo_poster_ncp', url_poster_bcp:'photo_poster_bcp', url_delivery_gimmick:'photo_delivery_gimmick', url_deploy_planogram:'photo_deploy_planogram' };
 const T = (v) => (v == null ? '' : String(v).trim());
 function toDateStr(v) {
   if (v === '' || v == null) return '';

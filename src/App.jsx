@@ -538,6 +538,8 @@ const PHOTO_LABELS = {
   photo_poster_before:   'Poster Biru',
   photo_poster_putih:    'Poster Putih',
   photo_poster_after:    'Poster After',
+  photo_poster_ncp:      'Poster NCP',
+  photo_poster_bcp:      'Poster Brand Campaign & Product',
   photo_delivery_gimmick:'Delivery Gimmick',
   photo_deploy_planogram:'Deploy Planogram',
 };
@@ -2827,7 +2829,7 @@ function MDDashboard({ currentMD, visits, bengkels, kotas }) {
 
 function VisitForm({ currentMD, bengkels, bengkelsLoading, regions, kotas, distributors, onSubmitted, onNeedAbsen, onBengkelCoords }) {
   const DRAFT_KEY = `visitDraft:${currentMD.id}`;
-  const emptyPhotos = { tampakDepan: null, in: null, out: null, spandukBefore: null, spandukPutih: null, spandukAfter: null, posterBefore: null, posterPutih: null, posterAfter: null, deliveryGimmick: null, deployPlanogram: null };
+  const emptyPhotos = { tampakDepan: null, in: null, out: null, spandukBefore: null, spandukPutih: null, spandukAfter: null, posterBefore: null, posterPutih: null, posterAfter: null, posterNcp: null, posterBcp: null, deliveryGimmick: null, deployPlanogram: null };
   const makeDefaultForm = () => ({
     regionId: currentMD.region_id || '',
     kotaId: '',
@@ -3194,6 +3196,8 @@ function VisitForm({ currentMD, bengkels, bengkelsLoading, regions, kotas, distr
           <PhotoTile label="Spanduk Putih" example="/contoh/spanduk-putih.jpg" photo={form.photos.spandukPutih} onChange={v => setPhoto('spandukPutih', v)} />
           <PhotoTile label="Poster Biru" example="/contoh/poster-biru.jpg" photo={form.photos.posterBefore} onChange={v => setPhoto('posterBefore', v)} />
           <PhotoTile label="Poster Putih" example="/contoh/poster-putih.jpg" photo={form.photos.posterPutih} onChange={v => setPhoto('posterPutih', v)} />
+          <PhotoTile label="Poster NCP" example="/contoh/poster-putih.jpg" photo={form.photos.posterNcp} onChange={v => setPhoto('posterNcp', v)} />
+          <PhotoTile label="Poster Brand Campaign & Product" example="/contoh/poster-biru.jpg" photo={form.photos.posterBcp} onChange={v => setPhoto('posterBcp', v)} />
         </div>
 
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-5 mb-2 pt-4 border-t border-zinc-800">Saat Pulang</div>
