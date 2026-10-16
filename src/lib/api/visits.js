@@ -4,7 +4,7 @@ import { supabase, MOCK_MODE } from '../supabase';
 import { uploadAllVisitPhotos } from '../storage';
 import { deletePhotosByVisit } from '../photoStore';
 import { MOCK_DATA, persistMock } from './_mock';
-import { fetchAllPaged } from './_helpers';
+import { fetchAllPaged, fetchPagedProgressively } from './_helpers';
 
 // Kolom foto di baris visit (URL R2) — daftar TIDAK menariknya lagi (egress).
 export const VISIT_PHOTO_COLS = [
@@ -23,20 +23,27 @@ const countPhotos = (v) => VISIT_PHOTO_COLS.filter(k => v[k]).length;
  * Fallback otomatis ke visit_details bila migrasi 0017 belum dijalankan.
  */
 export async function fetchVisits({ mdId, month } = {}) {
+  return fetchVisitsProgressive({ mdId, month });
+}
+
+export async function fetchVisitsProgressive({ mdId, month, onPage, onError, batch = 1000 } = {}) {
   if (MOCK_MODE) {
-    let v = [...MOCK_DATA.visits];
-    if (mdId) v = v.filter(x => x.md_id === mdId);
-    if (month) v = v.filter(x => x.visit_date.startsWith(month));
-    return v
+    let rows = [...MOCK_DATA.visits];
+    if (mdId) rows = rows.filter(x => x.md_id === mdId);
+    if (month) rows = rows.filter(x => x.visit_date.startsWith(month));
+    rows = rows
       .sort((a, b) => b.visit_date.localeCompare(a.visit_date))
       .map(x => ({ ...x, photo_count: countPhotos(x) }));
+    onPage?.(rows, { offset: 0, firstPage: true, done: true });
+    return rows;
   }
 
   const buildQuery = (view) => () => {
     let query = supabase
       .from(view)
       .select('*')
-      .order('visit_date', { ascending: false });
+      .order('visit_date', { ascending: false })
+      .order('id', { ascending: false });
     if (mdId) query = query.eq('md_id', mdId);
     if (month) {
       const start = month + '-01';
@@ -47,12 +54,13 @@ export async function fetchVisits({ mdId, month } = {}) {
     }
     return query;
   };
+  const options = { batch, onPage, onError };
+
   try {
-    return await fetchAllPaged(buildQuery('visit_list'));
+    return await fetchPagedProgressively(buildQuery('visit_list'), options);
   } catch (e) {
-    // View belum ada (migrasi 0017 belum jalan) -> perilaku lama.
     console.warn('visit_list tak tersedia, fallback visit_details:', e.message);
-    const rows = await fetchAllPaged(buildQuery('visit_details'));
+    const rows = await fetchPagedProgressively(buildQuery('visit_details'), options);
     return rows.map(x => ({ ...x, photo_count: countPhotos(x) }));
   }
 }

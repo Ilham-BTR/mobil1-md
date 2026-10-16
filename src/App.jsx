@@ -1,4 +1,6 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { excelDateSerial } from './lib/excelDates';
+import { aggregateVisitsByMd } from './lib/visitMetrics';
 import imageCompression from 'browser-image-compression';
 import { VISIT_PHOTO_MAP } from './lib/storage';
 import {
@@ -20,6 +22,7 @@ import L from 'leaflet';
 import { MOCK_MODE } from './lib/supabase';
 import * as api from './lib/api';
 import { getPhotoURL } from './lib/photoStore';
+import CoverageViewport from './CoverageViewport';
 
 // Saklar fitur passkey/biometrik. Set true untuk menghidupkan kembali login biometrik.
 const PASSKEY_ENABLED = false;
@@ -95,116 +98,6 @@ function setColDateFormat(XLSX, ws, header, fmt) {
   if (col < 0) return;
   for (let r = 1; r <= range.e.r; r++) { const cell = ws[XLSX.utils.encode_cell({ r, c: col })]; if (cell && (cell.t === 'd' || cell.t === 'n') && cell.v != null) cell.z = fmt; }
 }
-
-// Export daftar visit ke Excel (.xlsx) — XLSX di-load dinamis (lazy)
-async function exportVisitsXlsx(visits, ctx, filename) {
-  if (!visits || visits.length === 0) return;
-  const XLSX = await import('xlsx');
-  // Daftar visit kini LEAN (tanpa URL foto, hemat egress) -> tempel kolom foto
-  // hanya saat export: tarik id+11 kolom foto untuk baris yang di-export.
-  let toExport = visits;
-  if (!visits.some(v => PHOTO_KEYS.some(k => v[k]))) {
-    try {
-      const photoMap = await api.fetchVisitPhotosMap(visits.map(v => v.id));
-      toExport = visits.map(v => ({ ...v, ...(photoMap.get(v.id) || {}) }));
-    } catch (e) {
-      console.warn('Gagal tarik foto untuk export (kolom link foto kosong):', e?.message);
-    }
-  }
-  const rows = toExport.map(v => visitToCSVRow(v, ctx));
-  const ws = XLSX.utils.json_to_sheet(rows, { cellDates: true });
-  setColDateFormat(XLSX, ws, 'tanggal', 'dd/mm/yyyy');
-  setColDateFormat(XLSX, ws, 'waktu_submit', 'dd/mm/yyyy hh:mm');
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Visits');
-  XLSX.writeFile(wb, filename);
-}
-
-// CSV export helper — RFC 4180 escaped (dipakai bila perlu CSV mentah)
-const exportToCSV = (rows, filename) => {
-  if (!rows || rows.length === 0) return;
-  const headers = Object.keys(rows[0]);
-  const escape = (v) => {
-    if (v == null) return '';
-    const s = String(v);
-    if (s.includes('"') || s.includes(',') || s.includes('\n')) {
-      return `"${s.replace(/"/g, '""')}"`;
-    }
-    return s;
-  };
-  const csv = [
-    headers.join(','),
-    ...rows.map(r => headers.map(h => escape(r[h])).join(',')),
-  ].join('\n');
-  // Prepend BOM agar Excel ID buka UTF-8 dengan benar
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-};
-
-// Serial Excel (angka) untuk tanggal/waktu -> cell jadi tipe DATE asli di Excel
-// (bisa di-sort/filter tanggal), format tampilan diatur via setColDateFormat.
-// Pakai serial (bukan objek Date) supaya bebas bug timezone SheetJS (off-by-one).
-const XL_EPOCH = Date.UTC(1899, 11, 30);
-// "YYYY-MM-DD" -> serial hari
-const excelDateSerial = (s) => {
-  if (!s) return '';
-  const [y, m, d] = String(s).slice(0, 10).split('-').map(Number);
-  if (!y || !m || !d) return '';
-  return Math.round((Date.UTC(y, m - 1, d) - XL_EPOCH) / 86400000);
-};
-// timestamp ISO (UTC) -> serial (hari + pecahan jam), ditampilkan dlm WIB (UTC+7)
-const excelDateTimeSerial = (ts) => {
-  if (!ts) return '';
-  const w = new Date(new Date(ts).getTime() + 7 * 3600000);
-  return (Date.UTC(w.getUTCFullYear(), w.getUTCMonth(), w.getUTCDate(), w.getUTCHours(), w.getUTCMinutes(), w.getUTCSeconds()) - XL_EPOCH) / 86400000;
-};
-
-// Build flat row dari visit untuk CSV export
-const visitToCSVRow = (v, ctx) => {
-  const b = ctx.bengkels.find(x => x.id === v.bengkel_id);
-  const k = b ? ctx.kotas.find(x => x.id === b.kota_id) : null;
-  const r = k ? ctx.regions.find(x => x.id === k.region_id) : null;
-  const d = ctx.distributors.find(x => x.id === v.distributor_id) || null;
-  const md = ctx.mds.find(x => x.id === v.md_id);
-  const photoCount = v.photo_count ?? PHOTO_KEYS.filter(key => v[key]).length;
-  return {
-    visit_id: v.id,
-    tanggal: excelDateSerial(v.visit_date),
-    waktu_submit: excelDateTimeSerial(v.created_at),
-    md_name: md?.full_name || v.md_name || '',
-    md_email: md?.email || v.md_email || '',
-    bengkel_code: b?.code || '',
-    bengkel_name: b?.name || v.bengkel_name || '',
-    bengkel_alamat: b?.address || '',
-    kota: k?.name || v.kota_name || '',
-    region: r?.name || v.region_name || '',
-    distributor: d?.name || v.distributor_name || '',
-    pic_name: v.pic_name || '',
-    pic_phone: v.pic_phone || '',
-    status: v.status,
-    sub_type: v.sub_type || '',
-    remarks: v.remarks || '',
-    bengkel_lat: b?.lat ?? '',
-    bengkel_lng: b?.lng ?? '',
-    visit_lat: v.visit_lat ?? '',
-    visit_lng: v.visit_lng ?? '',
-    photo_count: photoCount,
-    // Link tiap foto (URL Supabase Storage di produksi). Header = label rapi.
-    // Skip kolom legacy "after"; "before" di-rename jadi *_biru.
-    ...Object.fromEntries(PHOTO_KEYS.filter(k => !EXPORT_PHOTO_SKIP.has(k)).map(k => [
-      EXPORT_PHOTO_HEADER[k] || ('link_' + k.replace(/^photo_/, '')),   // mis. link_tampak_depan, link_spanduk_biru, ...
-      typeof v[k] === 'string' && v[k].startsWith('http') ? v[k] : (v[k] ? '(foto lokal/idb)' : ''),
-    ])),
-    created_at: v.created_at || '',
-  };
-};
 
 // Recenter map when coords change (Leaflet map doesn't react to prop changes by default)
 function RecenterMap({ lat, lng }) {
@@ -3403,7 +3296,7 @@ function VisitHistory({ visits, bengkels, kotas, distributors }) {
 // ============================================================
 // LEADERBOARD — ranking produktivitas MD (pakai data yang sudah ada)
 // ============================================================
-function LeaderboardTab({ visits, mds, regions }) {
+function LeaderboardTab({ visits, mds, regions, isLoading = false, error = '' }) {
   const monthsList = useMemo(() => {
     const set = new Set(visits.map(v => v.visit_date.slice(0, 7)));
     set.add(new Date().toISOString().slice(0, 7));
@@ -3414,22 +3307,16 @@ function LeaderboardTab({ visits, mds, regions }) {
   const [dari, setDari] = useState('');
   const [sampai, setSampai] = useState('');
 
-  const regionName = (id) => regions.find(r => r.id === id)?.name || '';
+  const regionById = useMemo(() => new Map(regions.map(r => [r.id, r])), [regions]);
+  const regionName = (id) => regionById.get(id)?.name || '';
 
   const ranked = useMemo(() => {
+    const visitMetrics = aggregateVisitsByMd(visits, dari || sampai ? null : month, { dari, sampai });
     const rows = mds.filter(m => m.active !== false).map(m => {
-      const mv = visits.filter(v => {
-        if (v.md_id !== m.id) return false;
-        if (dari || sampai) return (!dari || v.visit_date >= dari) && (!sampai || v.visit_date <= sampai);
-        return v.visit_date.startsWith(month);
-      });
-      const total = mv.length;
+      const metrics = visitMetrics.get(m.id) || { total: 0, pemasangan: 0, revisit: 0, activeDays: 0 };
       const target = m.monthly_target || 30;
-      const achievement = target > 0 ? Math.round((total / target) * 100) : 0;
-      const pemasangan = mv.filter(v => v.status === 'Pemasangan').length;
-      const revisit = mv.filter(v => v.status === 'Revisit').length;
-      const activeDays = new Set(mv.map(v => v.visit_date)).size;
-      return { md: m, total, target, achievement, pemasangan, revisit, activeDays };
+      const achievement = target > 0 ? Math.round((metrics.total / target) * 100) : 0;
+      return { md: m, ...metrics, target, achievement };
     });
     rows.sort((a, b) => metric === 'visits'
       ? (b.total - a.total) || (b.achievement - a.achievement)
@@ -3451,7 +3338,8 @@ function LeaderboardTab({ visits, mds, regions }) {
           <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display flex items-center gap-2">
             <Trophy className="w-5 h-5 text-amber-400" />Ranking MD
           </h2>
-          <p className="text-sm text-zinc-500 mt-1">{ranked.length} MD · {totalVisits} visit · {(dari || sampai) ? 'rentang tanggal' : `bulan ${monthLabel(month)}`}</p>
+          <p className="text-sm text-zinc-500 mt-1">{ranked.length} MD · {totalVisits} visit{isLoading ? ' · memuat halaman berikutnya…' : ''} · {(dari || sampai) ? 'rentang tanggal' : `bulan ${monthLabel(month)}`}</p>
+          {error && <p role="status" className="text-xs text-amber-300 mt-1">Sebagian hasil belum lengkap: {error}</p>}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-lg">
@@ -3514,56 +3402,96 @@ function AdminView({ profile }) {
   const [distributors, setDistributors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [bengkelsLoading, setBengkelsLoading] = useState(true);
+  const [visitsLoading, setVisitsLoading] = useState(true);
+  const [visitsError, setVisitsError] = useState('');
+  const [mastersReady, setMastersReady] = useState(false);
   const [detailVisitId, setDetailVisitId] = useState(null);
+  const [visitLoadError, setVisitLoadError] = useState('');
+  const [visitLoadComplete, setVisitLoadComplete] = useState(false);
+  const loadIdRef = useRef(0);
+  const lastSyncRef = useRef(null);
+  const bumpSync = (rows) => {
+    for (const visit of rows) {
+      if (visit.updated_at && (!lastSyncRef.current || visit.updated_at > lastSyncRef.current)) lastSyncRef.current = visit.updated_at;
+    }
+  };
 
-  // silent=true → refresh data tanpa memunculkan layar Loading (cegah remount &
-  // pindah section di Master Data setiap habis update).
-  const loadAll = (silent = false) => {
-    if (!silent) setLoading(true);
-    // Bengkel (~ribuan) paling berat & lama ditarik. Lepas ke latar supaya tab
-    // langsung bisa dibuka; angka yang bergantung bengkel menyusul sesaat kemudian.
+  useEffect(() => {
+    let cancelled = false;
     setBengkelsLoading(true);
     api.fetchBengkelsCached()
-      .then(b => setBengkels(b))
-      .catch(err => console.error(err))
-      .finally(() => setBengkelsLoading(false));
+      .then(rows => { if (!cancelled) setBengkels(rows); })
+      .catch(error => console.error(error))
+      .finally(() => { if (!cancelled) setBengkelsLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const loadAll = (silent = false) => {
+    const loadId = ++loadIdRef.current;
+    const isCurrent = () => loadId === loadIdRef.current;
+    if (!silent) setLoading(true);
+    setVisitsLoading(true);
+    setVisitsError('');
+    setVisitLoadError('');
+    setVisitLoadComplete(false);
 
     Promise.all([
-      api.fetchVisits(), api.fetchAccounts(),
+      api.fetchVisitsProgressive({
+        onPage: (page, { firstPage }) => {
+          if (!isCurrent()) return;
+          setVisits(previous => firstPage ? page : [...previous, ...page]);
+          if (firstPage) {
+            setVisitsLoading(false);
+            setLoading(false);
+          }
+        },
+        onError: error => {
+          if (!isCurrent()) return;
+          console.error('Memuat riwayat visit berikutnya gagal:', error);
+          setVisitLoadError(error?.message || 'Gagal memuat halaman berikutnya.');
+          setVisitsLoading(false);
+        },
+      }).then(rows => {
+        if (!isCurrent()) return;
+        bumpSync(rows);
+        setVisits(rows);
+        setVisitLoadComplete(true);
+        setVisitsLoading(false);
+        setLoading(false);
+      }),
+      api.fetchAccounts(),
       api.fetchRegions(), api.fetchKotas(), api.fetchDistributors(),
-    ]).then(([v, acc, r, k, d]) => {
-      bumpSync(v);
-      setVisits(v); setAccounts(acc); setMds(acc.filter(a => a.role === 'md'));
+    ]).then(([, acc, r, k, d]) => {
+      if (!isCurrent()) return;
+      setAccounts(acc); setMds(acc.filter(a => a.role === 'md'));
       setRegions(r); setKotas(k); setDistributors(d);
+      setMastersReady(true);
       setLoading(false);
-    }).catch(err => { console.error(err); setLoading(false); });
+    }).catch(error => {
+      if (!isCurrent()) return;
+      console.error(error);
+      setVisitsError('Gagal memuat data kunjungan. Periksa koneksi lalu coba muat ulang.');
+      setVisitsLoading(false);
+      setLoading(false);
+    });
   };
 
   useEffect(() => { loadAll(); }, []);
-
-  // ---- Delta-sync visits (egress): jangan tarik ulang ~600KB tiap perubahan.
-  // lastSync = updated_at terbesar yang sudah dimiliki; refresh cukup tarik
-  // baris updated_at > lastSync lalu merge. Trigger updated_at ada di DB.
-  const lastSyncRef = useRef(null);
-  const bumpSync = (rows) => {
-    for (const v of rows) {
-      if (v.updated_at && (!lastSyncRef.current || v.updated_at > lastSyncRef.current)) lastSyncRef.current = v.updated_at;
-    }
-  };
   const refreshVisitsDelta = async () => {
-    if (!lastSyncRef.current) return loadAll(true);
+    if (!lastSyncRef.current || !visitLoadComplete) return loadAll(true);
     try {
       const delta = await api.fetchVisitsDelta({ since: lastSyncRef.current });
       if (!delta.length) return;
       bumpSync(delta);
-      setVisits(prev => {
-        const map = new Map(prev.map(v => [v.id, v]));
-        delta.forEach(v => map.set(v.id, v));
-        return [...map.values()].sort((a, b) => b.visit_date.localeCompare(a.visit_date));
+      setVisitLoadComplete(false);
+      setVisits(previous => {
+        const byId = new Map(previous.map(visit => [visit.id, visit]));
+        for (const visit of delta) byId.set(visit.id, visit);
+        return [...byId.values()].sort((a, b) => b.visit_date.localeCompare(a.visit_date) || b.id.localeCompare(a.id));
       });
-    } catch (err) { console.error('Delta visits gagal:', err); }
+    } catch (error) { console.error('Delta visits gagal:', error); }
   };
-  // Tab kembali fokus -> tarik delta saja (murah), bukan reload penuh.
+
   useEffect(() => {
     const onVis = () => { if (document.visibilityState === 'visible') refreshVisitsDelta(); };
     document.addEventListener('visibilitychange', onVis);
@@ -3632,9 +3560,9 @@ function AdminView({ profile }) {
         ))}
       </div>
 
-      {tab === 'dashboard' && <DashboardTab visits={sVisits} mds={activeMds} onOpenVisit={openDetail} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} />}
-      {tab === 'ranking' && <LeaderboardTab visits={sVisits} mds={activeMds} regions={regions} />}
-      {tab === 'visits' && <VisitsTab visits={sVisits} mds={activeMds} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} onOpenVisit={openDetail} />}
+      {tab === 'dashboard' && <DashboardTab visits={sVisits} mds={activeMds} onOpenVisit={openDetail} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} isLoading={visitsLoading || !mastersReady} error={visitsError || visitLoadError} onRetry={() => loadAll(true)} />}
+      {tab === 'ranking' && <LeaderboardTab visits={sVisits} mds={activeMds} regions={regions} isLoading={visitsLoading} error={visitsError || visitLoadError} />}
+      {tab === 'visits' && <VisitsTab visits={sVisits} mds={activeMds} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} onOpenVisit={openDetail} isLoading={visitsLoading} loadComplete={visitLoadComplete} error={visitsError || visitLoadError} onRetry={() => loadAll(true)} />}
       {tab === 'absen' && <AdminAbsenTab mds={activeMds} allowedMdIds={allowedMdIds} isSuperAdmin={isSuperAdmin} regions={regions} />}
       {tab === 'coverage' && <CoverageTab visits={sVisits} mds={activeMds} bengkels={bengkels} kotas={kotas} regions={regions} distributors={distributors} onOpenVisit={openDetail} />}
       {tab === 'master' && <MasterTab regions={regions} kotas={kotas} distributors={distributors} bengkels={bengkels} mds={sMds} accounts={sAccounts} onChange={reloadMaster} isSuperAdmin={isSuperAdmin} canManageMaster={canManageMaster} />}
@@ -3671,7 +3599,7 @@ function OnSiteBadge({ bengkel, visit }) {
   return null; // 100–500m: netral, tidak ditampilkan agar tidak ramai
 }
 
-function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpenVisit }) {
+function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpenVisit, isLoading = false, loadComplete = true, error = '', onRetry }) {
   const [filters, setFilters] = useState({
     search: '',
     mdId: 'all',
@@ -3682,8 +3610,12 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
     dari: '',
     sampai: '',
   });
-  // Batasi jumlah baris yang di-render (hindari ribuan node DOM = freeze di HP)
   const [visibleCount, setVisibleCount] = useState(50);
+  const [normalizedSearch, setNormalizedSearch] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setNormalizedSearch(filters.search.trim().toLowerCase()), 180);
+    return () => clearTimeout(timer);
+  }, [filters.search]);
   useEffect(() => { setVisibleCount(50); }, [filters]);
 
   // Index Map (O(1)) — hindari .find per-visit (O(n*m)) yang bikin HP freeze
@@ -3696,30 +3628,32 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
   const findKota = (id) => kotaById.get(id);
   const findRegion = (id) => regionById.get(id);
   const findMD = (id) => mdById.get(id);
+  const visitSearchIndex = useMemo(() => {
+    const index = new Map();
+    for (const visit of visits) {
+      const bengkel = findBengkel(visit.bengkel_id);
+      const md = findMD(visit.md_id);
+      index.set(visit.id, `${bengkel?.code || ''} ${bengkel?.name || visit.bengkel_name || ''} ${md?.full_name || visit.md_name || ''} ${visit.pic_name || ''} ${visit.sub_type || ''}`.toLowerCase());
+    }
+    return index;
+  }, [visits, bengkelById, mdById]);
 
-  // Build filtered list
   const filtered = useMemo(() => {
     return visits.filter(v => {
-      const b = findBengkel(v.bengkel_id);
-      const k = b ? findKota(b.kota_id) : null;
-      const md = findMD(v.md_id);
+      const bengkel = findBengkel(v.bengkel_id);
+      const kota = bengkel ? findKota(bengkel.kota_id) : null;
 
       if (filters.mdId !== 'all' && v.md_id !== filters.mdId) return false;
-      if (filters.regionId !== 'all' && k?.region_id !== filters.regionId) return false;
+      if (filters.regionId !== 'all' && kota?.region_id !== filters.regionId) return false;
       if (filters.distributorId !== 'all' && v.distributor_id !== filters.distributorId) return false;
       if (filters.status !== 'all' && v.status !== filters.status) return false;
       if (filters.month !== 'all' && !v.visit_date.startsWith(filters.month)) return false;
       if (filters.dari && v.visit_date < filters.dari) return false;
       if (filters.sampai && v.visit_date > filters.sampai) return false;
-
-      if (filters.search.trim()) {
-        const q = filters.search.toLowerCase();
-        const haystack = `${b?.code || ''} ${b?.name || v.bengkel_name || ''} ${md?.full_name || v.md_name || ''} ${v.pic_name || ''} ${v.sub_type || ''}`.toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
+      if (normalizedSearch && !visitSearchIndex.get(v.id)?.includes(normalizedSearch)) return false;
       return true;
-    }).sort((a, b) => b.visit_date.localeCompare(a.visit_date) || (b.created_at || '').localeCompare(a.created_at || ''));
-  }, [visits, filters, bengkels, kotas, mds]);
+    });
+  }, [visits, filters, bengkelById, kotaById, normalizedSearch, visitSearchIndex]);
 
   const availableMonths = useMemo(() => {
     const set = new Set(visits.map(v => v.visit_date.slice(0, 7)));
@@ -3727,8 +3661,13 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
   }, [visits]);
 
   const handleExport = async () => {
-    const ctx = { bengkels, kotas, regions, distributors, mds };
-    await exportVisitsXlsx(filtered, ctx, `visits_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    if (isLoading || !loadComplete) return;
+    const module = await import('./lib/visitExport');
+    const ctx = {
+      bengkelById, kotaById, regionById, distributorById,
+      mdById, fetchVisitPhotosMap: api.fetchVisitPhotosMap,
+    };
+    await module.exportVisitsXlsx(filtered, ctx, `visits_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   return (
@@ -3736,11 +3675,12 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
       <div className="mb-5 flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display">Daftar Visit</h2>
-          <p className="text-sm text-zinc-500 mt-1">{filtered.length} dari {visits.length} visit · klik untuk lihat detail</p>
+          <p className="text-sm text-zinc-500 mt-1">{filtered.length} dari {visits.length} visit{isLoading ? ' · memuat halaman berikutnya…' : ''} · klik untuk lihat detail</p>
+          {error && <div className="mt-2 text-xs text-amber-300" role="status">Sebagian riwayat belum lengkap: {error} <button className="underline" onClick={onRetry}>Coba lagi</button></div>}
         </div>
-        <Button variant="secondary" onClick={handleExport} disabled={filtered.length === 0}>
-          <Download className="w-4 h-4" />Export Excel ({filtered.length})
-        </Button>
+          <Button variant="secondary" onClick={handleExport} disabled={filtered.length === 0 || isLoading || !loadComplete}>
+            <Download className="w-4 h-4" />{loadComplete ? `Export Excel (${filtered.length})` : 'Memuat data untuk export…'}
+          </Button>
       </div>
 
       {/* Filter bar */}
@@ -3783,7 +3723,7 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
       {/* List */}
       {filtered.length === 0 ? (
         <div className="text-center py-12 text-zinc-500 text-sm bg-zinc-900/30 border border-zinc-800 rounded-xl">
-          Tidak ada visit yang sesuai filter.
+          {isLoading ? 'Memuat riwayat kunjungan…' : 'Tidak ada visit yang sesuai filter.'}
         </div>
       ) : (
         <div className="space-y-1.5">
@@ -3832,7 +3772,7 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
   );
 }
 
-function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onOpenVisit }) {
+function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onOpenVisit, isLoading = false, error = '', onRetry }) {
   const [filters, setFilters] = useState({ month: 'all', mdId: 'all', regionId: 'all', distributorId: 'all', dari: '', sampai: '' });
 
   const availableMonths = useMemo(() => {
@@ -3884,9 +3824,13 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
     const f = (m.full_name || '').split(' ')[0];
     acc[f] = (acc[f] || 0) + 1; return acc;
   }, {});
-  const regionName = (id) => regions.find(r => r.id === id)?.name || '';
+  const regionById = useMemo(() => new Map(regions.map(region => [region.id, region])), [regions]);
+  const regionName = (id) => regionById.get(id)?.name || '';
+  const filteredMetrics = useMemo(() => aggregateVisitsByMd(filteredVisits, null), [filteredVisits]);
+  const adminBengkelById = useMemo(() => new Map(bengkels.map(bengkel => [bengkel.id, bengkel])), [bengkels]);
+  const adminMdById = useMemo(() => new Map(mds.map(md => [md.id, md])), [mds]);
   const chartData = relevantMDs.map(md => {
-    const actual = filteredVisits.filter(v => v.md_id === md.id).length;
+    const actual = filteredMetrics.get(md.id)?.total || 0;
     const target = md.monthly_target || 30;
     const parts = (md.full_name || '—').split(' ');
     const shortName = firstNameCount[parts[0]] > 1 ? parts.slice(0, 2).join(' ') : parts[0];
@@ -3923,9 +3867,10 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
   const colorForRegion = (r) => regionColor[r] || '#71717a';
 
   const handleExport = async () => {
-    const ctx = { bengkels, kotas, regions, distributors, mds };
-    const fname = `visits_${filters.month}_${new Date().toISOString().slice(0, 10)}.xlsx`;
-    await exportVisitsXlsx(filteredVisits, ctx, fname);
+    if (isLoading) return;
+    const module = await import('./lib/visitExport');
+    const ctx = { bengkelById, kotaById, regionById, distributorById: new Map(distributors.map(d => [d.id, d])), mdById: new Map(mds.map(m => [m.id, m])), fetchVisitPhotosMap: api.fetchVisitPhotosMap };
+    await module.exportVisitsXlsx(filteredVisits, ctx, `visits_${filters.month}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   // Recent 5 visits dari filter
@@ -3938,10 +3883,11 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
       <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
         <div>
           <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display">Dashboard</h2>
-          <p className="text-sm text-zinc-500 mt-1">Performa tracking POSM · {filteredVisits.length} visit ter-filter</p>
+          <p className="text-sm text-zinc-500 mt-1">Performa tracking POSM · {filteredVisits.length} visit ter-filter{isLoading ? ' · memuat halaman berikutnya…' : ''}</p>
+          {error && <div className="mt-2 text-xs text-amber-300" role="status">Sebagian riwayat belum lengkap: {error} <button className="underline" onClick={onRetry}>Coba lagi</button></div>}
         </div>
-        <Button variant="secondary" onClick={handleExport} disabled={filteredVisits.length === 0}>
-          <Download className="w-4 h-4" />Export Excel ({filteredVisits.length})
+        <Button variant="secondary" onClick={handleExport} disabled={filteredVisits.length === 0 || isLoading}>
+          <Download className="w-4 h-4" />{isLoading ? 'Memuat data untuk export…' : `Export Excel (${filteredVisits.length})`}
         </Button>
       </div>
 
@@ -4042,8 +3988,8 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
         <Section title="Visit Terbaru" subtitle="Klik untuk lihat detail · 5 terbaru sesuai filter" icon={ClipboardList}>
           <div className="space-y-1.5">
             {recentVisits.map(v => {
-              const b = bengkels.find(x => x.id === v.bengkel_id);
-              const md = mds.find(m => m.id === v.md_id);
+              const b = adminBengkelById.get(v.bengkel_id);
+              const md = adminMdById.get(v.md_id);
               const photoCount = v.photo_count ?? PHOTO_KEYS.filter(key => v[key]).length;
               return (
                 <button key={v.id} onClick={() => onOpenVisit?.(v.id)}
@@ -4067,33 +4013,42 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
 
 const MD_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#a855f7', '#ec4899', '#06b6d4', '#84cc16'];
 
-// Fit map ke semua titik visit
-function FitToVisits({ points }) {
+// Fit bounds when the map's complete data set changes, but preserve the user's
+// zoom and pan when only the drawing budget changes.
+function FitToVisits({ points, boundsKey = points }) {
   const map = useMap();
+  const keyRef = useRef(null);
   useEffect(() => {
-    if (points.length === 0) return;
+    if (points.length === 0 || keyRef.current === boundsKey) return;
+    keyRef.current = boundsKey;
     if (points.length === 1) {
       map.flyTo(points[0], 13, { duration: 0.6 });
     } else {
       const bounds = L.latLngBounds(points);
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
     }
-  }, [JSON.stringify(points), map]);
+  }, [boundsKey, map, points]);
   return null;
 }
 
-// Icon marker lokasi bengkel — kotak abu-abu, dibedakan dari titik visit (bulat warna MD)
+// Icon marker lokasi bengkel — kotak abu-abu, dibedakan dari titik visit (bulat warna MD)// Icon marker lokasi bengkel — kotak abu-abu, dibedakan dari titik visit (bulat warna MD)
 const BENGKEL_ICON = L.divIcon({
   className: 'coverage-bengkel',
   html: `<div style="width:11px;height:11px;border-radius:50%;background:#0a0a0a;border:1.5px solid #f4f4f5;opacity:0.95;box-shadow:0 0 4px rgba(0,0,0,0.6);"></div>`,
   iconSize: [11, 11],
   iconAnchor: [5.5, 5.5],
 });
-const BENGKEL_CAP = 2000; // batas render biar peta tak freeze
+const COVERAGE_MARKER_CAP = 500;
 
 function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOpenVisit }) {
   const [filters, setFilters] = useState({ mdId: 'all', regionId: 'all', distributorId: 'all', month: 'all', dari: '', sampai: '' });
   const [showBengkels, setShowBengkels] = useState(false);
+  const [mapBounds, setMapBounds] = useState(null);
+  const [mapZoom, setMapZoom] = useState(5);
+  const handleBoundsChange = useCallback((bounds, zoom) => {
+    setMapBounds(previous => previous && previous.equals(bounds) ? previous : bounds);
+    setMapZoom(previous => previous === zoom ? previous : zoom);
+  }, []);
 
   // Index Map (O(1)) — hindari .find per-visit (O(n*m)) yang bikin HP freeze.
   const bengkelById = useMemo(() => new Map(bengkels.map(b => [b.id, b])), [bengkels]);
@@ -4112,7 +4067,7 @@ function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOp
   }), [visits, bengkelById, kotaById]);
 
   const filtered = useMemo(() => enriched.filter(v => {
-    if (!v.visit_lat || !v.visit_lng) return false;
+    if (v.visit_lat == null || v.visit_lng == null) return false;
     if (filters.dari || filters.sampai) {
       if (filters.dari && v.visit_date < filters.dari) return false;
       if (filters.sampai && v.visit_date > filters.sampai) return false;
@@ -4128,17 +4083,56 @@ function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOp
     return [...set].sort().reverse();
   }, [visits]);
 
-  const points = filtered.map(v => [v.visit_lat, v.visit_lng]);
+  const points = useMemo(() => filtered.map(v => [v.visit_lat, v.visit_lng]), [filtered]);
+  const boundsKey = useMemo(() => {
+    if (!points.length) return '';
+    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+    for (const [lat, lng] of points) {
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+    }
+    return `${points.length}:${minLat}:${maxLat}:${minLng}:${maxLng}`;
+  }, [points]);
 
-  // Group visits by location (round to 5 decimal ≈ 1m) untuk deteksi visit di titik sama
+  const markerGridMeters = mapZoom >= 11 ? 0 : mapZoom >= 9 ? 1200 : mapZoom >= 7 ? 5000 : 18000;
   const grouped = useMemo(() => {
-    const map = new Map();
-    filtered.forEach(v => {
-      const key = `${v.visit_lat.toFixed(5)},${v.visit_lng.toFixed(5)}`;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key).push(v);
-    });
-    return [...map.values()];
+    const mdIndex = new Map(mds.map((md, index) => [md.id, index]));
+    const groups = new Map();
+    const candidates = [];
+    let inViewCount = 0;
+    let totalGroups = 0;
+
+    for (const visit of filtered) {
+      if (mapBounds && !mapBounds.contains([visit.visit_lat, visit.visit_lng])) continue;
+      inViewCount++;
+      const key = markerGridMeters === 0
+        ? visit.id
+        : `${Math.floor((visit.visit_lng * 111320 * Math.max(Math.cos(visit.visit_lat * Math.PI / 180), 0.01)) / markerGridMeters)}:${Math.floor((visit.visit_lat * 111320) / markerGridMeters)}`;
+      const group = groups.get(key);
+      if (group) {
+        group.visits.push(visit);
+        continue;
+      }
+      totalGroups++;
+      const point = {
+        visit,
+        visits: [visit],
+        colorIndex: mdIndex.get(visit.md_id) ?? 0,
+        key,
+      };
+      groups.set(key, point);
+      if (candidates.length < COVERAGE_MARKER_CAP) candidates.push(point);
+    }
+
+    return { candidates, inViewCount, totalGroups, capped: totalGroups > candidates.length };
+  }, [filtered, mapBounds, mapZoom, mds, markerGridMeters]);
+
+  const markerCounts = useMemo(() => {
+    const counts = new Map();
+    for (const visit of filtered) counts.set(visit.md_id, (counts.get(visit.md_id) || 0) + 1);
+    return counts;
   }, [filtered]);
 
   // Lokasi bengkel dari DB (kolom lat/lng). Respect filter Region. Cap biar tak freeze.
@@ -4156,7 +4150,8 @@ function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOp
         <div>
           <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display">Coverage Map</h2>
           <p className="text-sm text-zinc-500 mt-1">
-            {filtered.length} titik visit di {grouped.length} lokasi unik
+            {filtered.length} titik visit di {grouped.totalGroups} lokasi unik
+            {grouped.capped && ` · peta meringkas ${grouped.inViewCount} titik menjadi maksimal ${COVERAGE_MARKER_CAP} marker; zoom atau gunakan filter untuk melihat area lebih dekat`}
             {showBengkels && <> · <span className="text-sky-400">{bengkelMarkers.length} lokasi bengkel</span>{bengkelMarkers.length > BENGKEL_CAP && ` (tampil ${BENGKEL_CAP}, filter Region untuk lihat semua)`}</>}
           </p>
         </div>
@@ -4212,17 +4207,17 @@ function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOp
                 subdomains="abcd"
                 maxZoom={19}
               />
-              {grouped.map((vs, gi) => {
-                const [lat, lng] = [vs[0].visit_lat, vs[0].visit_lng];
-                const isStacked = vs.length > 1;
-                // Pick color dari first visit di stack
-                const mdIdx = mds.findIndex(m => m.id === vs[0].md_id);
-                const color = MD_COLORS[mdIdx % MD_COLORS.length] || '#dc2626';
+              {grouped.candidates.map(group => {
+                const { visit, visits: stackedVisits, colorIndex, key } = group;
+                const lat = markerGridMeters === 0 ? visit.visit_lat : Math.floor((visit.visit_lat * 111320) / markerGridMeters) * markerGridMeters / 111320;
+                const lng = markerGridMeters === 0 ? visit.visit_lng : Math.floor((visit.visit_lng * 111320 * Math.max(Math.cos(visit.visit_lat * Math.PI / 180), 0.01)) / markerGridMeters) * markerGridMeters / (111320 * Math.max(Math.cos(visit.visit_lat * Math.PI / 180), 0.01));
+                const isStacked = stackedVisits.length > 1;
+                const color = MD_COLORS[colorIndex % MD_COLORS.length] || '#dc2626';
 
                 const icon = isStacked
                   ? L.divIcon({
                       className: 'coverage-cluster',
-                      html: `<div style="background:${color};color:#0a0a0a;font-weight:bold;font-size:11px;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #0a0a0a;box-shadow:0 0 10px rgba(0,0,0,0.5);">${vs.length}</div>`,
+                      html: `<div style="background:${color};color:#0a0a0a;font-weight:bold;font-size:11px;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #0a0a0a;box-shadow:0 0 10px rgba(0,0,0,0.5);">${stackedVisits.length}</div>`,
                       iconSize: [28, 28],
                       iconAnchor: [14, 14],
                     })
@@ -4234,19 +4229,19 @@ function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOp
                     });
 
                 return (
-                  <Marker key={gi} position={[lat, lng]} icon={icon}>
+                  <Marker key={key} position={[lat, lng]} icon={icon}>
                     <Popup maxWidth={280}>
                       <div className="text-xs space-y-1 max-h-48 overflow-y-auto">
-                        <div className="font-semibold text-zinc-100 text-sm mb-2">{vs.length} visit di titik ini</div>
-                        {vs.slice(0, 5).map(v => (
+                        <div className="font-semibold text-zinc-100 text-sm mb-2">{stackedVisits.length} visit di area ini</div>
+                        {stackedVisits.slice(0, 5).map(v => (
                           <button key={v.id} onClick={() => onOpenVisit?.(v.id)}
                             className="block w-full text-left p-2 rounded bg-zinc-800/50 hover:bg-zinc-700 transition">
                             <div className="font-mono text-[9px] text-zinc-500">{v._bengkel?.code} · {v.visit_date}</div>
                             <div className="text-xs text-zinc-100 truncate">{v._bengkel?.name}</div>
-                            <div className="text-[10px] text-zinc-400">{v.md_name || mds.find(m => m.id === v.md_id)?.full_name} · {v.status}</div>
+                            <div className="text-[10px] text-zinc-400">{v.md_name || mdById.get(v.md_id)?.full_name} · {v.status}</div>
                           </button>
                         ))}
-                        {vs.length > 5 && <div className="text-[10px] text-zinc-500 text-center pt-1">+{vs.length - 5} lagi</div>}
+                        {stackedVisits.length > 5 && <div className="text-[10px] text-zinc-500 text-center pt-1">+{stackedVisits.length - 5} lagi</div>}
                       </div>
                     </Popup>
                   </Marker>
@@ -4263,7 +4258,8 @@ function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOp
                   </Popup>
                 </Marker>
               ))}
-              <FitToVisits points={points} />
+              <CoverageViewport onChange={handleBoundsChange} />
+              <FitToVisits points={points} boundsKey={boundsKey} />
             </MapContainer>
           )}
         </div>
@@ -4271,7 +4267,7 @@ function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOp
         {/* Legend MD */}
         <div className="border-t border-zinc-800 p-4 flex flex-wrap gap-3">
           {mds.map((md, i) => {
-            const count = filtered.filter(v => v.md_id === md.id).length;
+            const count = markerCounts.get(md.id) || 0;
             return (
               <button key={md.id}
                 onClick={() => setFilters(f => ({ ...f, mdId: f.mdId === md.id ? 'all' : md.id }))}
