@@ -4038,6 +4038,7 @@ const BENGKEL_ICON = L.divIcon({
   iconSize: [11, 11],
   iconAnchor: [5.5, 5.5],
 });
+const BENGKEL_CAP = 2000;
 const COVERAGE_MARKER_CAP = 500;
 
 function CoverageTab({ visits, mds, bengkels, kotas, regions, distributors, onOpenVisit }) {
