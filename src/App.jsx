@@ -3623,6 +3623,7 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
   const bengkelById = useMemo(() => new Map(bengkels.map(b => [b.id, b])), [bengkels]);
   const kotaById = useMemo(() => new Map(kotas.map(k => [k.id, k])), [kotas]);
   const regionById = useMemo(() => new Map(regions.map(r => [r.id, r])), [regions]);
+  const distributorById = useMemo(() => new Map(distributors.map(d => [d.id, d])), [distributors]);
   const mdById = useMemo(() => new Map(mds.map(m => [m.id, m])), [mds]);
   const findBengkel = (id) => bengkelById.get(id);
   const findKota = (id) => kotaById.get(id);

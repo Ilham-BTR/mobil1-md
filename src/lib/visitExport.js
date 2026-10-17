@@ -16,7 +16,7 @@ export function visitToCSVRow(visit, ctx) {
   const bengkel = ctx.bengkelById.get(visit.bengkel_id);
   const kota = bengkel ? ctx.kotaById.get(bengkel.kota_id) : null;
   const region = kota ? ctx.regionById.get(kota.region_id) : null;
-  const distributor = ctx.distributorById.get(visit.distributor_id);
+  const distributor = ctx.distributorById?.get(visit.distributor_id) ?? null;
   const md = ctx.mdById.get(visit.md_id);
   const photoCount = visit.photo_count ?? PHOTO_KEYS.filter(key => visit[key]).length;
   return {

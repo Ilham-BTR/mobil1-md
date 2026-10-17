@@ -1,16 +1,16 @@
 # Graph Report - Mobil1  (2026-10-17)
 
 ## Corpus Check
-- 91 files · ~538,593 words
+- 92 files · ~541,324 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1063 nodes · 1462 edges · 99 communities (85 shown, 14 thin omitted)
+- 1064 nodes · 1464 edges · 99 communities (85 shown, 14 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 11 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `3bac30f2`
+- Built from commit: `fb918a38`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -46,7 +46,7 @@
 - list-r2-lost-photos.mjs
 - migrate.mjs
 - dependencies
-- localDateStr
+- BengkelImportModal
 - webauthn/index.ts
 - get-upload-url/index.ts
 - 0007_webauthn.sql
@@ -187,8 +187,8 @@ Cohesion: 0.17
 Nodes (8): cfg, __dirname, H, month, QUERIES, results, sizeMap, totalGz
 
 ### Community 13 - "useBackDismiss"
-Cohesion: 0.18
-Nodes (13): BengkelImportModal(), downloadBengkelTemplate(), downloadMasterTemplate(), __ensureModalListener(), __lockBodyScroll(), MasterImportModal(), MasterTab(), MdDetailModal() (+5 more)
+Cohesion: 0.16
+Nodes (18): AbsenTab(), BengkelMap(), downloadMasterTemplate(), __ensureModalListener(), formatDistance(), haversineMeters(), localDateStr(), __lockBodyScroll() (+10 more)
 
 ### Community 14 - "backup.mjs Script"
 Cohesion: 0.22
@@ -258,9 +258,9 @@ Nodes (4): applied, BASELINE, files, NEVER_AUTO
 Cohesion: 0.05
 Nodes (42): dependencies, browser-image-compression, leaflet, lucide-react, react, react-dom, react-leaflet, recharts (+34 more)
 
-### Community 31 - "localDateStr"
-Cohesion: 0.28
-Nodes (9): AbsenTab(), BengkelMap(), formatDistance(), haversineMeters(), localDateStr(), MDDashboard(), OnSiteBadge(), VisitDetailModal() (+1 more)
+### Community 31 - "BengkelImportModal"
+Cohesion: 0.50
+Nodes (4): BengkelImportModal(), downloadBengkelTemplate(), normalizeColumn(), validateBengkelRow()
 
 ### Community 32 - "webauthn/index.ts"
 Cohesion: 0.40
@@ -335,7 +335,7 @@ Cohesion: 0.25
 Nodes (10): fetchAllPaged(), fetchPagedProgressively(), countPhotos(), createVisit(), fetchVisitFull(), fetchVisits(), fetchVisitsDelta(), fetchVisitsProgressive() (+2 more)
 
 ### Community 72 - "visitExport.js"
-Cohesion: 0.22
+Cohesion: 0.21
 Nodes (11): excelDateSerial(), XL_EPOCH, VISIT_PHOTO_MAP, excelDateTimeSerial(), EXPORT_PHOTO_HEADER, EXPORT_PHOTO_SKIP, exportVisitsXlsx(), PHOTO_KEYS (+3 more)
 
 ### Community 73 - "local-perf-before-20261017-032351/src/lib/api/visits.js"
