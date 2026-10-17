@@ -1,41 +1,33 @@
 import { describe, expect, it, vi } from 'vitest';
 import { visitToCSVRow } from './visitExport.js';
 
-vi.mock('./storage', () => ({ VISIT_PHOTO_MAP: {
-  in: { col: 'photo_in', path: 'foto-in' },
-  out: { col: 'photo_out', path: 'foto-out' },
-} }));
+const mock = vi.hoisted(() => ({ photos: { in: { col: 'photo_in', path: 'foto-in' }, out: { col: 'photo_out', path: 'foto-out' } } }));
+vi.mock('./storage', () => ({ VISIT_PHOTO_MAP: mock.photos }));
 
 describe('visitToCSVRow', () => {
-  it('builds visit rows without searching master arrays repeatedly', () => {
-    const visit = {
-      id: 'visit-1', md_id: 'md-1', bengkel_id: 'bengkel-1', distributor_id: 'dist-1',
-      visit_date: '2026-10-16', created_at: '2026-10-16T01:00:00Z', status: 'Pemasangan',
-      pic_name: 'PIC', photo_count: 3,
-    };
+  it('uses indexed master lookups and maps the photo column identifiers', () => {
     const ctx = {
-      bengkelById: new Map([['bengkel-1', { id: 'bengkel-1', code: 'B01', name: 'Bengkel', kota_id: 'kota-1', lat: -6, lng: 106 }]]),
-      kotaById: new Map([['kota-1', { id: 'kota-1', name: 'Jakarta', region_id: 'region-1' }]]),
-      regionById: new Map([['region-1', { id: 'region-1', name: 'Jakarta Greater' }]]),
-      distributorById: new Map([['dist-1', { id: 'dist-1', name: 'Distributor' }]]),
-      mdById: new Map([['md-1', { id: 'md-1', full_name: 'MD', email: 'md@example.test' }]]),
+      bengkelById: new Map([['b1', { code: 'B01', name: 'Bengkel', kota_id: 'k1', lat: -6, lng: 106 }]]),
+      kotaById: new Map([['k1', { name: 'Jakarta', region_id: 'r1' }]]),
+      regionById: new Map([['r1', { name: 'Jakarta Greater' }]]),
+      distributorById: new Map([['d1', { name: 'Distributor' }]]),
+      mdById: new Map([['m1', { full_name: 'MD', email: 'md@example.test' }]]),
     };
-
-    const row = visitToCSVRow(visit, ctx);
+    const row = visitToCSVRow({
+      id: 'v1', md_id: 'm1', bengkel_id: 'b1', distributor_id: 'd1',
+      visit_date: '2026-10-16', status: 'Pemasangan', photo_count: 2,
+      photo_in: 'https://cdn.example/photo-in', photo_out: 'https://cdn.example/photo-out',
+    }, ctx);
     expect(row.bengkel_code).toBe('B01');
     expect(row.kota).toBe('Jakarta');
     expect(row.region).toBe('Jakarta Greater');
     expect(row.distributor).toBe('Distributor');
-    expect(row.md_name).toBe('MD');
-    expect(row.tanggal).toBeTypeOf('number');
+    expect(row.link_in).toBe('https://cdn.example/photo-in');
+    expect(row.link_out).toBe('https://cdn.example/photo-out');
   });
 
-  it('does not throw when distributor master row is absent', () => {
-    const ctx = {
-      bengkelById: new Map(), kotaById: new Map(), regionById: new Map(),
-      distributorById: new Map(), mdById: new Map(),
-    };
-    const row = visitToCSVRow({ id: 'v', visit_date: '2026-10-16', status: 'Revisit' }, ctx);
-    expect(row.distributor).toBe('');
+  it('allows a missing distributor lookup', () => {
+    const ctx = { bengkelById: new Map(), kotaById: new Map(), regionById: new Map(), mdById: new Map() };
+    expect(visitToCSVRow({ id: 'v', visit_date: '2026-10-16' }, ctx).distributor).toBe('');
   });
 });

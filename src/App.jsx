@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { currentMonthKey } from './lib/dateFilters';
 import { excelDateSerial } from './lib/excelDates';
 import { aggregateVisitsByMd } from './lib/visitMetrics';
 import imageCompression from 'browser-image-compression';
@@ -3606,17 +3607,20 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
     regionId: 'all',
     distributorId: 'all',
     status: 'all',
-    month: 'all',
+    month: currentMonthKey(),
     dari: '',
     sampai: '',
   });
   const [visibleCount, setVisibleCount] = useState(50);
   const [normalizedSearch, setNormalizedSearch] = useState('');
+  const [exportState, setExportState] = useState({ status: 'idle', message: '' });
   useEffect(() => {
-    const timer = setTimeout(() => setNormalizedSearch(filters.search.trim().toLowerCase()), 180);
-    return () => clearTimeout(timer);
-  }, [filters.search]);
+    if (normalizedSearch !== filters.search.trim().toLowerCase()) setNormalizedSearch(filters.search.trim().toLowerCase());
+  }, [normalizedSearch, filters.search]);
   useEffect(() => { setVisibleCount(50); }, [filters]);
+  useEffect(() => {
+    if (exportState.status !== 'loading') setExportState({ status: 'idle', message: '' });
+  }, [filtered.length, filters]);
 
   // Index Map (O(1)) — hindari .find per-visit (O(n*m)) yang bikin HP freeze
   // saat visit/bengkel banyak.
@@ -3662,13 +3666,20 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
   }, [visits]);
 
   const handleExport = async () => {
-    if (isLoading || !loadComplete) return;
-    const module = await import('./lib/visitExport');
-    const ctx = {
-      bengkelById, kotaById, regionById, distributorById,
-      mdById, fetchVisitPhotosMap: api.fetchVisitPhotosMap,
-    };
-    await module.exportVisitsXlsx(filtered, ctx, `visits_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    if (isLoading || !loadComplete || filtered.length === 0 || exportState.status === 'loading') return;
+    setExportState({ status: 'loading', message: 'Menyiapkan file Excel…' });
+    try {
+      const module = await import('./lib/visitExport');
+      const ctx = {
+        bengkelById, kotaById, regionById, distributorById,
+        mdById, fetchVisitPhotosMap: api.fetchVisitPhotosMap,
+      };
+      await module.exportVisitsXlsx(filtered, ctx, `visits_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      setExportState({ status: 'success', message: 'File Excel berhasil dibuat dan mulai diunduh.' });
+    } catch (error) {
+      console.error('Ekspor Visits gagal:', error);
+      setExportState({ status: 'error', message: `Ekspor gagal: ${error?.message || 'Terjadi kesalahan.'}` });
+    }
   };
 
   return (
@@ -3678,9 +3689,10 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
           <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display">Daftar Visit</h2>
           <p className="text-sm text-zinc-500 mt-1">{filtered.length} dari {visits.length} visit{isLoading ? ' · memuat halaman berikutnya…' : ''} · klik untuk lihat detail</p>
           {error && <div className="mt-2 text-xs text-amber-300" role="status">Sebagian riwayat belum lengkap: {error} <button className="underline" onClick={onRetry}>Coba lagi</button></div>}
+          {exportState.message && <p role="status" aria-live="polite" className={`mt-2 text-xs ${exportState.status === 'error' ? 'text-rose-300' : exportState.status === 'success' ? 'text-emerald-300' : 'text-zinc-400'}`}>{exportState.message}</p>}
         </div>
-          <Button variant="secondary" onClick={handleExport} disabled={filtered.length === 0 || isLoading || !loadComplete}>
-            <Download className="w-4 h-4" />{loadComplete ? `Export Excel (${filtered.length})` : 'Memuat data untuk export…'}
+          <Button variant="secondary" onClick={handleExport} disabled={filtered.length === 0 || isLoading || !loadComplete || exportState.status === 'loading'}>
+            <Download className="w-4 h-4" />{exportState.status === 'loading' ? 'Menyiapkan Excel…' : loadComplete ? `Export Excel (${filtered.length})` : 'Memuat data untuk export…'}
           </Button>
       </div>
 
@@ -3774,7 +3786,8 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
 }
 
 function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onOpenVisit, isLoading = false, error = '', onRetry }) {
-  const [filters, setFilters] = useState({ month: 'all', mdId: 'all', regionId: 'all', distributorId: 'all', dari: '', sampai: '' });
+  const [filters, setFilters] = useState({ month: currentMonthKey(), mdId: 'all', regionId: 'all', distributorId: 'all', dari: '', sampai: '' });
+  const [exportState, setExportState] = useState({ status: 'idle', message: '' });
 
   const availableMonths = useMemo(() => {
     const set = new Set(visits.map(v => v.visit_date.slice(0, 7)));
@@ -3785,10 +3798,13 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
   // Default month ke yang terbaru
   useEffect(() => {
     if (filters.month === 'all' && availableMonths.length > 0) {
-      setFilters(f => ({ ...f, month: availableMonths[0] }));
+      setFilters(f => ({ ...f, month: currentMonthKey() }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [availableMonths.join(',')]);
+  useEffect(() => {
+    if (exportState.status !== 'loading') setExportState({ status: 'idle', message: '' });
+  }, [filteredVisits.length, filters]);
 
   // Index Map (O(1)) — hindari .find per-visit (O(n*m)) yang bikin HP freeze.
   const bengkelById = useMemo(() => new Map(bengkels.map(b => [b.id, b])), [bengkels]);
@@ -3868,11 +3884,22 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
   const colorForRegion = (r) => regionColor[r] || '#71717a';
 
   const handleExport = async () => {
-    if (isLoading) return;
-    const module = await import('./lib/visitExport');
-    const ctx = { bengkelById, kotaById, regionById, distributorById: new Map(distributors.map(d => [d.id, d])), mdById: new Map(mds.map(m => [m.id, m])), fetchVisitPhotosMap: api.fetchVisitPhotosMap };
-    await module.exportVisitsXlsx(filteredVisits, ctx, `visits_${filters.month}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    if (isLoading || filteredVisits.length === 0 || exportState.status === 'loading') return;
+    setExportState({ status: 'loading', message: 'Menyiapkan file Excel…' });
+    try {
+      const module = await import('./lib/visitExport');
+      const ctx = { bengkelById, kotaById, regionById, distributorById: new Map(distributors.map(d => [d.id, d])), mdById: new Map(mds.map(m => [m.id, m])), fetchVisitPhotosMap: api.fetchVisitPhotosMap };
+      await module.exportVisitsXlsx(filteredVisits, ctx, `visits_${filters.month}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      setExportState({ status: 'success', message: 'File Excel berhasil dibuat dan mulai diunduh.' });
+    } catch (error) {
+      console.error('Ekspor Dashboard gagal:', error);
+      setExportState({ status: 'error', message: `Ekspor gagal: ${error?.message || 'Terjadi kesalahan.'}` });
+    }
   };
+
+  useEffect(() => {
+    if (exportState.status !== 'loading') setExportState({ status: 'idle', message: '' });
+  }, [filteredVisits.length, filters]);
 
   // Recent 5 visits dari filter
   const recentVisits = useMemo(() => [...filteredVisits]
@@ -3886,9 +3913,10 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
           <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-display">Dashboard</h2>
           <p className="text-sm text-zinc-500 mt-1">Performa tracking POSM · {filteredVisits.length} visit ter-filter{isLoading ? ' · memuat halaman berikutnya…' : ''}</p>
           {error && <div className="mt-2 text-xs text-amber-300" role="status">Sebagian riwayat belum lengkap: {error} <button className="underline" onClick={onRetry}>Coba lagi</button></div>}
+          {exportState.message && <p role="status" aria-live="polite" className={`mt-2 text-xs ${exportState.status === 'error' ? 'text-rose-300' : exportState.status === 'success' ? 'text-emerald-300' : 'text-zinc-400'}`}>{exportState.message}</p>}
         </div>
-        <Button variant="secondary" onClick={handleExport} disabled={filteredVisits.length === 0 || isLoading}>
-          <Download className="w-4 h-4" />{isLoading ? 'Memuat data untuk export…' : `Export Excel (${filteredVisits.length})`}
+        <Button variant="secondary" onClick={handleExport} disabled={filteredVisits.length === 0 || isLoading || exportState.status === 'loading'}>
+          <Download className="w-4 h-4" />{exportState.status === 'loading' ? 'Menyiapkan Excel…' : isLoading ? 'Memuat data untuk export…' : `Export Excel (${filteredVisits.length})`}
         </Button>
       </div>
 
