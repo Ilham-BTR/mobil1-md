@@ -1,7 +1,7 @@
 import { excelDateSerial } from './excelDates';
 import { VISIT_PHOTO_MAP } from './storage';
 
-const PHOTO_KEYS = Object.values(VISIT_PHOTO_MAP);
+const PHOTO_COLUMNS = Object.values(VISIT_PHOTO_MAP).map(photo => photo.col);
 const EXPORT_PHOTO_SKIP = new Set(['photo_spanduk_after', 'photo_poster_after']);
 const EXPORT_PHOTO_HEADER = {
   photo_tampak_depan: 'link_tampak_depan', photo_in: 'link_in', photo_out: 'link_out',
@@ -18,7 +18,7 @@ export function visitToCSVRow(visit, ctx) {
   const region = kota ? ctx.regionById.get(kota.region_id) : null;
   const distributor = ctx.distributorById?.get(visit.distributor_id) ?? null;
   const md = ctx.mdById.get(visit.md_id);
-  const photoCount = visit.photo_count ?? PHOTO_KEYS.filter(key => visit[key]).length;
+  const photoCount = visit.photo_count ?? PHOTO_COLUMNS.filter(key => visit[key]).length;
   return {
     visit_id: visit.id,
     tanggal: excelDateSerial(visit.visit_date),
@@ -41,7 +41,7 @@ export function visitToCSVRow(visit, ctx) {
     visit_lat: visit.visit_lat ?? '',
     visit_lng: visit.visit_lng ?? '',
     photo_count: photoCount,
-    ...Object.fromEntries(PHOTO_KEYS.filter(key => !EXPORT_PHOTO_SKIP.has(key)).map(key => [
+    ...Object.fromEntries(PHOTO_COLUMNS.filter(key => !EXPORT_PHOTO_SKIP.has(key)).map(key => [
       EXPORT_PHOTO_HEADER[key] || ('link_' + key.replace(/^photo_/, '')),
       typeof visit[key] === 'string' && visit[key].startsWith('http') ? visit[key] : (visit[key] ? '(foto lokal/idb)' : ''),
     ])),
@@ -53,7 +53,7 @@ export async function exportVisitsXlsx(visits, ctx, filename) {
   if (!visits?.length) return;
   const XLSX = await import('xlsx');
   let toExport = visits;
-  if (!visits.some(visit => PHOTO_KEYS.some(key => visit[key]))) {
+  if (!visits.some(visit => PHOTO_COLUMNS.some(key => visit[key]))) {
     try {
       const photoMap = await ctx.fetchVisitPhotosMap(visits.map(visit => visit.id));
       toExport = visits.map(visit => ({ ...visit, ...(photoMap.get(visit.id) || {}) }));

@@ -1,16 +1,16 @@
 # Graph Report - Mobil1  (2026-10-17)
 
 ## Corpus Check
-- 92 files · ~541,324 words
+- 103 files · ~577,367 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1064 nodes · 1464 edges · 99 communities (85 shown, 14 thin omitted)
+- 1208 nodes · 1687 edges · 107 communities (93 shown, 14 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 11 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `fb918a38`
+- Built from commit: `2c3aed6c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -72,7 +72,7 @@
 - monthLabel
 - monthLabel
 - src/lib/api/visits.js
-- visitExport.js
+- src/lib/visitExport.js
 - local-perf-before-20261017-032351/src/lib/api/visits.js
 - local-perf-before-20261017-040900/src/lib/api/visits.js
 - Mobil1 POSM Tracker
@@ -98,6 +98,14 @@
 - react
 - react-dom
 - vitest
+- export-fix-before-20261017-072435/App.jsx
+- export-fix-before-20261017-072435/src/lib/visitExport.js
+- monthLabel
+- localDateStr
+- export-fix-before-20261017-072435/visitExport.js
+- VisitDetailModal
+- useBackDismiss
+- useTabBackButton
 
 ## God Nodes (most connected - your core abstractions)
 1. `persistMock()` - 19 edges
@@ -132,7 +140,7 @@
 - **Region-Kota-Bengkel-Visit Data Hierarchy** — prd_entity_regions, prd_entity_bengkels, prd_entity_distributors, prd_entity_visits [EXTRACTED 1.00]
 - **Presigned Photo Upload Pipeline** — readme_lib_storage, prd_edge_function_get_upload_url, readme_s3_object_storage, prd_backblaze_b2 [EXTRACTED 1.00]
 
-## Communities (99 total, 14 thin omitted)
+## Communities (107 total, 14 thin omitted)
 
 ### Community 0 - "src/App.jsx"
 Cohesion: 0.04
@@ -334,9 +342,9 @@ Nodes (15): AbsenHistory(), AdminAbsenTab(), CoverageTab(), DashboardTab(), exce
 Cohesion: 0.25
 Nodes (10): fetchAllPaged(), fetchPagedProgressively(), countPhotos(), createVisit(), fetchVisitFull(), fetchVisits(), fetchVisitsDelta(), fetchVisitsProgressive() (+2 more)
 
-### Community 72 - "visitExport.js"
+### Community 72 - "src/lib/visitExport.js"
 Cohesion: 0.21
-Nodes (11): excelDateSerial(), XL_EPOCH, VISIT_PHOTO_MAP, excelDateTimeSerial(), EXPORT_PHOTO_HEADER, EXPORT_PHOTO_SKIP, exportVisitsXlsx(), PHOTO_KEYS (+3 more)
+Nodes (11): excelDateSerial(), XL_EPOCH, VISIT_PHOTO_MAP, excelDateTimeSerial(), EXPORT_PHOTO_HEADER, EXPORT_PHOTO_SKIP, exportVisitsXlsx(), PHOTO_COLUMNS (+3 more)
 
 ### Community 73 - "local-perf-before-20261017-032351/src/lib/api/visits.js"
 Cohesion: 0.29
@@ -410,8 +418,40 @@ Nodes (3): AdminView(), MDView(), useTabBackButton()
 Cohesion: 0.67
 Nodes (3): AdminView(), MDView(), useTabBackButton()
 
+### Community 99 - "export-fix-before-20261017-072435/App.jsx"
+Cohesion: 0.04
+Nodes (21): ALL_SUBTYPES, BENGKEL_ICON, BLUE_PIN_ICON, COLUMN_ALIASES, EXPORT_PHOTO_HEADER, EXPORT_PHOTO_SKIP, ID_MONTHS, INDONESIA_CENTER (+13 more)
+
+### Community 100 - "export-fix-before-20261017-072435/src/lib/visitExport.js"
+Cohesion: 0.08
+Nodes (33): DEFAULT_MOCK, MOCK_DATA, persistMock(), resetMockData(), attachEgressMeter(), countCall(), counts, endpointLabel() (+25 more)
+
+### Community 101 - "monthLabel"
+Cohesion: 0.24
+Nodes (12): AbsenHistory(), AdminAbsenTab(), CoverageTab(), DashboardTab(), fmtAbsenTime(), fmtWorkDuration(), LeaderboardTab(), monthLabel() (+4 more)
+
+### Community 102 - "localDateStr"
+Cohesion: 0.20
+Nodes (10): AbsenTab(), BengkelImportModal(), downloadBengkelTemplate(), downloadMasterTemplate(), localDateStr(), MasterImportModal(), MasterTab(), MDDashboard() (+2 more)
+
+### Community 103 - "export-fix-before-20261017-072435/visitExport.js"
+Cohesion: 0.29
+Nodes (8): excelDateTimeSerial(), EXPORT_PHOTO_HEADER, EXPORT_PHOTO_SKIP, exportVisitsXlsx(), PHOTO_KEYS, setColDateFormat(), visitToCSVRow(), XL_EPOCH
+
+### Community 104 - "VisitDetailModal"
+Cohesion: 0.47
+Nodes (6): BengkelMap(), formatDistance(), haversineMeters(), OnSiteBadge(), VisitDetailModal(), VisitForm()
+
+### Community 105 - "useBackDismiss"
+Cohesion: 0.40
+Nodes (6): __ensureModalListener(), __lockBodyScroll(), MdDetailModal(), MDWelcomeModal(), PasskeyManagerModal(), useBackDismiss()
+
+### Community 106 - "useTabBackButton"
+Cohesion: 0.67
+Nodes (3): AdminView(), MDView(), useTabBackButton()
+
 ## Knowledge Gaps
-- **310 isolated node(s):** `__dirname`, `cfgPath`, `cfg`, `logFile`, `supabase` (+305 more)
+- **344 isolated node(s):** `__dirname`, `cfgPath`, `cfg`, `logFile`, `supabase` (+339 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -419,16 +459,16 @@ Nodes (3): AdminView(), MDView(), useTabBackButton()
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `MOCK_MODE` connect `auth.js` to `src/App.jsx`, `master.js`, `attendance.js`, `src/lib/api/visits.js`?**
-  _High betweenness centrality (0.004) - this node is a cross-community bridge._
-- **Why does `devDependencies` connect `devDependencies` to `local-perf-before-20261017-040900/package.json`, `vitest`?**
-  _High betweenness centrality (0.003) - this node is a cross-community bridge._
-- **Why does `dependencies` connect `dependencies` to `react`, `react-dom`, `package.json`?**
   _High betweenness centrality (0.002) - this node is a cross-community bridge._
+- **Why does `dependencies` connect `dependencies` to `local-perf-before-20261017-040900/package.json`, `react`, `react-dom`?**
+  _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **What connects `__dirname`, `cfgPath`, `cfg` to the rest of the system?**
-  _310 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _344 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `src/App.jsx` be split into smaller, more focused modules?**
   _Cohesion score 0.03696741854636591 - nodes in this community are weakly interconnected._
 - **Should `auth.js` be split into smaller, more focused modules?**
   _Cohesion score 0.13450292397660818 - nodes in this community are weakly interconnected._
 - **Should `Fresh Setup Schema` be split into smaller, more focused modules?**
   _Cohesion score 0.11954022988505747 - nodes in this community are weakly interconnected._
+- **Should `Seed Generator Scripts` be split into smaller, more focused modules?**
+  _Cohesion score 0.07936507936507936 - nodes in this community are weakly interconnected._

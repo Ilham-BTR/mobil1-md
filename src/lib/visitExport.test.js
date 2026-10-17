@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { visitToCSVRow } from './visitExport.js';
 
-vi.mock('./storage', () => ({ VISIT_PHOTO_MAP: {} }));
+vi.mock('./storage', () => ({ VISIT_PHOTO_MAP: {
+  in: { col: 'photo_in', path: 'foto-in' },
+  out: { col: 'photo_out', path: 'foto-out' },
+} }));
 
 describe('visitToCSVRow', () => {
   it('builds visit rows without searching master arrays repeatedly', () => {
