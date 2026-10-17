@@ -3618,9 +3618,6 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
     if (normalizedSearch !== filters.search.trim().toLowerCase()) setNormalizedSearch(filters.search.trim().toLowerCase());
   }, [normalizedSearch, filters.search]);
   useEffect(() => { setVisibleCount(50); }, [filters]);
-  useEffect(() => {
-    if (exportState.status !== 'loading') setExportState({ status: 'idle', message: '' });
-  }, [filtered.length, filters]);
 
   // Index Map (O(1)) — hindari .find per-visit (O(n*m)) yang bikin HP freeze
   // saat visit/bengkel banyak.
