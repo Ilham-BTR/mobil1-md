@@ -3788,52 +3788,40 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
 function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onOpenVisit, isLoading = false, error = '', onRetry }) {
   const [filters, setFilters] = useState({ month: currentMonthKey(), mdId: 'all', regionId: 'all', distributorId: 'all', dari: '', sampai: '' });
   const [exportState, setExportState] = useState({ status: 'idle', message: '' });
+  const exportStatusRef = useRef('idle');
 
   const availableMonths = useMemo(() => {
     const set = new Set(visits.map(v => v.visit_date.slice(0, 7)));
     const arr = [...set].sort().reverse();
     return arr.length ? arr : [new Date().toISOString().slice(0, 7)];
   }, [visits]);
-
-  // Default month ke yang terbaru
-  useEffect(() => {
-    if (filters.month === 'all' && availableMonths.length > 0) {
-      setFilters(f => ({ ...f, month: currentMonthKey() }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [availableMonths.join(',')]);
-  useEffect(() => {
-    if (exportState.status !== 'loading') setExportState({ status: 'idle', message: '' });
-  }, [filteredVisits.length, filters]);
-
-  // Index Map (O(1)) — hindari .find per-visit (O(n*m)) yang bikin HP freeze.
   const bengkelById = useMemo(() => new Map(bengkels.map(b => [b.id, b])), [bengkels]);
   const kotaById = useMemo(() => new Map(kotas.map(k => [k.id, k])), [kotas]);
+  const filteredVisits = useMemo(() => visits.filter(visit => {
+    const inDateRange = filters.dari || filters.sampai;
+    if (inDateRange) {
+      if (filters.dari && visit.visit_date < filters.dari) return false;
+      if (filters.sampai && visit.visit_date > filters.sampai) return false;
+    } else if (filters.month !== 'all' && !visit.visit_date.startsWith(filters.month)) return false;
+    if (filters.mdId !== 'all' && visit.md_id !== filters.mdId) return false;
+    if (filters.regionId !== 'all') {
+      const bengkel = bengkelById.get(visit.bengkel_id);
+      const kota = bengkel ? kotaById.get(bengkel.kota_id) : null;
+      if (kota?.region_id !== filters.regionId) return false;
+    }
+    if (filters.distributorId !== 'all' && visit.distributor_id !== filters.distributorId) return false;
+    return true;
+  }), [visits, filters, bengkelById, kotaById]);
 
-  // Apply filters
-  const filteredVisits = useMemo(() => {
-    const needRegion = filters.regionId !== 'all';
-    return visits.filter(v => {
-      if (filters.dari || filters.sampai) {
-        if (filters.dari && v.visit_date < filters.dari) return false;
-        if (filters.sampai && v.visit_date > filters.sampai) return false;
-      } else if (filters.month !== 'all' && !v.visit_date.startsWith(filters.month)) return false;
-      if (filters.mdId !== 'all' && v.md_id !== filters.mdId) return false;
-      if (needRegion) {
-        const b = bengkelById.get(v.bengkel_id);
-        const k = b ? kotaById.get(b.kota_id) : null;
-        if (k?.region_id !== filters.regionId) return false;
-      }
-      if (filters.distributorId !== 'all' && v.distributor_id !== filters.distributorId) return false;
-      return true;
-    });
-  }, [visits, filters, bengkelById, kotaById]);
+  // Dashboard filters use current-month and date range directly; no second filteredVisits hook is needed.
 
-  // MDs yang relevan dengan filter (region/distributor)
   const relevantMDs = useMemo(() => {
     if (filters.regionId === 'all') return mds;
     return mds.filter(m => m.region_id === filters.regionId);
   }, [mds, filters.regionId]);
+  const regionById = useMemo(() => new Map(regions.map(region => [region.id, region])), [regions]);
+  const distributorById = useMemo(() => new Map(distributors.map(distributor => [distributor.id, distributor])), [distributors]);
+  const mdById = useMemo(() => new Map(mds.map(md => [md.id, md])), [mds]);
 
   // Nama depan yang tak unik (mis. 2 "Muhammad") → tambah kata berikutnya
   // agar di chart/ranking tidak terlihat seperti duplikat.
@@ -3841,7 +3829,6 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
     const f = (m.full_name || '').split(' ')[0];
     acc[f] = (acc[f] || 0) + 1; return acc;
   }, {});
-  const regionById = useMemo(() => new Map(regions.map(region => [region.id, region])), [regions]);
   const regionName = (id) => regionById.get(id)?.name || '';
   const filteredMetrics = useMemo(() => aggregateVisitsByMd(filteredVisits, null), [filteredVisits]);
   const adminBengkelById = useMemo(() => new Map(bengkels.map(bengkel => [bengkel.id, bengkel])), [bengkels]);
@@ -3884,14 +3871,17 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
   const colorForRegion = (r) => regionColor[r] || '#71717a';
 
   const handleExport = async () => {
-    if (isLoading || filteredVisits.length === 0 || exportState.status === 'loading') return;
+    if (isLoading || filteredVisits.length === 0 || exportStatusRef.current === 'loading') return;
+    exportStatusRef.current = 'loading';
     setExportState({ status: 'loading', message: 'Menyiapkan file Excel…' });
     try {
       const module = await import('./lib/visitExport');
       const ctx = { bengkelById, kotaById, regionById, distributorById: new Map(distributors.map(d => [d.id, d])), mdById: new Map(mds.map(m => [m.id, m])), fetchVisitPhotosMap: api.fetchVisitPhotosMap };
       await module.exportVisitsXlsx(filteredVisits, ctx, `visits_${filters.month}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      exportStatusRef.current = 'success';
       setExportState({ status: 'success', message: 'File Excel berhasil dibuat dan mulai diunduh.' });
     } catch (error) {
+      exportStatusRef.current = 'error';
       console.error('Ekspor Dashboard gagal:', error);
       setExportState({ status: 'error', message: `Ekspor gagal: ${error?.message || 'Terjadi kesalahan.'}` });
     }
