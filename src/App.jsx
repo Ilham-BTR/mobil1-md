@@ -3828,6 +3828,12 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
   }, {});
   const regionName = (id) => regionById.get(id)?.name || '';
   const filteredMetrics = useMemo(() => aggregateVisitsByMd(filteredVisits, null), [filteredVisits]);
+  useEffect(() => {
+    if (exportStatusRef.current !== 'loading') {
+      exportStatusRef.current = 'idle';
+      setExportState({ status: 'idle', message: '' });
+    }
+  }, [filters]);
   const adminBengkelById = useMemo(() => new Map(bengkels.map(bengkel => [bengkel.id, bengkel])), [bengkels]);
   const adminMdById = useMemo(() => new Map(mds.map(md => [md.id, md])), [mds]);
   const chartData = relevantMDs.map(md => {
@@ -3885,9 +3891,11 @@ function DashboardTab({ visits, mds, bengkels, kotas, regions, distributors, onO
   };
 
   useEffect(() => {
-    if (exportState.status !== 'loading') setExportState({ status: 'idle', message: '' });
-  }, [filteredVisits.length, filters]);
-
+    if (exportStatusRef.current !== 'loading') {
+      exportStatusRef.current = 'idle';
+      setExportState({ status: 'idle', message: '' });
+    }
+  }, [filters]);
   // Recent 5 visits dari filter
   const recentVisits = useMemo(() => [...filteredVisits]
     .sort((a, b) => (b.created_at || b.visit_date).localeCompare(a.created_at || a.visit_date))

@@ -1,16 +1,16 @@
-# Graph Report - Mobil1  (2026-10-17)
+# Graph Report - Mobil1  (2026-10-19)
 
 ## Corpus Check
-- 116 files · ~918,323 words
+- 118 files · ~949,660 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2806 nodes · 4759 edges · 193 communities (174 shown, 19 thin omitted)
+- 2907 nodes · 4913 edges · 191 communities (175 shown, 16 thin omitted)
 - Extraction: 95% EXTRACTED · 5% INFERRED · 0% AMBIGUOUS · INFERRED: 259 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `cc2ccc03`
+- Built from commit: `4257acc4`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -109,18 +109,18 @@
 - .test.js
 - export-and-filter-before-20261017-093300/App.jsx
 - createSuiteCollector
-- normalizeDiffOptions
+- diff
 - match
 - withGlobal
 - format
 - inspect
 - assert
-- inspectList2
+- visit-history-export-before-20261019-105526/App.jsx
 - iterableEquality
 - admin-visits-blank-20261017-171319/App.jsx
 - requireLib
 - createExpect
-- sort
+- decode
 - "node_modules/tslib/tslib.es6.mjs"
 - handleOperation
 - requireReactIs_development
@@ -142,18 +142,18 @@
 - monthLabel
 - monthLabel
 - localDateStr
-- diff
+- sort
 - "node_modules/@supabase/auth-js/dist/main/lib/base64url.js"
 - localDateStr
 - export-and-filter-before-20261017-093300/src/lib/visitExport.js
 - catch
 - localDateStr
 - joinAlignedDiffsNoExpand
-- namespaceToPath2
+- "node_modules/@supabase/auth-js/dist/main/lib/webauthn.js"
 - "node_modules/@supabase/auth-js/dist/main/lib/errors.js"
 - monthLabel
-- "node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js"
-- uploadOrUpdate
+- __importDefault
+- monthLabel
 - VisitDetailModal
 - useBackDismiss
 - VisitDetailModal
@@ -161,12 +161,12 @@
 - localDateStr
 - "node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.js"
 - loadShould
-- asymmetricMatch
+- localDateStr
 - VisitDetailModal
 - useBackDismiss
 - "node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.js"
 - useTabBackButton
-- "node_modules/expect-type/dist/index.js"
+- src-lib-api-visits.js
 - VisitDetailModal
 - useBackDismiss
 - VisitDetailModal
@@ -178,19 +178,17 @@
 - useTabBackButton
 - useTabBackButton
 - adminDashboardRender.test.js
-- __asyncGenerator
-- "node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.js"
-- printDiffOrStringify
+- reject
+- VisitDetailModal
+- useBackDismiss
 - localDateStr
 - step
-- reject
-- equals
+- waitFor
+- useTabBackButton
 - then
 - VisitDetailModal
 - useBackDismiss
-- toPropertyKey2
 - useTabBackButton
-- "node_modules/@supabase/auth-js/dist/main/lib/local-storage.js"
 
 ## God Nodes (most connected - your core abstractions)
 1. `toString()` - 43 edges
@@ -225,7 +223,7 @@
 - **Region-Kota-Bengkel-Visit Data Hierarchy** — prd_entity_regions, prd_entity_bengkels, prd_entity_distributors, prd_entity_visits [EXTRACTED 1.00]
 - **Presigned Photo Upload Pipeline** — readme_lib_storage, prd_edge_function_get_upload_url, readme_s3_object_storage, prd_backblaze_b2 [EXTRACTED 1.00]
 
-## Communities (193 total, 19 thin omitted)
+## Communities (191 total, 16 thin omitted)
 
 ### Community 0 - "src/App.jsx"
 Cohesion: 0.04
@@ -537,91 +535,91 @@ Nodes (3): AdminView(), MDView(), useTabBackButton()
 
 ### Community 107 - ".test.js"
 Cohesion: 0.01
-Nodes (62): RFC-6749, advanceTimersByTimeAsync(), advanceTimersToNextFrame(), advanceTimersToNextTimer(), advanceTimersToNextTimerAsync(), assert2(), assertTypes(), _checkFakeTimers() (+54 more)
+Nodes (62): RFC-6749, advanceTimersByTimeAsync(), advanceTimersToNextFrame(), advanceTimersToNextTimer(), advanceTimersToNextTimerAsync(), assert2(), _checkFakeTimers(), createNamespace() (+54 more)
 
 ### Community 108 - "export-and-filter-before-20261017-093300/App.jsx"
 Cohesion: 0.04
 Nodes (21): ALL_SUBTYPES, BENGKEL_ICON, BLUE_PIN_ICON, COLUMN_ALIASES, EXPORT_PHOTO_HEADER, EXPORT_PHOTO_SKIP, ID_MONTHS, INDONESIA_CENTER (+13 more)
 
 ### Community 109 - "createSuiteCollector"
-Cohesion: 0.05
-Nodes (45): collectTask(), create(), createBucket(), createChainable(), createSuite(), suiteFn(), createSuiteCollector(), addHook() (+37 more)
+Cohesion: 0.06
+Nodes (42): attachEgressMeter(), clear(), collectTask(), createBucket(), createChainable(), createSuite(), suiteFn(), createSuiteCollector() (+34 more)
 
-### Community 110 - "normalizeDiffOptions"
-Cohesion: 0.17
-Nodes (18): compareObjects(), comparePrimitive(), countChanges(), diffLinesRaw(), diffLinesUnified(), diffLinesUnified2(), diffStringsUnified(), getCommonMessage() (+10 more)
+### Community 110 - "diff"
+Cohesion: 0.08
+Nodes (41): compareObjects(), comparePrimitive(), countChanges(), diff(), diffLinesRaw(), diffLinesUnified(), diffLinesUnified2(), diffStrings() (+33 more)
 
 ### Community 111 - "match"
-Cohesion: 0.06
-Nodes (37): addExtraLineBreaks(), _addSnapshot(), countCall(), createSimpleStackTrace(), diff_cleanupSemanticLossless(), diff_cleanupSemanticScore_(), endpointLabel(), ensureTrailingSlash() (+29 more)
+Cohesion: 0.07
+Nodes (36): addExtraLineBreaks(), _addSnapshot(), countCall(), createSimpleStackTrace(), diff_cleanupSemanticLossless(), diff_cleanupSemanticScore_(), endpointLabel(), ensureTrailingSlash() (+28 more)
 
 ### Community 112 - "withGlobal"
-Cohesion: 0.12
-Nodes (33): withGlobal(), addTimer(), callTimer(), checkIsNearInfiniteLimit(), clearTimer(), compareTimers(), createClock(), doRun() (+25 more)
+Cohesion: 0.13
+Nodes (32): withGlobal(), addTimer(), callTimer(), checkIsNearInfiniteLimit(), clearTimer(), compareTimers(), createClock(), doRun() (+24 more)
 
 ### Community 113 - "format"
 Cohesion: 0.08
-Nodes (30): createIndent(), findPlugin(), format(), getColorsEmpty(), getColorsHighlight(), getConfig(), getEscapeRegex(), getEscapeString() (+22 more)
+Nodes (32): createIndent(), findPlugin(), format(), getColorsEmpty(), getColorsHighlight(), getConfig(), getEscapeRegex(), getEscapeString() (+24 more)
 
 ### Community 114 - "inspect"
-Cohesion: 0.06
-Nodes (44): arrayFromSet(), assertIsMock(), escape(), format2(), formatTitle(), getSpy(), getUnserializableMessage(), inspect() (+36 more)
+Cohesion: 0.07
+Nodes (43): arrayFromSet(), arrayFromSet2(), assertIsMock(), getSpy(), inspect(), inspect3(), inspectArguments(), inspectArguments2() (+35 more)
 
 ### Community 115 - "assert"
 Cohesion: 0.05
-Nodes (57): a(), assert(), assertAbove(), assertBelow(), assertChanges(), assertDecreases(), assertDelta(), assertEql() (+49 more)
+Nodes (55): a(), assert(), assertAbove(), assertBelow(), assertChanges(), assertDecreases(), assertDelta(), assertEql() (+47 more)
 
-### Community 116 - "inspectList2"
-Cohesion: 0.09
-Nodes (28): arrayFromSet2(), escape2(), inspect3(), inspectArguments2(), inspectArray2(), inspectAttribute2(), inspectBigInt2(), inspectClass2() (+20 more)
+### Community 116 - "visit-history-export-before-20261019-105526/App.jsx"
+Cohesion: 0.04
+Nodes (21): ALL_SUBTYPES, BENGKEL_ICON, BLUE_PIN_ICON, COLUMN_ALIASES, EXPORT_PHOTO_HEADER, EXPORT_PHOTO_SKIP, ID_MONTHS, INDONESIA_CENTER (+13 more)
 
 ### Community 117 - "iterableEquality"
-Cohesion: 0.27
-Nodes (9): hasIterator(), isImmutableList(), isImmutableOrderedKeyed(), isImmutableOrderedSet(), isImmutableRecord(), isImmutableUnorderedKeyed(), isImmutableUnorderedSet(), isObjectLiteral() (+1 more)
+Cohesion: 0.12
+Nodes (27): asymmetricMatch(), eq(), equals(), getCustomEqualityTesters(), getMatcherContext(), getMatcherState(), getObjectKeys(), getObjectSubset() (+19 more)
 
 ### Community 118 - "admin-visits-blank-20261017-171319/App.jsx"
 Cohesion: 0.04
 Nodes (21): ALL_SUBTYPES, BENGKEL_ICON, BLUE_PIN_ICON, COLUMN_ALIASES, EXPORT_PHOTO_HEADER, EXPORT_PHOTO_SKIP, ID_MONTHS, INDONESIA_CENTER (+13 more)
 
 ### Community 119 - "requireLib"
-Cohesion: 0.06
-Nodes (45): deepEqual(), entriesEqual(), extensiveDeepEqual(), extensiveDeepEqualByType(), generatorEqual(), getEnumerableKeys(), getEnumerableSymbols(), getGeneratorEntries() (+37 more)
+Cohesion: 0.10
+Nodes (25): require_function(), requireArray(), requireCalledInOrder(), checkAdjacentCalls(), hasCallsLeft(), requireClassName(), requireCopyPrototypeMethods(), requireEvery() (+17 more)
 
 ### Community 120 - "createExpect"
-Cohesion: 0.29
-Nodes (10): createExpect(), assertions(), hasAssertions(), createExpectPoll(), getCurrentEnvironment(), getState(), getWorkerState(), setState() (+2 more)
-
-### Community 121 - "sort"
 Cohesion: 0.09
-Nodes (23): binarySearch(), cast(), decode(), decodedMappings(), decodeInteger(), expectTypes(), getKeysOfEnumerableProperties(), getPropKeys() (+15 more)
+Nodes (26): addCustomEqualityTesters(), assertTypes(), clone(), collectOwnProperties(), createExpect(), assertions(), hasAssertions(), createExpectPoll() (+18 more)
+
+### Community 121 - "decode"
+Cohesion: 0.20
+Nodes (11): binarySearch(), cast(), decode(), decodedMappings(), decodeInteger(), hasMoreVlq(), memoizedBinarySearch(), OMapping() (+3 more)
 
 ### Community 122 - ""node_modules/tslib/tslib.es6.mjs""
-Cohesion: 0.06
-Nodes (36): __addDisposableResource(), __asyncDelegator(), verb(), __asyncValues(), __await(), __classPrivateFieldGet(), __classPrivateFieldIn(), __classPrivateFieldSet() (+28 more)
+Cohesion: 0.10
+Nodes (21): __addDisposableResource(), __asyncDelegator(), verb(), __await(), __classPrivateFieldGet(), __classPrivateFieldIn(), __classPrivateFieldSet(), __decorate() (+13 more)
 
 ### Community 123 - "handleOperation"
-Cohesion: 0.14
-Nodes (21): copy(), createIndex(), deleteBucket(), deleteIndex(), deleteVectors(), emptyBucket(), getBucket(), getIndex() (+13 more)
+Cohesion: 0.08
+Nodes (40): copy(), createIndex(), createSignedUploadUrl(), createSignedUrl(), createSignedUrls(), _defineProperty2(), deleteBucket(), deleteIndex() (+32 more)
 
 ### Community 124 - "requireReactIs_development"
 Cohesion: 0.17
 Nodes (16): getType(), requireReactIs(), requireReactIs_development(), isContextConsumer(), isContextProvider(), isForwardRef(), isFragment(), isLazy() (+8 more)
 
 ### Community 125 - "indexOf"
-Cohesion: 0.07
-Nodes (41): addChainableMethod(), addLengthGuard(), addMethod(), addProperty(), an(), C(), C3(), createAssertionMessage() (+33 more)
+Cohesion: 0.06
+Nodes (44): addChainableMethod(), addLengthGuard(), addMethod(), addProperty(), an(), C(), C3(), compatibleMessage() (+36 more)
 
 ### Community 126 - "admin-blank-before-20261017-103500/App.jsx"
 Cohesion: 0.04
 Nodes (21): ALL_SUBTYPES, BENGKEL_ICON, BLUE_PIN_ICON, COLUMN_ALIASES, EXPORT_PHOTO_HEADER, EXPORT_PHOTO_SKIP, ID_MONTHS, INDONESIA_CENTER (+13 more)
 
 ### Community 127 - ""node_modules/@supabase/auth-js/dist/main/lib/helpers.js""
-Cohesion: 0.11
-Nodes (13): encode(), encodeInteger(), __esDecorate(), accept(), "node_modules/@supabase/auth-js/dist/main/lib/helpers.js"(), dec2hex(), generatePKCEChallenge(), generatePKCEVerifier() (+5 more)
+Cohesion: 0.08
+Nodes (19): encode(), encodeInteger(), __esDecorate(), accept(), "node_modules/@supabase/auth-js/dist/main/lib/helpers.js"(), dec2hex(), generatePKCEChallenge(), generatePKCEVerifier() (+11 more)
 
 ### Community 128 - "constructor"
-Cohesion: 0.10
-Nodes (25): applySettingDefaults(), constructor(), createFetchClient(), _defineProperty(), _defineProperty3(), from(), getSnapshotData(), _handleTokenChanged() (+17 more)
+Cohesion: 0.08
+Nodes (30): applySettingDefaults(), constructor(), createFetchClient(), _defineProperty(), _defineProperty3(), from(), getSnapshotData(), _handleTokenChanged() (+22 more)
 
 ### Community 129 - "admin-blank-before-20261017-114023/App.jsx"
 Cohesion: 0.04
@@ -664,8 +662,8 @@ Cohesion: 0.20
 Nodes (12): align(), concatenateRelevantDiffs(), flushChangeLines(), getAlignedDiffs(), getLines(), isLineEmpty(), moveLinesTo(), pushDiff() (+4 more)
 
 ### Community 139 - "toString"
-Cohesion: 0.12
-Nodes (19): applyTransformOptsToQuery(), buildUrl(), createSignedUploadUrl(), createSignedUrl(), createSignedUrls(), download(), getBtoa(), _getFinalPath() (+11 more)
+Cohesion: 0.07
+Nodes (35): applyTransformOptsToQuery(), buildUrl(), download(), escape(), escape2(), getBtoa(), getPublicUrl(), getUnserializableMessage() (+27 more)
 
 ### Community 140 - "monthLabel"
 Cohesion: 0.24
@@ -679,9 +677,9 @@ Nodes (12): AbsenHistory(), AdminAbsenTab(), CoverageTab(), DashboardTab(), fmtA
 Cohesion: 0.20
 Nodes (10): AbsenTab(), BengkelImportModal(), downloadBengkelTemplate(), downloadMasterTemplate(), localDateStr(), MasterImportModal(), MasterTab(), MDDashboard() (+2 more)
 
-### Community 143 - "diff"
-Cohesion: 0.19
-Nodes (17): diff(), formatCalls(), formatReturns(), getCustomEqualityTesters(), getMatcherContext(), getMatcherState(), getMatcherUtils(), getType3() (+9 more)
+### Community 143 - "sort"
+Cohesion: 0.11
+Nodes (26): deepEqual(), entriesEqual(), extensiveDeepEqual(), extensiveDeepEqualByType(), generatorEqual(), getEnumerableKeys(), getEnumerableSymbols(), getGeneratorEntries() (+18 more)
 
 ### Community 144 - ""node_modules/@supabase/auth-js/dist/main/lib/base64url.js""
 Cohesion: 0.33
@@ -696,8 +694,8 @@ Cohesion: 0.29
 Nodes (8): excelDateTimeSerial(), EXPORT_PHOTO_HEADER, EXPORT_PHOTO_SKIP, exportVisitsXlsx(), PHOTO_COLUMNS, setColDateFormat(), visitToCSVRow(), XL_EPOCH
 
 ### Community 147 - "catch"
-Cohesion: 0.06
-Nodes (31): attachEgressMeter(), catch(), clear(), cloneRequestState(), createDefer(), createFetchApi(), delete(), execute() (+23 more)
+Cohesion: 0.10
+Nodes (20): catch(), cloneRequestState(), createDefer(), createFetchApi(), delete(), execute(), extractTraceContext(), getPromise() (+12 more)
 
 ### Community 148 - "localDateStr"
 Cohesion: 0.20
@@ -707,9 +705,9 @@ Nodes (10): AbsenTab(), BengkelImportModal(), downloadBengkelTemplate(), downloa
 Cohesion: 0.39
 Nodes (8): createPatchMark(), formatTrailingSpaces(), joinAlignedDiffsExpand(), joinAlignedDiffsNoExpand(), printCommonLine(), printDeleteLine(), printDiffLine(), printInsertLine()
 
-### Community 150 - "namespaceToPath2"
-Cohesion: 0.29
-Nodes (8): createTable(), createTableIfNotExists(), dropTable(), listTables(), loadTable(), namespaceToPath2(), tableExists(), updateTable()
+### Community 150 - ""node_modules/@supabase/auth-js/dist/main/lib/webauthn.js""
+Cohesion: 0.11
+Nodes (18): create(), "node_modules/@supabase/auth-js/dist/main/lib/fetch.js"(), _generateLinkResponse(), handleError2(), _handleRequest2(), hasSession(), _request(), _sessionResponse() (+10 more)
 
 ### Community 151 - ""node_modules/@supabase/auth-js/dist/main/lib/errors.js""
 Cohesion: 0.46
@@ -719,13 +717,13 @@ Nodes (8): "node_modules/@supabase/auth-js/dist/main/lib/errors.js"(), isAuthApi
 Cohesion: 0.24
 Nodes (12): AbsenHistory(), AdminAbsenTab(), CoverageTab(), DashboardTab(), fmtAbsenTime(), fmtWorkDuration(), LeaderboardTab(), monthLabel() (+4 more)
 
-### Community 153 - ""node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js""
-Cohesion: 0.50
-Nodes (4): "node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js"(), createSiweMessage(), getAddress(), toHex()
+### Community 153 - "__importDefault"
+Cohesion: 0.16
+Nodes (13): __exportStar(), __importDefault(), __importStar(), "node_modules/@supabase/auth-js/dist/main/AuthAdminApi.js"(), "node_modules/@supabase/auth-js/dist/main/AuthClient.js"(), "node_modules/@supabase/auth-js/dist/main/GoTrueClient.js"(), "node_modules/@supabase/auth-js/dist/main/index.js"(), "node_modules/@supabase/realtime-js/dist/main/index.js"() (+5 more)
 
-### Community 154 - "uploadOrUpdate"
-Cohesion: 0.43
-Nodes (7): encodeMetadata(), _removeEmptyFolders(), setHeader(), toBase64(), upload(), uploadOrUpdate(), uploadToSignedUrl()
+### Community 154 - "monthLabel"
+Cohesion: 0.24
+Nodes (12): AbsenHistory(), AdminAbsenTab(), CoverageTab(), DashboardTab(), fmtAbsenTime(), fmtWorkDuration(), LeaderboardTab(), monthLabel() (+4 more)
 
 ### Community 155 - "VisitDetailModal"
 Cohesion: 0.47
@@ -755,9 +753,9 @@ Nodes (3): "node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter
 Cohesion: 0.20
 Nodes (5): __disposeResources(), next(), loadShould(), should2, next()
 
-### Community 162 - "asymmetricMatch"
-Cohesion: 0.22
-Nodes (11): addCustomEqualityTesters(), asymmetricMatch(), eq(), getType2(), isA(), isAsymmetric(), isAsymmetricMatcher(), isDomNode() (+3 more)
+### Community 162 - "localDateStr"
+Cohesion: 0.20
+Nodes (10): AbsenTab(), BengkelImportModal(), downloadBengkelTemplate(), downloadMasterTemplate(), localDateStr(), MasterImportModal(), MasterTab(), MDDashboard() (+2 more)
 
 ### Community 163 - "VisitDetailModal"
 Cohesion: 0.47
@@ -770,6 +768,10 @@ Nodes (6): __ensureModalListener(), __lockBodyScroll(), MdDetailModal(), MDWelco
 ### Community 166 - "useTabBackButton"
 Cohesion: 0.67
 Nodes (3): AdminView(), MDView(), useTabBackButton()
+
+### Community 167 - "src-lib-api-visits.js"
+Cohesion: 0.29
+Nodes (6): countPhotos(), fetchVisitFull(), fetchVisits(), fetchVisitsDelta(), fetchVisitsProgressive(), VISIT_PHOTO_COLS
 
 ### Community 168 - "VisitDetailModal"
 Cohesion: 0.47
@@ -811,33 +813,37 @@ Nodes (3): AdminView(), MDView(), useTabBackButton()
 Cohesion: 0.67
 Nodes (3): AdminView(), MDView(), useTabBackButton()
 
-### Community 180 - "__asyncGenerator"
-Cohesion: 0.29
-Nodes (10): __asyncGenerator(), fulfill(), resume(), settle(), step(), verb(), settle(), verb() (+2 more)
+### Community 180 - "reject"
+Cohesion: 0.32
+Nodes (12): __asyncGenerator(), awaitReturn(), fulfill(), reject(), resume(), settle(), step(), verb() (+4 more)
 
-### Community 182 - "printDiffOrStringify"
-Cohesion: 0.20
-Nodes (11): diffStrings(), diffStringsRaw(), getCommonAndChangedSubstrings(), getLabelPrinter(), getNewLineSymbol(), normalizeErrorMessage(), printDiffOrStringify(), printExpected() (+3 more)
+### Community 181 - "VisitDetailModal"
+Cohesion: 0.47
+Nodes (6): BengkelMap(), formatDistance(), haversineMeters(), OnSiteBadge(), VisitDetailModal(), VisitForm()
+
+### Community 182 - "useBackDismiss"
+Cohesion: 0.40
+Nodes (6): __ensureModalListener(), __lockBodyScroll(), MdDetailModal(), MDWelcomeModal(), PasskeyManagerModal(), useBackDismiss()
 
 ### Community 183 - "localDateStr"
 Cohesion: 0.20
 Nodes (10): AbsenTab(), BengkelImportModal(), downloadBengkelTemplate(), downloadMasterTemplate(), localDateStr(), MasterImportModal(), MasterTab(), MDDashboard() (+2 more)
 
 ### Community 184 - "step"
-Cohesion: 0.38
-Nodes (9): __awaiter(), __awaiter2(), adopt(), fulfilled(), rejected(), step(), fulfilled(), rejected() (+1 more)
+Cohesion: 0.26
+Nodes (11): __awaiter(), __awaiter2(), adopt(), fulfilled(), rejected(), step(), fulfilled(), rejected() (+3 more)
 
-### Community 185 - "reject"
+### Community 185 - "waitFor"
 Cohesion: 0.36
-Nodes (9): advanceTimersByTime(), reject(), copyStackTrace(), getSafeTimers(), isFakeTimers(), makeTimeoutMsg(), waitFor(), waitUntil() (+1 more)
+Nodes (8): advanceTimersByTime(), copyStackTrace(), getSafeTimers(), isFakeTimers(), makeTimeoutMsg(), waitFor(), waitUntil(), withTimeout()
 
-### Community 186 - "equals"
-Cohesion: 0.33
-Nodes (9): equals(), getObjectKeys(), getObjectSubset(), getSnapshotClient(), hasPropertyInObject(), isObject(), isObjectWithKeys(), sparseArrayEquality() (+1 more)
+### Community 186 - "useTabBackButton"
+Cohesion: 0.67
+Nodes (3): AdminView(), MDView(), useTabBackButton()
 
 ### Community 187 - "then"
 Cohesion: 0.25
-Nodes (7): awaitReturn(), "node_modules/@supabase/auth-js/dist/main/lib/locks.js"(), navigatorLock(), processLock(), shouldRetry(), sleep(), then()
+Nodes (7): "node_modules/@supabase/auth-js/dist/main/lib/locks.js"(), navigatorLock(), processLock(), processResponse(), shouldRetry(), sleep(), then()
 
 ### Community 188 - "VisitDetailModal"
 Cohesion: 0.47
@@ -847,24 +853,20 @@ Nodes (6): BengkelMap(), formatDistance(), haversineMeters(), OnSiteBadge(), Vis
 Cohesion: 0.40
 Nodes (6): __ensureModalListener(), __lockBodyScroll(), MdDetailModal(), MDWelcomeModal(), PasskeyManagerModal(), useBackDismiss()
 
-### Community 190 - "toPropertyKey2"
-Cohesion: 0.67
-Nodes (4): _defineProperty2(), toPrimitive2(), toPropertyKey2(), _typeof2()
-
 ### Community 191 - "useTabBackButton"
 Cohesion: 0.67
 Nodes (3): AdminView(), MDView(), useTabBackButton()
 
 ## Knowledge Gaps
-- **477 isolated node(s):** `RFC-6749`, `RED_PIN_ICON`, `BLUE_PIN_ICON`, `ID_MONTHS`, `INDONESIA_CENTER` (+472 more)
+- **499 isolated node(s):** `RFC-6749`, `RED_PIN_ICON`, `BLUE_PIN_ICON`, `ID_MONTHS`, `INDONESIA_CENTER` (+494 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **19 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **16 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `"node_modules/@supabase/auth-js/dist/main/lib/helpers.js"()` connect `"node_modules/@supabase/auth-js/dist/main/lib/helpers.js"` to `.test.js`, `toString`?**
-  _High betweenness centrality (0.011) - this node is a cross-community bridge._
+- **Why does `"node_modules/@supabase/auth-js/dist/main/lib/helpers.js"()` connect `"node_modules/@supabase/auth-js/dist/main/lib/helpers.js"` to `.test.js`?**
+  _High betweenness centrality (0.007) - this node is a cross-community bridge._
 - **Why does `withGlobal()` connect `withGlobal` to `constructor`, `match`, `requireLib`?**
   _High betweenness centrality (0.007) - this node is a cross-community bridge._
 - **Why does `"node_modules/@supabase/auth-js/dist/main/lib/base64url.js"()` connect `"node_modules/@supabase/auth-js/dist/main/lib/base64url.js"` to `.test.js`?**
@@ -876,4 +878,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Are the 2 inferred relationships involving `withGlobal()` (e.g. with `createClock()` and `install()`) actually correct?**
   _`withGlobal()` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `RFC-6749`, `RED_PIN_ICON`, `BLUE_PIN_ICON` to the rest of the system?**
-  _477 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _499 weakly-connected nodes found - possible documentation gaps or missing edges._
