@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { currentMonthKey } from './lib/dateFilters';
 import { excelDateSerial } from './lib/excelDates';
 import { aggregateVisitsByMd } from './lib/visitMetrics';
+import { buildOrphanMdOptions } from './lib/mdOptions';
 import imageCompression from 'browser-image-compression';
 import { VISIT_PHOTO_MAP } from './lib/storage';
 import {
@@ -2081,6 +2082,7 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin, regions = [] }) {
   const mdById = useMemo(() => new Map(mds.map(m => [m.id, m])), [mds]);
   const regionById = useMemo(() => new Map((regions || []).map(r => [r.id, r])), [regions]);
   const areaOf = (mdId) => { const m = mdById.get(mdId); return m?.region?.name || regionById.get(m?.region_id)?.name || ''; };
+  const orphanMds = useMemo(() => buildOrphanMdOptions(rows, mdById), [rows, mdById]);
   useBackDismiss(!!detail, () => setDetail(null));    // back -> tutup detail absen
   useBackDismiss(!!lightbox, () => setLightbox(null)); // back -> tutup foto (di atas detail)
 
@@ -2221,7 +2223,8 @@ function AdminAbsenTab({ mds, allowedMdIds, isSuperAdmin, regions = [] }) {
         </Select>
         <Select value={mdId} onChange={e => setMdId(e.target.value)}>
           <option value="all">Semua MD</option>
-          {mds.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+          {mds.map(m => <option key={m.id} value={m.id}>{m.full_name}{m.active === false ? ' (Nonaktif)' : ''}</option>)}
+          {orphanMds.map(m => <option key={m.id} value={m.id}>{m.name} (Terhapus)</option>)}
         </Select>
       </div>
 
@@ -3530,14 +3533,18 @@ function AdminView({ profile }) {
   const sMds = isTL ? mds.filter(m => inTlScope(m.region_id)) : mds;        // semua MD (termasuk nonaktif) → utk kelola akun
   const activeMds = sMds.filter(m => m.active !== false);                   // hanya MD aktif → data di tab
   const visibleMdIds = new Set(activeMds.map(m => m.id));
-  const allowedMdIds = visibleMdIds;                                        // absen: tampil hanya MD aktif (+scope TL)
-  const sVisits = visits.filter(v => visibleMdIds.has(v.md_id));            // visit hanya dari MD aktif (+scope TL)
+  // Riwayat (Visits & Absen) menampilkan SEMUA MD: aktif, nonaktif, dan md_id
+  // yatim dari baris riwayat (akun terhapus). TL tetap dibatasi region-nya;
+  // non-TL tanpa filter agar baris yatim tak terbuang.
+  const allowedMdIds = isTL ? new Set(sMds.map(m => m.id)) : null;
+  const sVisits = visits.filter(v => visibleMdIds.has(v.md_id));            // visit MD aktif (+scope TL) → dashboard/ranking/coverage
+  const historyVisits = allowedMdIds ? visits.filter(v => allowedMdIds.has(v.md_id)) : visits;
   // Daftar akun: super_admin lihat semua; admin/bp hanya MD; TL hanya MD region-nya.
   const sAccounts = isSuperAdmin ? accounts : accounts.filter(a => a.role === 'md' && inTlScope(a.region_id));
   const canManageMaster = !isTL;
 
   const openDetail = (id) => setDetailVisitId(id);
-  const detailVisit = detailVisitId ? sVisits.find(v => v.id === detailVisitId) : null;
+  const detailVisit = detailVisitId ? (historyVisits.find(v => v.id === detailVisitId) || null) : null;
   const detailBengkel = detailVisit ? bengkels.find(b => b.id === detailVisit.bengkel_id) : null;
   const detailKota = detailBengkel ? kotas.find(k => k.id === detailBengkel.kota_id) : null;
   const detailDistributor = detailVisit ? distributors.find(d => d.id === detailVisit.distributor_id) : null;
@@ -3563,8 +3570,8 @@ function AdminView({ profile }) {
 
       {tab === 'dashboard' && <DashboardTab visits={sVisits} mds={activeMds} onOpenVisit={openDetail} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} isLoading={visitsLoading || !mastersReady} error={visitsError || visitLoadError} onRetry={() => loadAll(true)} />}
       {tab === 'ranking' && <LeaderboardTab visits={sVisits} mds={activeMds} regions={regions} isLoading={visitsLoading} error={visitsError || visitLoadError} />}
-      {tab === 'visits' && <VisitsTab visits={sVisits} mds={activeMds} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} onOpenVisit={openDetail} isLoading={visitsLoading} loadComplete={visitLoadComplete} error={visitsError || visitLoadError} onRetry={() => loadAll(true)} />}
-      {tab === 'absen' && <AdminAbsenTab mds={activeMds} allowedMdIds={allowedMdIds} isSuperAdmin={isSuperAdmin} regions={regions} />}
+      {tab === 'visits' && <VisitsTab visits={historyVisits} mds={sMds} bengkels={bengkels} kotas={kotas} distributors={distributors} regions={regions} onOpenVisit={openDetail} isLoading={visitsLoading} loadComplete={visitLoadComplete} error={visitsError || visitLoadError} onRetry={() => loadAll(true)} />}
+      {tab === 'absen' && <AdminAbsenTab mds={sMds} allowedMdIds={allowedMdIds} isSuperAdmin={isSuperAdmin} regions={regions} />}
       {tab === 'coverage' && <CoverageTab visits={sVisits} mds={activeMds} bengkels={bengkels} kotas={kotas} regions={regions} distributors={distributors} onOpenVisit={openDetail} />}
       {tab === 'master' && <MasterTab regions={regions} kotas={kotas} distributors={distributors} bengkels={bengkels} mds={sMds} accounts={sAccounts} onChange={reloadMaster} isSuperAdmin={isSuperAdmin} canManageMaster={canManageMaster} />}
 
@@ -3626,6 +3633,7 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
   const regionById = useMemo(() => new Map(regions.map(r => [r.id, r])), [regions]);
   const distributorById = useMemo(() => new Map(distributors.map(d => [d.id, d])), [distributors]);
   const mdById = useMemo(() => new Map(mds.map(m => [m.id, m])), [mds]);
+  const orphanMds = useMemo(() => buildOrphanMdOptions(visits, mdById), [visits, mdById]);
   const findBengkel = (id) => bengkelById.get(id);
   const findKota = (id) => kotaById.get(id);
   const findRegion = (id) => regionById.get(id);
@@ -3707,7 +3715,8 @@ function VisitsTab({ visits, mds, bengkels, kotas, distributors, regions, onOpen
         </Select>
         <Select value={filters.mdId} onChange={e => setFilters({ ...filters, mdId: e.target.value })}>
           <option value="all">Semua MD</option>
-          {mds.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+          {mds.map(m => <option key={m.id} value={m.id}>{m.full_name}{m.active === false ? ' (Nonaktif)' : ''}</option>)}
+          {orphanMds.map(m => <option key={m.id} value={m.id}>{m.name} (Terhapus)</option>)}
         </Select>
         <Select value={filters.regionId} onChange={e => setFilters({ ...filters, regionId: e.target.value })}>
           <option value="all">Semua Region</option>
